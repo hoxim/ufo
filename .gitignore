@@ -1,0 +1,12 @@
+# Secretsgi
+ufo/Config.xcconfig
+
+# Pliki systemowe Maca
+.DS_Store
+
+# Pliki tymczasowe Xcode
+build/
+DerivedData/
+*.xcuserstate
+ufo.xcodeproj/xcuserdata/
+ufo.xcodeproj/project.xcworkspace/
