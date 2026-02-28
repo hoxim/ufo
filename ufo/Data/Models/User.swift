@@ -13,5 +13,5 @@ struct User {
     var displayName: String
     var role: String
     var avatarURL: String
-    var groupId: UUID?
+    var spaceId: UUID?
 }

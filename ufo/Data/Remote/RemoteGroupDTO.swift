@@ -1,5 +1,5 @@
 //
-//  RemoteGroupDTO.swift
+//  RemoteSpaceDTO.swift
 //  ufo
 //
 //  Created by Marcin Ryzko on 03/02/2026.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct RemoteGroupDTO: Codable {
+struct RemoteSpaceDTO: Codable {
     let id: UUID
     let name: String
     let inviteCode: String

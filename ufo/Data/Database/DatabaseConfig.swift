@@ -5,8 +5,6 @@
 //  Created by Marcin Ryzko on 29/01/2026.
 //
 
-// path: ufo/DatabaseConfig.swift
-
 import Foundation
 import Supabase
 
@@ -16,7 +14,7 @@ enum SupabaseConfig {
     }
     
     static let url: URL = {
-        guard let urlString = infoDictionary["SUPABASE_URL"] as? String,
+        guard let urlString = infoDictionary["SupabaseURL"] as? String,
               let url = URL(string: urlString) else {
             fatalError("SUPABASE_URL not found in Info.plist")
         }
@@ -24,7 +22,7 @@ enum SupabaseConfig {
     }()
     
     static let anonKey: String = {
-        guard let key = infoDictionary["SUPABASE_ANON_KEY"] as? String else {
+        guard let key = infoDictionary["SupabaseAnonKey"] as? String else {
             fatalError("SUPABASE_ANON_KEY not found in Info.plist")
         }
         return key
@@ -32,6 +30,11 @@ enum SupabaseConfig {
     
     static let client = SupabaseClient(
         supabaseURL: url,
-        supabaseKey: anonKey
+        supabaseKey: anonKey,
+        options: SupabaseClientOptions(
+            auth: .init(
+                emitLocalSessionAsInitialSession: true
+            )
+        )
     )
 }

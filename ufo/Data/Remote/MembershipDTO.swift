@@ -9,5 +9,5 @@ import Foundation
 
 struct MembershipDTO: Codable {
     let role: String
-    let group: RemoteGroupDTO?
+    let space: RemoteSpaceDTO?
 }

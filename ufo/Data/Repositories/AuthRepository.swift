@@ -8,44 +8,56 @@
 import Foundation
 import Supabase
 import SwiftData
+import UniformTypeIdentifiers
 
 @Observable
 final class AuthRepository: AuthRepositoryProtocol {
     
-    // MARK: - Properties
     var isLoggedIn: Bool = false
     var isBusy: Bool = false
     var currentUser: UserProfile? // Your SwiftData Domain Model
     
     private let client: SupabaseClient
     
-    // MARK: - Init
-    init(client: SupabaseClient) {
+    init(client: SupabaseClient, isLoggedIn: Bool = false, currentUser: UserProfile? = nil) {
         self.client = client
+        self.isLoggedIn = isLoggedIn
+        self.currentUser = currentUser
     }
     
-    // MARK: - Auth Status Check (App Launch)
-    
-    /// Checks if a session exists in the Keychain on app launch.
+    /**
+     Checks whether an auth session exists and is still valid.
+
+     If a non-expired session is found, this method fetches the user profile and updates local state.
+     If no session exists or the session is expired, it signs the user out and clears local state.
+
+     - Note: This method toggles `isBusy` while it runs and updates state on the main actor when signing out.
+
+     ### Example
+     ```swift
+     await authRepository.checkAuthStatus()
+     ```
+     */
     func checkAuthStatus() async {
         isBusy = true
         defer { isBusy = false }
-        
+
         do {
-            // Check for existing session
             let session = try await client.auth.session
-            Log.msg("Session found. Fetching full profile for: \(session.user.id)")
             
-            // If session exists, fetch the profile and groups
+            guard !session.isExpired else {
+                Log.msg("Session expired")
+                await signOut()
+                return
+            }
+
             try await fetchUserProfile(id: session.user.id)
-            
+
         } catch {
-            Log.msg("No active session found or fetch failed: \(error.localizedDescription)")
-            await signOut() // Clean up state if session is invalid
+            Log.msg("No active session found: \(error.localizedDescription)")
+            await signOut()
         }
     }
-    
-    // MARK: - Sign In
     
     func signIn(email: String, password: String) async throws {
         isBusy = true
@@ -58,9 +70,9 @@ final class AuthRepository: AuthRepositoryProtocol {
             let session = try await client.auth.signIn(email: email, password: password)
             let userId = session.user.id
             
-            Log.msg("Auth successful. Fetching profile and groups data...")
+            Log.msg("Auth successful. Fetching profile and spaces data...")
             
-            // 2. Fetch Profile + Memberships + Groups
+            // 2. Fetch Profile + Memberships + Spaces
             try await fetchUserProfile(id: userId)
             
         } catch {
@@ -69,9 +81,6 @@ final class AuthRepository: AuthRepositoryProtocol {
         }
     }
     
-    // MARK: - Sign Up
-    
-    /// Minimal registration using only email and password.
     func signUp(email: String, password: String) async throws {
         isBusy = true
         defer { isBusy = false }
@@ -97,8 +106,6 @@ final class AuthRepository: AuthRepositoryProtocol {
         }
     }
     
-    // MARK: - Sign Out
-    
     func signOut() async {
         do {
             try await client.auth.signOut()
@@ -114,9 +121,6 @@ final class AuthRepository: AuthRepositoryProtocol {
         }
     }
     
-    // MARK: - Profile Management (Onboarding)
-    
-    /// Updates the user's name and avatar. Used during Onboarding.
     func completeProfile(fullName: String, avatarUrl: String? = nil) async throws {
         guard let userId = client.auth.currentUser?.id else {
             throw AuthError.notAuthenticated
@@ -142,20 +146,14 @@ final class AuthRepository: AuthRepositoryProtocol {
             
         Log.msg("Profile updated on server. Refreshing local data...")
         
-        // Refresh local state to reflect changes immediately
         try await fetchUserProfile(id: userId)
     }
     
-    // MARK: - Data Fetching & Sync
-    
-    /// Fetches the complete user profile including group memberships and nested group details.
     func fetchUserProfile(id: UUID) async throws {
         do {
-            // Fetch raw data from Supabase (Profile + Memberships + Groups)
-            // This query joins 3 tables: profiles -> group_members -> groups
             let profileDTO: UserProfileDTO = try await client
                 .from("profiles")
-                .select("*, group_members(*, groups(*))")
+                .select("*, space_members(*, spaces(*))")
                 .eq("id", value: id)
                 .single()
                 .execute()
@@ -163,7 +161,6 @@ final class AuthRepository: AuthRepositoryProtocol {
             
             Log.msg("Profile fetched: \(profileDTO.fullName ?? "No Name"). Syncing with SwiftData...")
             
-            // Sync with local state
             syncWithSwiftData(dto: profileDTO)
             
         } catch {
@@ -172,7 +169,6 @@ final class AuthRepository: AuthRepositoryProtocol {
         }
     }
 
-    /// Maps the DTO to the Domain Model and updates the local state.
     @MainActor
     private func syncWithSwiftData(dto: UserProfileDTO) {
         // 1. Create UserProfile (Domain Model)
@@ -183,23 +179,23 @@ final class AuthRepository: AuthRepositoryProtocol {
             role: "user"
         )
         
-        // 2. Map Memberships and Groups
-        if let membersDTO = dto.groupMembers {
-            var memberships: [GroupMembership] = []
+        // 2. Map Memberships and Spaces
+        if let membersDTO = dto.spaceMembers {
+            var memberships: [SpaceMembership] = []
             
             for memberDTO in membersDTO {
-                if let groupDTO = memberDTO.group {
-                    // Create Group Model
-                    let group = Group(
-                        id: groupDTO.id,
-                        name: groupDTO.name,
-                        inviteCode: groupDTO.inviteCode
+                if let spaceDTO = memberDTO.space {
+                    // Create Space Model
+                    let space = Space(
+                        id: spaceDTO.id,
+                        name: spaceDTO.name,
+                        inviteCode: spaceDTO.inviteCode
                     )
                     
                     // Create Membership Model
-                    let membership = GroupMembership(
+                    let membership = SpaceMembership(
                         user: userProfile,
-                        group: group,
+                        space: space,
                         role: memberDTO.role
                     )
                     
@@ -213,6 +209,40 @@ final class AuthRepository: AuthRepositoryProtocol {
         self.currentUser = userProfile
         self.isLoggedIn = true
         Log.msg("Local state updated. User is logged in.")
+    }
+
+    func uploadAvatar(imageData: Data, fileName: String) async throws {
+        guard let userId = currentUser?.id else { return }
+        
+        // 1. Upload do Supabase Storage
+        let fileExtension = fileName.split(separator: ".").last.map(String.init) ?? "jpg"
+        let type = UTType(filenameExtension: fileExtension) ?? .jpeg
+        let storagePath = "avatars/\(userId.uuidString).\(fileExtension)"
+        
+        try await client.storage
+            .from("avatars")
+            .upload(
+                storagePath,
+                data: imageData,
+                options: FileOptions(contentType: type.preferredMIMEType)
+            )
+        
+        // 2. get public URL
+        let publicURL = try client.storage
+            .from("avatars")
+            .getPublicURL(path: storagePath)
+        
+        // 3. update supabase
+        try await client
+            .from("profiles")
+            .update(["avatar_url": publicURL.absoluteString])
+            .eq("id", value: userId)
+            .execute()
+        
+        // 4. refresh local model
+        await MainActor.run {
+            currentUser?.avatarURL = publicURL.absoluteString
+        }
     }
 }
 

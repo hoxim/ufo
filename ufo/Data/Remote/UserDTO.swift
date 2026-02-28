@@ -13,12 +13,12 @@ struct UserDTO: Codable {
     let fullName: String?
     let avatarUrl: String?
     let role: String?
-    let groupMembers: [MembershipDTO]?
+    let spaceMembers: [MembershipDTO]?
 
     enum CodingKeys: String, CodingKey {
         case id, email, role
         case fullName = "full_name"
         case avatarUrl = "avatar_url"
-        case groupMembers = "group_members"
+        case spaceMembers = "space_members"
     }
 }

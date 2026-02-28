@@ -1,29 +1,50 @@
 //
-//  Task.swift
+//  Mission.swift
 //  ufo
 //
 //  Created by Marcin Ryzko on 30/01/2026.
 //
 
+
 import Foundation
 import SwiftData
 
 @Model
-final class Mission {
+final class Mission: Thing {
     @Attribute(.unique) var id: UUID
+    var spaceId: UUID
     var title: String
-    var details: String?
+    var createdAt: Date
+    var missionDescription: String = ""
     var isCompleted: Bool = false
-    var dueDate: Date?
+    var difficulty: Int = 1
+    var space: Space?
+    var version: Int = 0
+    var lastUpdatedAt: Date
+    var pendingSync: Bool = false
+    
+    // relation to  UserProfile
+    @Relationship(inverse: \UserProfile.assignedMissions)
+    var assignees: [UserProfile] = []
 
-    var recurrenceRule: String? // np. "daily", "weekly"
+    @Relationship(deleteRule: .cascade)
+    var links: [LinkedThing] = []
 
-    var group: Group?
-    var assignees: [UserProfile] = [] // Wiele osób przypisanych do zadania
-
-    init(id: UUID, title: String, group: Group) {
+    init(id: UUID = UUID(), spaceId: UUID, title: String, missionDescription: String = "", difficulty: Int = 1) {
         self.id = id
+        self.spaceId = spaceId
         self.title = title
-        self.group = group
+        self.createdAt = .now
+        self.missionDescription = missionDescription
+        self.difficulty = difficulty
+        self.isCompleted = false
+        self.lastUpdatedAt = .now
+    }
+}
+
+extension Mission {
+    @Transient
+    var subThings: [any Thing] {
+        return []
     }
 }
