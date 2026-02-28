@@ -37,8 +37,9 @@ final class MissionStore {
     @MainActor
     func addMission(_ mission: Mission) {
         mission.pendingSync = true
-        mission.version += 1
+        mission.version = max(1, mission.version)
         mission.lastUpdatedAt = .now
+        mission.updatedAt = .now
         modelContext.insert(mission)
         missions.append(mission)
     }
@@ -52,6 +53,7 @@ final class MissionStore {
         mission.pendingSync = true
         mission.version += 1
         mission.lastUpdatedAt = .now
+        mission.updatedAt = .now
     }
 
     // Synchronizacja z Supabase

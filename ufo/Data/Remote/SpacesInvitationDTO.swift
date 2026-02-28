@@ -9,19 +9,24 @@ import Foundation
 
 struct SpaceInvitationDTO: Codable {
     let id: UUID
-    let space_id: UUID
-    let inviter_id: UUID
-    let invitee_email: String
-    let invite_code: String
+    let spaceId: UUID
+    let inviterId: UUID?
+    let inviteeEmail: String
+    let inviteCode: String
     let status: String
-    let sent_at: Date
-    let expires_at: Date?
+    let sentAt: Date
+    let expiresAt: Date?
     
     let space: SpaceDTO?
 
     enum CodingKeys: String, CodingKey {
-        case id, space_id, inviter_id, invitee_email, invite_code, status
-        case sent_at, expires_at
+        case id, status
+        case spaceId = "space_id"
+        case inviterId = "inviter_id"
+        case inviteeEmail = "invitee_email"
+        case inviteCode = "invite_code"
+        case sentAt = "sent_at"
+        case expiresAt = "expires_at"
         case space = "spaces"
     }
 }

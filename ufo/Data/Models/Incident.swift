@@ -13,21 +13,39 @@ final class Incident: Thing {
 
     @Attribute(.unique) var id: UUID
     var spaceId: UUID
+    var createdBy: UUID?
     var title: String
+    var incidentDescription: String?
     var createdAt: Date
     var occurrenceDate: Date
-    var assignedUserIds: [UUID] = []
+    var version: Int = 1
+    var lastUpdatedAt: Date
+    var updatedAt: Date
+    var updatedBy: UUID?
+    var deletedAt: Date?
+    var pendingSync: Bool = false
     
 
     @Relationship(deleteRule: .cascade)
     var links: [LinkedThing] = []
 
-    init(id: UUID = UUID(), spaceId: UUID, title: String, occurrenceDate: Date) {
+    init(
+        id: UUID = UUID(),
+        spaceId: UUID,
+        title: String,
+        incidentDescription: String? = nil,
+        occurrenceDate: Date,
+        createdBy: UUID? = nil
+    ) {
         self.id = id
         self.spaceId = spaceId
+        self.createdBy = createdBy
         self.title = title
+        self.incidentDescription = incidentDescription
         self.createdAt = .now
         self.occurrenceDate = occurrenceDate
+        self.lastUpdatedAt = .now
+        self.updatedAt = .now
     }
 }
 

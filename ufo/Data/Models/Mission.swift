@@ -15,12 +15,16 @@ final class Mission: Thing {
     var spaceId: UUID
     var title: String
     var createdAt: Date
+    var createdBy: UUID?
     var missionDescription: String = ""
     var isCompleted: Bool = false
     var difficulty: Int = 1
     var space: Space?
-    var version: Int = 0
+    var version: Int = 1
     var lastUpdatedAt: Date
+    var updatedAt: Date
+    var updatedBy: UUID?
+    var deletedAt: Date?
     var pendingSync: Bool = false
     
     // relation to  UserProfile
@@ -30,15 +34,24 @@ final class Mission: Thing {
     @Relationship(deleteRule: .cascade)
     var links: [LinkedThing] = []
 
-    init(id: UUID = UUID(), spaceId: UUID, title: String, missionDescription: String = "", difficulty: Int = 1) {
+    init(
+        id: UUID = UUID(),
+        spaceId: UUID,
+        title: String,
+        missionDescription: String = "",
+        difficulty: Int = 1,
+        createdBy: UUID? = nil
+    ) {
         self.id = id
         self.spaceId = spaceId
         self.title = title
         self.createdAt = .now
+        self.createdBy = createdBy
         self.missionDescription = missionDescription
         self.difficulty = difficulty
         self.isCompleted = false
         self.lastUpdatedAt = .now
+        self.updatedAt = .now
     }
 }
 

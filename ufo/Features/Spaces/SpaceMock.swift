@@ -22,9 +22,10 @@ struct SpaceMock {
 
         let invite = SpaceInvitation(
             id: UUID(),
-            spaceID: UUID(),
-            inviterID: UUID(),
+            spaceId: UUID(),
+            inviterId: UUID(),
             inviteeEmail: "m.ryzko@gmail.com",
+            inviteCode: "INVITE01",
             status: "pending",
             spaceName: space.name
         )

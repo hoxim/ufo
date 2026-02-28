@@ -102,11 +102,12 @@ struct InvitationAlertView: View {
 #Preview("Light mode") {
     let invite = SpaceInvitation(
         id: UUID(),
-        spaceID: UUID(),
-        inviterID: UUID(),
+        spaceId: UUID(),
+        inviterId: UUID(),
         inviteeEmail: "mr@hoxim.com",
+        inviteCode: "ABC123",
         status: "pending",
-        receivedAt: .now,
+        sentAt: .now,
         spaceName: "My space"
     )
     let repo = SpaceRepository(client: SupabaseConfig.client)
@@ -117,11 +118,12 @@ struct InvitationAlertView: View {
 #Preview("Dark mode") {
     let invite = SpaceInvitation(
         id: UUID(),
-        spaceID: UUID(),
-        inviterID: UUID(),
+        spaceId: UUID(),
+        inviterId: UUID(),
         inviteeEmail: "mr@hoxim.com",
+        inviteCode: "ABC123",
         status: "pending",
-        receivedAt: .now,
+        sentAt: .now,
         spaceName: "My space"
     )
     let repo = SpaceRepository(client: SupabaseConfig.client)

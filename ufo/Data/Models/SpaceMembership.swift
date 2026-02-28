@@ -10,18 +10,46 @@ import SwiftData
 
 @Model
 final class SpaceMembership {
-    @Attribute(.unique) var id: String // Format: "userID_spaceID"
+    @Attribute(.unique) var id: UUID
+    var userId: UUID
+    var spaceId: UUID
     var role: String // "admin", "member", "parent", "child"
     var joinedAt: Date
+    var createdAt: Date
+    var updatedAt: Date
     
     var user: UserProfile?
     var space: Space?
 
-    init(user: UserProfile, space: Space, role: String = "member") {
-        self.id = "\(user.id.uuidString)_\(space.id.uuidString)"
+    init(
+        id: UUID = UUID(),
+        userId: UUID,
+        spaceId: UUID,
+        role: String = "member",
+        joinedAt: Date = .now,
+        createdAt: Date = .now,
+        updatedAt: Date = .now,
+        user: UserProfile? = nil,
+        space: Space? = nil
+    ) {
+        self.id = id
+        self.userId = userId
+        self.spaceId = spaceId
+        self.role = role
+        self.joinedAt = joinedAt
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
         self.user = user
         self.space = space
-        self.role = role
-        self.joinedAt = Date()
+    }
+
+    convenience init(user: UserProfile, space: Space, role: String = "member") {
+        self.init(
+            userId: user.id,
+            spaceId: space.id,
+            role: role,
+            user: user,
+            space: space
+        )
     }
 }

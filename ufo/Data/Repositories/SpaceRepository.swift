@@ -189,10 +189,13 @@ final class SpaceRepository {
                 
                 let invite = SpaceInvitation(
                     id: dto.id,
-                    spaceID: spaceDTO.id,
-                    inviterID: dto.inviter_id,
-                    inviteeEmail: dto.invitee_email,
+                    spaceId: spaceDTO.id,
+                    inviterId: dto.inviterId,
+                    inviteeEmail: dto.inviteeEmail,
+                    inviteCode: dto.inviteCode,
                     status: dto.status,
+                    sentAt: dto.sentAt,
+                    expiresAt: dto.expiresAt,
                     spaceName: spaceDTO.name
                 )
                 
@@ -231,7 +234,7 @@ final class SpaceRepository {
             .from("space_members")
             .insert(NewMember(
                 user_id: userId,
-                space_id: invitation.spaceID,
+                space_id: invitation.spaceId,
                 role: "member"
             ))
             .execute()
