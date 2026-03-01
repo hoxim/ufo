@@ -13,6 +13,7 @@ final class LinkedThing {
     var version: Int
     var updatedBy: UUID?
     var deletedAt: Date?
+    var pendingSync: Bool
     
     init(
         id: UUID = UUID(),
@@ -23,7 +24,8 @@ final class LinkedThing {
         updatedAt: Date = .now,
         version: Int = 1,
         updatedBy: UUID? = nil,
-        deletedAt: Date? = nil
+        deletedAt: Date? = nil,
+        pendingSync: Bool = false
     ) {
         self.id = id
         self.thingId = thingId
@@ -34,5 +36,6 @@ final class LinkedThing {
         self.version = version
         self.updatedBy = updatedBy
         self.deletedAt = deletedAt
+        self.pendingSync = pendingSync
     }
 }

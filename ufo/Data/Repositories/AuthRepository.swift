@@ -189,7 +189,10 @@ final class AuthRepository: AuthRepositoryProtocol {
                     let space = Space(
                         id: spaceDTO.id,
                         name: spaceDTO.name,
-                        inviteCode: spaceDTO.inviteCode
+                        inviteCode: spaceDTO.inviteCode,
+                        category: spaceDTO.category ?? SpaceType.shared.rawValue,
+                        updatedAt: spaceDTO.updatedAt ?? .now,
+                        version: spaceDTO.version ?? 1
                     )
                     
                     // Create Membership Model

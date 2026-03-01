@@ -18,7 +18,10 @@ struct AuthMock {
             Space.self,
             SpaceMembership.self,
             SpaceInvitation.self,
-            Mission.self
+            Mission.self,
+            Incident.self,
+            LinkedThing.self,
+            Assignment.self
         ])
 
         let config = ModelConfiguration(isStoredInMemoryOnly: true)

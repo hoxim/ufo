@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct AuthView: View {
-    @Environment(AuthRepository.self) var authRepository: AuthRepository
     @State private var isShowingLogin: Bool = true
     
     var body: some View {
@@ -44,6 +43,9 @@ struct AuthView: View {
 
 #Preview {
     let mockRepo = AuthMock.makeRepository(isLoggedIn: true)
+    let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
+    let authStore = AuthStore(authRepository: mockRepo, spaceRepository: spaceRepo)
      AuthView()
         .environment(mockRepo)
+        .environment(authStore)
 }

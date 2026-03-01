@@ -31,7 +31,7 @@ final class SpaceRepository {
     }
     
     var currentSpaceId: UUID? {
-        return nil
+        selectedSpace?.id
     }
     
     func selectFirstSpace(from userSpaces: [Space]) {
@@ -61,7 +61,7 @@ final class SpaceRepository {
         
         let memberships: [SpaceMemberDTO] = try await client
             .from("space_members")
-            .select("role, joined_at, spaces(*)")
+            .select("user_id, role, joined_at, spaces(*)")
             .eq("user_id", value: userId)
             .execute()
             .value
@@ -71,12 +71,71 @@ final class SpaceRepository {
             return Space(
                 id: g.id,
                 name: g.name,
-                inviteCode: g.inviteCode
+                inviteCode: g.inviteCode,
+                category: g.category ?? SpaceType.shared.rawValue,
+                updatedAt: g.updatedAt ?? .now,
+                version: g.version ?? 1
             )
         }
         
         Log.msg("✅ Successfully retrieved \(userSpaces.count) spaces.")
         return userSpaces
+    }
+
+    func fetchAll() async throws -> [Space] {
+        try await getSpaces()
+    }
+
+    func fetchById(_ id: UUID) async throws -> Space? {
+        let result: SpaceDTO? = try await client
+            .from("spaces")
+            .select("*")
+            .eq("id", value: id)
+            .single()
+            .execute()
+            .value
+
+        guard let result else { return nil }
+        return Space(
+            id: result.id,
+            name: result.name,
+            inviteCode: result.inviteCode,
+            category: result.category ?? SpaceType.shared.rawValue,
+            updatedAt: result.updatedAt ?? .now,
+            version: result.version ?? 1
+        )
+    }
+
+    func fetchMembers(spaceId: UUID) async throws -> [SpaceMemberDTO] {
+        try await client
+            .from("space_members")
+            .select("user_id, role, joined_at, profiles(*), spaces(*)")
+            .eq("space_id", value: spaceId)
+            .execute()
+            .value
+    }
+
+    func fetchRecipients(spaceId: UUID) async throws -> [SpaceMemberRecipient] {
+        let members = try await fetchMembers(spaceId: spaceId)
+        return members.map { member in
+            SpaceMemberRecipient(
+                id: member.userId,
+                email: member.profile?.email ?? "",
+                fullName: member.profile?.fullName,
+                avatarURL: member.profile?.avatarUrl,
+                role: member.role
+            )
+        }
+    }
+
+    func fetchInvitations(for email: String, status: String = "pending") async throws -> [SpaceInvitationDTO] {
+        try await client
+            .from("space_invitations")
+            .select("*, spaces(*)")
+            .eq("invitee_email", value: email.lowercased())
+            .eq("status", value: status)
+            .execute()
+            .value
     }
 
     func createSpace(name: String = "My Space", type: SpaceType = .personal) async throws {
@@ -121,6 +180,11 @@ final class SpaceRepository {
                 
             Log.msg("Space created and Admin assigned.")
         }
+
+    func ensurePersonalSpaceIfNeeded(for spaces: [Space]) async throws {
+        guard spaces.isEmpty else { return }
+        try await createSpace(name: "Personal Space", type: .personal)
+    }
     
     func joinSpace(inviteCode: String) async throws {
         guard let userId = client.auth.currentUser?.id else {
@@ -168,6 +232,14 @@ final class SpaceRepository {
             .execute()
             
         Log.msg("Left space successfully.")
+    }
+
+    func deleteSpace(spaceId: UUID) async throws {
+        try await client
+            .from("spaces")
+            .delete()
+            .eq("id", value: spaceId)
+            .execute()
     }
 
     func checkInvites(for email: String) async throws {
@@ -264,6 +336,10 @@ final class SpaceRepository {
         guard let userId = client.auth.currentUser?.id else {
             throw AuthError.notAuthenticated
         }
+
+        guard let space = try await fetchById(spaceId), space.allowsInvitations else {
+            throw SpaceError.invitationsBlockedForPrivateSpace
+        }
         
         Log.msg("Sending invitation to: \(email)")
         
@@ -293,6 +369,10 @@ final class SpaceRepository {
         guard let userId = client.auth.currentUser?.id else {
             throw AuthError.notAuthenticated
         }
+
+        guard let space = try await fetchById(spaceId), space.allowsInvitations else {
+            throw SpaceError.invitationsBlockedForPrivateSpace
+        }
         
         Log.msg("🛸 Initiating transmission to: \(email)")
         
@@ -320,5 +400,16 @@ final class SpaceRepository {
             .execute()
             
         Log.msg("✅ Transmission successful. Invite stored.")
+    }
+}
+
+enum SpaceError: LocalizedError {
+    case invitationsBlockedForPrivateSpace
+
+    var errorDescription: String? {
+        switch self {
+        case .invitationsBlockedForPrivateSpace:
+            return "Do Space typu Private nie można wysyłać zaproszeń. Utwórz Space typu Shared."
+        }
     }
 }

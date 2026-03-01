@@ -8,34 +8,52 @@
 import SwiftUI
 
 struct RegisterView: View {
-    @Environment(AuthRepository.self) private var authRepository
+    @Environment(AuthStore.self) private var authStore
     @State var email:String = ""
     @State var confirmPassword:String = ""
     @State var password:String = ""
     @State var error:String? = nil
-    let passwordMinimalCount:Int = 6
+    @State var showError: Bool = false
     
     var body: some View {
-        Card {
-            Text("auth.register.title").font(.title).bold()
-                .padding([.top, .bottom], 24)
-            VStack (spacing: 12) {
-                UfoTextField(title: "auth.register.email", text: $email)
-                UfoSecureField(title: "auth.register.password", text: $password)
-                UfoSecureField(title: "auth.register.confirm", text: $confirmPassword)
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Email", text: $email)
+                        #if os(iOS)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        #endif
+                    SecureField("Hasło", text: $password)
+                    SecureField("Powtórz hasło", text: $confirmPassword)
+                }
+
+                if let validationError = passwordValidationError, !password.isEmpty {
+                    Section {
+                        Text(validationError.localizedDescription)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                }
+
+                Section {
+                    Button {
+                        Task { await signUp() }
+                    } label: {
+                        Text("Załóż konto")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .disabled(passwordValidationError != nil || !isEmailValid)
+                }
             }
-            
-            if let error = passwordValidationError, !password.isEmpty {
-                Text(error.localizedDescription).foregroundColor(.red).font(.caption)
+            .navigationTitle("Rejestracja")
+            .alert("Błąd", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(error ?? "Nie udało się utworzyć konta.")
             }
-            
-            Button("auth.register.button") {
-                Task { await signUp() }
-            }
-            .ufoPrimaryButton()
-            .padding([.top, .bottom], 24)
-            .disabled(passwordValidationError != nil || !isEmailValid)
-        }.padding([.leading, .trailing], 24)
+        }
     }
     
     var isEmailValid: Bool {
@@ -59,27 +77,35 @@ struct RegisterView: View {
     
     func signUp() async {
         guard isEmailValid else {
-            error = "Emails must match and be valid."
+            error = "Email jest niepoprawny."
+            showError = true
             return
         }
         do{
-            try await authRepository.signUp(email: email, password: password)
+            try await authStore.signUp(email: email, password: password)
         }
         catch (let error){
-            print(error.localizedDescription)
+            self.error = error.localizedDescription
+            showError = true
         }
     }
 }
 
 #Preview("Register Light Mode") {
     let mockRepo = AuthMock.makeRepository()
+    let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
+    let authStore = AuthStore(authRepository: mockRepo, spaceRepository: spaceRepo)
     return RegisterView()
         .environment(mockRepo)
+        .environment(authStore)
 }
 
 #Preview("Register Dark Mode") {
     let mockRepo = AuthMock.makeRepository(isLoggedIn: true)
+    let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
+    let authStore = AuthStore(authRepository: mockRepo, spaceRepository: spaceRepo)
     return RegisterView()
         .environment(mockRepo)
+        .environment(authStore)
         .preferredColorScheme(.dark)
 }

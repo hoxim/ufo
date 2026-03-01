@@ -26,6 +26,8 @@ final class Mission: Thing {
     var updatedBy: UUID?
     var deletedAt: Date?
     var pendingSync: Bool = false
+    var iconName: String?
+    var imageData: Data?
     
     // relation to  UserProfile
     @Relationship(inverse: \UserProfile.assignedMissions)
@@ -40,6 +42,8 @@ final class Mission: Thing {
         title: String,
         missionDescription: String = "",
         difficulty: Int = 1,
+        iconName: String? = nil,
+        imageData: Data? = nil,
         createdBy: UUID? = nil
     ) {
         self.id = id
@@ -49,6 +53,8 @@ final class Mission: Thing {
         self.createdBy = createdBy
         self.missionDescription = missionDescription
         self.difficulty = difficulty
+        self.iconName = iconName
+        self.imageData = imageData
         self.isCompleted = false
         self.lastUpdatedAt = .now
         self.updatedAt = .now

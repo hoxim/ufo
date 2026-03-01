@@ -7,13 +7,12 @@
 
 import SwiftUI
 import SwiftData
-import Supabase
 
 struct SpaceSelectorView: View {
     @Environment(SpaceRepository.self) private var spaceRepo
-    @Environment(AuthRepository.self) private var authRepo
     
     let userSpaces: [Space]
+    @State private var showCreator = false
     
     var body: some View {
         NavigationStack {
@@ -47,7 +46,7 @@ struct SpaceSelectorView: View {
                     
                     //  "Add new"
                     Button {
-                        // open creator
+                        showCreator = true
                     } label: {
                         Card {
                             Image(systemName: "plus")
@@ -66,20 +65,31 @@ struct SpaceSelectorView: View {
                 }
             }
             .navigationTitle("Select Base")
+            .sheet(isPresented: $showCreator) {
+                SpaceEditorView()
+            }
         }
     }
 }
 
 #Preview("Light mode") {
-    let container = try! ModelContainer(for: Space.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let previewSchema = Schema([
+        UserProfile.self,
+        Space.self,
+        SpaceMembership.self,
+        SpaceInvitation.self,
+        Mission.self,
+        Incident.self,
+        LinkedThing.self,
+        Assignment.self
+    ])
+    let container = try! ModelContainer(for: previewSchema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     let context = container.mainContext
     let spaces = SpaceMock.makeSampleData(context: context)
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
-    let authRepo = AuthRepository(client: SupabaseConfig.client)
 
     SpaceSelectorView(userSpaces: spaces)
         .environment(spaceRepo)
-        .environment(authRepo)
         .modelContainer(container)
 
 }

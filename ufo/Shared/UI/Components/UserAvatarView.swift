@@ -61,7 +61,6 @@ struct UserAvatarView: View {
                                 .fontWeight(.bold)
                         }
                 }
-                Text(user?.fullName ?? "Unknown Scout")
                 #if os(macOS)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(user?.fullName ?? "Unknown Scout")
@@ -71,6 +70,9 @@ struct UserAvatarView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
+                #else
+                Text(user?.fullName ?? "Unknown Scout")
+                    .font(.subheadline)
                 #endif
             }
             .contentShape(Rectangle())

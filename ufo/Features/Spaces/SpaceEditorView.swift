@@ -22,7 +22,11 @@ struct SpaceEditorView: View {
     init(space: Space? = nil) {
         self.spaceToEdit = space
         _name = State(initialValue: space?.name ?? "")
-        _selectedType = State(initialValue: .family)
+        if let category = space?.category {
+            _selectedType = State(initialValue: SpaceType(category: category))
+        } else {
+            _selectedType = State(initialValue: .personal)
+        }
     }
     
     var body: some View {
@@ -32,11 +36,20 @@ struct SpaceEditorView: View {
                     TextField("Space Name (e.g. Alpha Crew)", text: $name)
                     
                     Picker("Space Type", selection: $selectedType) {
-                        ForEach(SpaceType.allCases) { type in
-                            Text(type.rawValue).tag(type)
-                        }
+                        Text("Private").tag(SpaceType.personal)
+                        Text("Shared").tag(SpaceType.shared)
                     }
                     .pickerStyle(.menu)
+
+                    if selectedType == .personal || selectedType == .private {
+                        Text("Private Space jest tylko dla Ciebie. Nie można do niego zapraszać innych osób.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Shared Space pozwala zapraszać innych użytkowników.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 
                 Section {
@@ -86,4 +99,12 @@ struct SpaceEditorView: View {
             isProcessing = false
         }
     }
+}
+
+#Preview("Create Space") {
+    let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
+    let authRepo = AuthRepository(client: SupabaseConfig.client)
+    SpaceEditorView()
+        .environment(spaceRepo)
+        .environment(authRepo)
 }

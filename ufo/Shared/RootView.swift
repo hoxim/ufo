@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct RootView: View {
-    @Environment(AuthRepository.self) private var authRepository
+    @Environment(AuthStore.self) private var authStore
     @Environment(SpaceRepository.self) private var spaceRepository
     
     @State private var selectedTab: TabItem = .missions
@@ -18,23 +18,37 @@ struct RootView: View {
     @State private var showProfileSheet = false
     @State private var showSettingsSheet = false
 
+    private var canInviteInSelectedSpace: Bool {
+        guard
+            let user = authStore.currentUser,
+            let selectedSpace = spaceRepository.selectedSpace,
+            selectedSpace.allowsInvitations
+        else {
+            return false
+        }
+
+        return user.memberships.contains {
+            $0.space?.id == selectedSpace.id && $0.role == "admin"
+        }
+    }
+
     var body: some View {
         ZStack {
-            if authRepository.isLoggedIn {
-                if let user = authRepository.currentUser, !user.memberships.isEmpty {
-                    if let selectedSpace = spaceRepository.selectedSpace {
-                        mainNavigationLayout
-                            .transition(.opacity)
-                            .environment(\.selectedSpaceID, selectedSpace.id)
-                    } else {
-                        SpaceSelectorView(userSpaces: user.memberships.compactMap { $0.space })
-                            .transition(.move(edge: .leading))
-                    }
+            if authStore.state == .checkingSession || authStore.state == .bootstrapping {
+                ProgressView("Przygotowuję dane konta...")
+            } else if authStore.state == .signedOut {
+                AuthView()
+            } else if let user = authStore.currentUser, !user.memberships.isEmpty {
+                if let selectedSpace = spaceRepository.selectedSpace {
+                    mainNavigationLayout
+                        .transition(.opacity)
+                        .environment(\.selectedSpaceID, selectedSpace.id)
                 } else {
-                    NoSpaceView(spaceRepository: spaceRepository)
+                    SpaceSelectorView(userSpaces: user.memberships.compactMap { $0.space })
+                        .transition(.move(edge: .leading))
                 }
             } else {
-                AuthView()
+                NoSpaceView(spaceRepository: spaceRepository)
             }
 
             // Invitation alert
@@ -44,20 +58,32 @@ struct RootView: View {
                     .transition(.opacity.combined(with: .scale))
             }
         }
-        .animation(.default, value: authRepository.isLoggedIn)
+        .animation(.default, value: authStore.state)
         .animation(.easeInOut, value: spaceRepository.selectedSpace)
         .animation(.spring(), value: spaceRepository.pendingInvitation)
         .task {
+            if authStore.state == .checkingSession {
+                await authStore.bootstrap()
+            }
             await startBackgroundSync()
         }
         .sheet(isPresented: $showInviteSheet) {
-            if let spaceId = spaceRepository.selectedSpace?.id {
-                InviteMemberView(spaceId: spaceId)
+            if let selectedSpace = spaceRepository.selectedSpace {
+                InviteMemberView(space: selectedSpace)
                     .presentationDetents([.medium])
             }
         }
         .sheet(isPresented: $showProfileSheet) {
-            Text("Profile Settings")
+            UserProfileView()
+                #if os(macOS)
+                .frame(minWidth: 480, minHeight: 560)
+                #endif
+        }
+        .sheet(isPresented: $showSettingsSheet) {
+            AppSettingsView()
+                #if os(macOS)
+                .frame(minWidth: 480, minHeight: 560)
+                #endif
         }
     }
 
@@ -73,40 +99,42 @@ struct RootView: View {
 
     // MARK: - Shared Components
     private var profileMenuButton: some View {
-        Menu {
-            Button { showProfileSheet = true } label: {
-                Label("Profile", systemImage: "person.circle")
+        VStack(alignment: .leading, spacing: 8) {
+            UserAvatarView(
+                user: authStore.currentUser,
+                onSettings: { showSettingsSheet = true },
+                onProfile: { showProfileSheet = true },
+                onLogout: { Task { await authStore.signOut() } }
+            )
+            #if os(macOS)
+            if let selectedSpace = spaceRepository.selectedSpace, !selectedSpace.allowsInvitations {
+                Text("Private Space: utwórz Shared, aby zapraszać.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else if !canInviteInSelectedSpace {
+                Text("Tylko administrator może zapraszać.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                Button {
+                    showInviteSheet = true
+                } label: {
+                    Label("Invite to Space", systemImage: "envelope")
+                }
+                .buttonStyle(.bordered)
+                .font(.caption)
             }
-            Button { showSettingsSheet = true } label: {
-                Label("Settings", systemImage: "gear")
-            }
-            Divider()
-            Button { showInviteSheet = true } label: {
-                Label("Invite to Space", systemImage: "envelope")
-            }
-            Button(role: .destructive) {
-                Task { await authRepository.signOut() }
-            } label: {
-                Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
-            }
-        } label: {
-            Circle()
-                .fill(Color.blue.gradient)
-                .frame(width: 32, height: 32)
-                .overlay(
-                    Text(authRepository.currentUser?.fullName?.prefix(1) ?? "U")
-                        .foregroundStyle(.white).bold()
-                )
+            #endif
         }
     }
 
     private func startBackgroundSync() async {
-        while !authRepository.isLoggedIn {
+        while !authStore.isLoggedIn {
             try? await Task.sleep(nanoseconds: 1 * 1_000_000_000)
         }
         
         while !Task.isCancelled {
-            if let user = authRepository.currentUser {
+            if let user = authStore.currentUser {
                 try? await spaceRepository.checkInvites(for: user.email)
                 
                 if !user.memberships.isEmpty && spaceRepository.selectedSpace == nil {
@@ -121,7 +149,7 @@ struct RootView: View {
 
 // MARK: - Shared Models
 enum TabItem: Hashable {
-    case missions, incidents, profile, spaces
+    case missions, incidents, links, budget, lists, locations, messages, profile, spaces
 }
 
 #Preview {
@@ -142,13 +170,14 @@ enum TabItem: Hashable {
         isLoggedIn: true,
         currentUser: mockUser
     )
-    
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
     spaceRepo.selectedSpace = mockSpace
+    let authStore = AuthStore(authRepository: authRepo, spaceRepository: spaceRepo)
     
     return RootView()
         .environment(authRepo)
         .environment(spaceRepo)
+        .environment(authStore)
         #if os(macOS)
         .frame(width: 1000, height: 700)
         #endif

@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct InvitationAlertView: View {
+    @Environment(AuthStore.self) private var authStore
     let invite: SpaceInvitation
     var spaceRepo: SpaceRepository
     
@@ -77,6 +78,7 @@ struct InvitationAlertView: View {
         Task {
             do {
                 try await spaceRepo.acceptInvitation(invite)
+                await authStore.refreshProfileAndSpaces()
             } catch {
                 await MainActor.run {
                     isProcessing = false
@@ -113,6 +115,7 @@ struct InvitationAlertView: View {
     let repo = SpaceRepository(client: SupabaseConfig.client)
     
     InvitationAlertView(invite: invite, spaceRepo: repo)
+        .environment(AuthStore(authRepository: AuthRepository(client: SupabaseConfig.client), spaceRepository: repo))
 }
 
 #Preview("Dark mode") {
@@ -129,5 +132,6 @@ struct InvitationAlertView: View {
     let repo = SpaceRepository(client: SupabaseConfig.client)
     
     InvitationAlertView(invite: invite, spaceRepo: repo)
+        .environment(AuthStore(authRepository: AuthRepository(client: SupabaseConfig.client), spaceRepository: repo))
         .preferredColorScheme(.dark)
 }

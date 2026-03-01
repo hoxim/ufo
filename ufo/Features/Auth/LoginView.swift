@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct LoginView: View {
-    @Environment(AuthRepository.self) private var authRepository
+    @Environment(AuthStore.self) private var authStore
     @State var email: String = ""
     @State var password: String = ""
     @State var error: String? = nil
@@ -19,23 +19,34 @@ struct LoginView: View {
     }
     
     var body: some View {
-        ZStack{
-            Color.backgroundSolid.ignoresSafeArea()
-            Card {
-                Text("auth.login.title").font(.title).bold().padding(.bottom, 44)
-                
-                UfoTextField(title: "auth.login.email", text: $email)
-                
-                UfoSecureField(title: "auth.login.password", text: $password)
-                
-                Button("auth.login.button") {
-                    Task { await signIn() }
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Email", text: $email)
+                        #if os(iOS)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        #endif
+                    SecureField("Hasło", text: $password)
                 }
-                .ufoPrimaryButton()
-                .disabled(isFormValid)
-                .padding(.top, 44)
+
+                Section {
+                    Button {
+                        Task { await signIn() }
+                    } label: {
+                        if authStore.state == .checkingSession {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            Text("Zaloguj się")
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .disabled(!isFormValid || authStore.state == .checkingSession)
+                }
             }
-            .padding([.leading, .trailing], 24)
+            .navigationTitle("Logowanie")
             .alert("auth.login.error.title", isPresented: $showError) {
                 Button("auth.login.ok", role: .cancel) { }
             } message: {
@@ -53,10 +64,9 @@ struct LoginView: View {
     
     
     private func signIn() async {
-        do {
-            try await authRepository.signIn(email: email, password: password)
-        } catch {
-            self.error = error.localizedDescription
+        await authStore.signIn(email: email, password: password)
+        if let storeError = authStore.errorMessage {
+            self.error = storeError
             showError = true
         }
     }
@@ -64,13 +74,19 @@ struct LoginView: View {
 
 #Preview("Logged Out State") {
     let mockRepo = AuthMock.makeRepository(isLoggedIn: false)
+    let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
+    let authStore = AuthStore(authRepository: mockRepo, spaceRepository: spaceRepo)
     return LoginView()
         .environment(mockRepo)
+        .environment(authStore)
 }
 
 #Preview("Login Dark Mode") {
     let mockRepo = AuthMock.makeRepository(isLoggedIn: true)
+    let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
+    let authStore = AuthStore(authRepository: mockRepo, spaceRepository: spaceRepo)
     return LoginView()
         .environment(mockRepo)
+        .environment(authStore)
         .preferredColorScheme(.dark)
 }

@@ -50,9 +50,45 @@ final class Space {
 }
 
 enum SpaceType: String, Codable, CaseIterable, Identifiable {
+    case `private` = "Private"
+    case shared = "Shared"
     case family = "Family"
     case work = "Work"
     case personal = "Personal"
     
     var id: String { self.rawValue }
+
+    var allowsInvitations: Bool {
+        switch self {
+        case .private, .personal:
+            return false
+        case .shared, .family, .work:
+            return true
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .private, .personal:
+            return "Private"
+        case .shared, .family, .work:
+            return "Shared"
+        }
+    }
+}
+
+extension SpaceType {
+    init(category: String) {
+        self = SpaceType(rawValue: category) ?? .shared
+    }
+}
+
+extension Space {
+    var type: SpaceType {
+        SpaceType(category: category)
+    }
+
+    var allowsInvitations: Bool {
+        type.allowsInvitations
+    }
 }

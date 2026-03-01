@@ -4,14 +4,20 @@ struct InviteMemberView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(SpaceRepository.self) private var spaceRepo
 
-    let spaceId: UUID
+    let space: Space
 
     @State private var viewModel: InviteViewModel?
 
     var body: some View {
         NavigationStack {
             Group {
-                if let vm = viewModel {
+                if !space.allowsInvitations {
+                    ContentUnavailableView(
+                        "To jest Private Space",
+                        systemImage: "lock.fill",
+                        description: Text("Aby zaprosić osoby, utwórz Space typu Shared.")
+                    )
+                } else if let vm = viewModel {
                     InviteForm(vm: vm)
                 } else {
                     ProgressView()
@@ -33,7 +39,7 @@ struct InviteMemberView: View {
             if viewModel == nil {
                 viewModel = InviteViewModel(
                     spaceRepository: spaceRepo,
-                    spaceId: spaceId
+                    spaceId: space.id
                 )
             }
         }
@@ -90,4 +96,18 @@ struct InviteForm: View {
             Text(vm.message ?? "")
         }
     }
+}
+
+#Preview("Invite Allowed") {
+    let repo = SpaceRepository(client: SupabaseConfig.client)
+    let space = Space(id: UUID(), name: "Team Ops", inviteCode: "ABC123", category: SpaceType.shared.rawValue)
+    InviteMemberView(space: space)
+        .environment(repo)
+}
+
+#Preview("Invite Blocked") {
+    let repo = SpaceRepository(client: SupabaseConfig.client)
+    let space = Space(id: UUID(), name: "Personal", inviteCode: "ABC123", category: SpaceType.personal.rawValue)
+    InviteMemberView(space: space)
+        .environment(repo)
 }
