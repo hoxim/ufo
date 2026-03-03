@@ -11,26 +11,8 @@ struct RootView: View {
     @Environment(AuthStore.self) private var authStore
     @Environment(SpaceRepository.self) private var spaceRepository
     
-    @State private var selectedTab: TabItem = .missions
-    
-    // Obsługa arkuszy (sheets)
-    @State private var showInviteSheet = false
-    @State private var showProfileSheet = false
-    @State private var showSettingsSheet = false
-
-    private var canInviteInSelectedSpace: Bool {
-        guard
-            let user = authStore.currentUser,
-            let selectedSpace = spaceRepository.selectedSpace,
-            selectedSpace.allowsInvitations
-        else {
-            return false
-        }
-
-        return user.memberships.contains {
-            $0.space?.id == selectedSpace.id && $0.role == "admin"
-        }
-    }
+    @State private var selectedTab: TabItem = .home
+    private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
     var body: some View {
         ZStack {
@@ -62,72 +44,25 @@ struct RootView: View {
         .animation(.easeInOut, value: spaceRepository.selectedSpace)
         .animation(.spring(), value: spaceRepository.pendingInvitation)
         .task {
+            guard !isPreview else { return }
             if authStore.state == .checkingSession {
                 await authStore.bootstrap()
             }
             await startBackgroundSync()
         }
-        .sheet(isPresented: $showInviteSheet) {
-            if let selectedSpace = spaceRepository.selectedSpace {
-                InviteMemberView(space: selectedSpace)
-                    .presentationDetents([.medium])
-            }
-        }
-        .sheet(isPresented: $showProfileSheet) {
-            UserProfileView()
-                #if os(macOS)
-                .frame(minWidth: 480, minHeight: 560)
-                #endif
-        }
-        .sheet(isPresented: $showSettingsSheet) {
-            AppSettingsView()
-                #if os(macOS)
-                .frame(minWidth: 480, minHeight: 560)
-                #endif
-        }
     }
 
-    // MARK: - Layout Switcher
+    // MARK: - Layout
     @ViewBuilder
     private var mainNavigationLayout: some View {
         #if os(macOS)
-        SidebarMenuView(selectedTab: $selectedTab, profileMenu: AnyView(profileMenuButton))
+        SidebarMenuView(selectedTab: $selectedTab)
         #else
-        TabMenuView(selectedTab: $selectedTab, profileMenu: AnyView(profileMenuButton))
+        TabMenuView(selectedTab: $selectedTab)
         #endif
     }
 
-    // MARK: - Shared Components
-    private var profileMenuButton: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            UserAvatarView(
-                user: authStore.currentUser,
-                onSettings: { showSettingsSheet = true },
-                onProfile: { showProfileSheet = true },
-                onLogout: { Task { await authStore.signOut() } }
-            )
-            #if os(macOS)
-            if let selectedSpace = spaceRepository.selectedSpace, !selectedSpace.allowsInvitations {
-                Text("Private Space: utwórz Shared, aby zapraszać.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            } else if !canInviteInSelectedSpace {
-                Text("Tylko administrator może zapraszać.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            } else {
-                Button {
-                    showInviteSheet = true
-                } label: {
-                    Label("Invite to Space", systemImage: "envelope")
-                }
-                .buttonStyle(.bordered)
-                .font(.caption)
-            }
-            #endif
-        }
-    }
-
+    /// Handles start background sync.
     private func startBackgroundSync() async {
         while !authStore.isLoggedIn {
             try? await Task.sleep(nanoseconds: 1 * 1_000_000_000)
@@ -149,7 +84,7 @@ struct RootView: View {
 
 // MARK: - Shared Models
 enum TabItem: Hashable {
-    case missions, incidents, links, budget, lists, locations, messages, profile, spaces
+    case home, budget, people, spaces
 }
 
 #Preview {
@@ -173,6 +108,7 @@ enum TabItem: Hashable {
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
     spaceRepo.selectedSpace = mockSpace
     let authStore = AuthStore(authRepository: authRepo, spaceRepository: spaceRepo)
+    authStore.state = .ready
     
     return RootView()
         .environment(authRepo)

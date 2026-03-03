@@ -2,13 +2,10 @@ import Foundation
 import SwiftData
 
 @Model
-final class SharedList {
+final class NoteFolder {
     @Attribute(.unique) var id: UUID
     var spaceId: UUID
     var name: String
-    var type: String
-    var iconName: String?
-    var iconColorHex: String?
     var createdBy: UUID?
     var createdAt: Date
     var updatedAt: Date
@@ -17,24 +14,16 @@ final class SharedList {
     var deletedAt: Date?
     var pendingSync: Bool
 
-    @Relationship(deleteRule: .cascade)
-    var items: [SharedListItem] = []
-
+    /// Creates folder model used to group notes in one space.
     init(
         id: UUID = UUID(),
         spaceId: UUID,
         name: String,
-        type: String = "shopping",
-        iconName: String? = "checklist",
-        iconColorHex: String? = "#6366F1",
         createdBy: UUID? = nil
     ) {
         self.id = id
         self.spaceId = spaceId
         self.name = name
-        self.type = type
-        self.iconName = iconName
-        self.iconColorHex = iconColorHex
         self.createdBy = createdBy
         self.createdAt = .now
         self.updatedAt = .now
@@ -43,11 +32,4 @@ final class SharedList {
         self.deletedAt = nil
         self.pendingSync = false
     }
-}
-
-enum SharedListType: String, CaseIterable, Identifiable {
-    case shopping = "shopping"
-    case goals = "goals"
-
-    var id: String { rawValue }
 }

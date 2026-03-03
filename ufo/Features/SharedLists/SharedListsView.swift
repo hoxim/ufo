@@ -7,97 +7,124 @@ struct SharedListsView: View {
     @Environment(AuthRepository.self) private var authRepo
 
     @State private var listStore: SharedListStore?
-    @State private var newListName = ""
-    @State private var selectedType: SharedListType = .shopping
-    @State private var newItemTextByList: [UUID: String] = [:]
+    @State private var isAddingList = false
+    @State private var navPath: [UUID] = []
 
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
     var body: some View {
-        NavigationStack {
-            List {
-                if let error = listStore?.lastErrorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-
-                Section("New list") {
-                    TextField("List name", text: $newListName)
-                    Picker("Type", selection: $selectedType) {
-                        ForEach(SharedListType.allCases) { type in
-                            Text(type.rawValue.capitalized).tag(type)
-                        }
-                    }
-                    Button("Create list") {
-                        Task {
-                            await listStore?.addList(
-                                name: newListName.trimmingCharacters(in: .whitespacesAndNewlines),
-                                type: selectedType,
-                                actor: authRepo.currentUser?.id
-                            )
-                            newListName = ""
-                        }
-                    }
-                    .disabled(newListName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-
-                ForEach(listStore?.lists ?? []) { list in
-                    Section(list.name) {
-                        ForEach(listStore?.itemsByList[list.id] ?? []) { item in
-                            HStack {
-                                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(item.isCompleted ? .green : .secondary)
-                                    .onTapGesture {
-                                        Task { await listStore?.toggleItem(item, actor: authRepo.currentUser?.id) }
-                                    }
-                                Text(item.title)
-                            }
-                        }
-
-                        HStack {
-                            TextField("New item", text: bindingForItemInput(list.id))
-                            Button {
-                                Task {
-                                    let value = newItemTextByList[list.id, default: ""].trimmingCharacters(in: .whitespacesAndNewlines)
-                                    guard !value.isEmpty else { return }
-                                    await listStore?.addItem(listId: list.id, title: value)
-                                    newItemTextByList[list.id] = ""
-                                }
-                            } label: {
-                                Image(systemName: "plus.circle.fill")
-                            }
-                        }
-                    }
+        NavigationStack(path: $navPath) {
+            Group {
+                if let store = listStore {
+                    content(store: store)
+                } else {
+                    ProgressView("Loading Lists...")
                 }
             }
             .navigationTitle("Shared Lists")
             .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        isAddingList = true
+                    } label: {
+                        Label("Add List", systemImage: "plus")
+                    }
+                    .disabled(spaceRepo.selectedSpace == nil || listStore == nil)
+                }
                 ToolbarItem(placement: .automatic) {
                     Button {
                         Task { await listStore?.syncPending() }
                     } label: {
                         Label("Sync", systemImage: "arrow.triangle.2.circlepath")
                     }
+                    .disabled(listStore?.isSyncing == true || spaceRepo.selectedSpace == nil)
+                }
+            }
+            .sheet(isPresented: $isAddingList) {
+                if let listStore {
+                    AddSharedListView(
+                        store: listStore,
+                        actorId: authRepo.currentUser?.id
+                    ) { createdListId in
+                        navPath.append(createdListId)
+                    }
+                    #if os(iOS)
+                    .presentationDetents([.medium, .large])
+                    #endif
+                    #if os(macOS)
+                    .frame(minWidth: 560, minHeight: 520)
+                    #endif
+                }
+            }
+            .navigationDestination(for: UUID.self) { listId in
+                if let listStore {
+                    SharedListDetailView(
+                        store: listStore,
+                        listId: listId,
+                        actorId: authRepo.currentUser?.id
+                    )
+                } else {
+                    ProgressView("Loading list...")
                 }
             }
             .task { await setupStoreIfNeeded() }
             .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
                 listStore?.setSpace(newValue)
+                navPath = []
                 Task { await listStore?.refreshRemote() }
             }
         }
     }
 
-    private func bindingForItemInput(_ listId: UUID) -> Binding<String> {
-        Binding {
-            newItemTextByList[listId, default: ""]
-        } set: {
-            newItemTextByList[listId] = $0
+    @ViewBuilder
+    /// Renders main list content.
+    private func content(store: SharedListStore) -> some View {
+        if store.lists.isEmpty {
+            VStack(spacing: 12) {
+                Image(systemName: "list.bullet.clipboard")
+                    .font(.title)
+                    .foregroundStyle(.secondary)
+                Text("No lists yet")
+                    .font(.headline)
+                Text("Use + in the top-right corner to create a list.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            List {
+                if let error = store.lastErrorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+
+                ForEach(store.lists) { list in
+                    NavigationLink(value: list.id) {
+                        HStack(spacing: 12) {
+                            Image(systemName: list.iconName ?? "checklist")
+                                .foregroundStyle(Color(hex: list.iconColorHex ?? "#6366F1"))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(list.name)
+                                    .font(.headline)
+                                Text(list.type.capitalized)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            let count = store.itemsByList[list.id]?.count ?? 0
+                            Text("\(count)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
         }
     }
 
     @MainActor
+    /// Sets up store if needed.
     private func setupStoreIfNeeded() async {
         guard listStore == nil else { return }
         let repo = SharedListRepository(client: SupabaseConfig.client, context: modelContext)
@@ -108,6 +135,180 @@ struct SharedListsView: View {
         if !isPreview {
             await store.refreshRemote()
         }
+    }
+}
+
+private struct AddSharedListView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let store: SharedListStore
+    let actorId: UUID?
+    let onCreated: (UUID) -> Void
+
+    @State private var name = ""
+    @State private var selectedType: SharedListType = .shopping
+    @State private var selectedIconName = "checklist"
+    @State private var selectedIconColorHex = "#6366F1"
+    @State private var isSaving = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("List name", text: $name)
+                Picker("Type", selection: $selectedType) {
+                    ForEach(SharedListType.allCases) { type in
+                        Text(type.rawValue.capitalized).tag(type)
+                    }
+                }
+                OperationStylePicker(iconName: $selectedIconName, colorHex: $selectedIconColorHex)
+            }
+            .navigationTitle("New List")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        Task {
+                            await saveList()
+                        }
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Text("Create")
+                        }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
+                }
+            }
+        }
+    }
+
+    @MainActor
+    /// Saves a new list and opens its detail view.
+    private func saveList() async {
+        isSaving = true
+        defer { isSaving = false }
+
+        let listId = await store.addList(
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            type: selectedType,
+            iconName: selectedIconName,
+            iconColorHex: selectedIconColorHex,
+            actor: actorId
+        )
+        guard let listId else { return }
+        dismiss()
+        onCreated(listId)
+    }
+}
+
+private struct SharedListDetailView: View {
+    let store: SharedListStore
+    let listId: UUID
+    let actorId: UUID?
+
+    @State private var newItemName = ""
+
+    private var list: SharedList? {
+        store.lists.first { $0.id == listId }
+    }
+
+    private var items: [SharedListItem] {
+        store.itemsByList[listId] ?? []
+    }
+
+    var body: some View {
+        List {
+            if let error = store.lastErrorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            Section("New item") {
+                HStack {
+                    TextField("Item name", text: $newItemName)
+                    Button {
+                        Task {
+                            await addItem()
+                        }
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                    }
+                    .disabled(newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+
+            Section("Items") {
+                if items.isEmpty {
+                    Text("No items yet")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(items) { item in
+                    HStack {
+                        Button {
+                            Task {
+                                await store.toggleItem(item, actor: actorId)
+                            }
+                        } label: {
+                            Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(item.isCompleted ? .green : .secondary)
+                        }
+                        .buttonStyle(.plain)
+                        Text(item.title)
+                            .strikethrough(item.isCompleted)
+                        Spacer()
+                        Menu {
+                            Button(role: .destructive) {
+                                Task {
+                                    await store.deleteItem(item, actor: actorId)
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.title3)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .onDelete { offsets in
+                    let values = offsets.map { items[$0] }
+                    Task {
+                        for item in values {
+                            await store.deleteItem(item, actor: actorId)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle(list?.name ?? "List")
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    Task {
+                        await store.syncPending()
+                    }
+                } label: {
+                    Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                }
+            }
+        }
+    }
+
+    @MainActor
+    /// Adds a new item to the current list.
+    private func addItem() async {
+        let value = newItemName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
+        await store.addItem(listId: listId, title: value)
+        newItemName = ""
     }
 }
 

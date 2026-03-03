@@ -18,6 +18,7 @@ final class LocationStore {
         self.repository = repository
     }
 
+    /// Sets space.
     func setSpace(_ spaceId: UUID?) {
         currentSpaceId = spaceId
         guard let spaceId else {
@@ -27,6 +28,7 @@ final class LocationStore {
         loadLocal(spaceId: spaceId)
     }
 
+    /// Loads local.
     func loadLocal(spaceId: UUID) {
         do {
             pings = try repository.fetchLocal(spaceId: spaceId)
@@ -37,6 +39,7 @@ final class LocationStore {
         }
     }
 
+    /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true
@@ -52,6 +55,7 @@ final class LocationStore {
         }
     }
 
+    /// Handles add ping.
     func addPing(userId: UUID, userName: String, latitude: Double, longitude: Double, actor: UUID?) async {
         guard let spaceId = currentSpaceId else { return }
         do {
@@ -70,6 +74,7 @@ final class LocationStore {
         }
     }
 
+    /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true

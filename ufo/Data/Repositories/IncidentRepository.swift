@@ -27,6 +27,7 @@ final class IncidentRepository {
         let updatedBy: UUID?
         let deletedAt: Date?
         let iconName: String?
+        let iconColorHex: String?
 
         enum CodingKeys: String, CodingKey {
             case id, title, description, version
@@ -39,6 +40,7 @@ final class IncidentRepository {
             case updatedBy = "updated_by"
             case deletedAt = "deleted_at"
             case iconName = "icon_name"
+            case iconColorHex = "icon_color_hex"
         }
     }
 
@@ -55,8 +57,10 @@ final class IncidentRepository {
         let updated_by: UUID?
         let deleted_at: Date?
         let icon_name: String?
+        let icon_color_hex: String?
     }
 
+    /// Fetches all remote.
     private func fetchAllRemote(spaceId: UUID) async throws -> [IncidentRecord] {
         try await client
             .from("incidents")
@@ -68,6 +72,7 @@ final class IncidentRepository {
             .value
     }
 
+    /// Fetches by id remote.
     func fetchByIdRemote(id: UUID) async throws -> IncidentRecord? {
         try await client
             .from("incidents")
@@ -78,6 +83,7 @@ final class IncidentRepository {
             .value
     }
 
+    /// Fetches all local.
     func fetchAllLocal(spaceId: UUID) throws -> [Incident] {
         guard let context else { return [] }
         return try context.fetch(
@@ -88,6 +94,7 @@ final class IncidentRepository {
         )
     }
 
+    /// Creates local.
     func createLocal(spaceId: UUID, title: String, description: String?, occurrenceDate: Date, createdBy: UUID?) throws -> Incident {
         guard let context else { throw RepositoryError.missingLocalContext }
         let incident = Incident(
@@ -103,6 +110,7 @@ final class IncidentRepository {
         return incident
     }
 
+    /// Handles mark updated local.
     func markUpdatedLocal(_ incident: Incident, title: String? = nil, description: String? = nil, occurrenceDate: Date? = nil, updatedBy: UUID?) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         if let title { incident.title = title }
@@ -116,6 +124,7 @@ final class IncidentRepository {
         try context?.save()
     }
 
+    /// Handles soft delete local.
     func softDeleteLocal(_ incident: Incident, updatedBy: UUID?) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         incident.deletedAt = .now
@@ -127,6 +136,7 @@ final class IncidentRepository {
         try context?.save()
     }
 
+    /// Handles upsert remote.
     func upsertRemote(_ incident: Incident) async throws {
         let payload = IncidentPayload(
             id: incident.id,
@@ -140,7 +150,8 @@ final class IncidentRepository {
             updated_at: incident.updatedAt,
             updated_by: incident.updatedBy,
             deleted_at: incident.deletedAt,
-            icon_name: incident.iconName
+            icon_name: incident.iconName,
+            icon_color_hex: incident.iconColorHex
         )
 
         try await client
@@ -149,6 +160,7 @@ final class IncidentRepository {
             .execute()
     }
 
+    /// Handles pull remote to local.
     func pullRemoteToLocal(spaceId: UUID) async throws {
         guard let context else { return }
         let remote = try await fetchAllRemote(spaceId: spaceId)
@@ -173,6 +185,7 @@ final class IncidentRepository {
                     local.version = record.version
                     local.deletedAt = record.deletedAt
                     local.iconName = record.iconName
+                    local.iconColorHex = record.iconColorHex
                     local.pendingSync = false
                 }
             } else {
@@ -183,6 +196,7 @@ final class IncidentRepository {
                     incidentDescription: record.description,
                     occurrenceDate: record.occurrenceDate,
                     iconName: record.iconName,
+                    iconColorHex: record.iconColorHex,
                     createdBy: record.createdBy
                 )
                 incident.createdAt = record.createdAt ?? .now
@@ -199,6 +213,7 @@ final class IncidentRepository {
         try context.save()
     }
 
+    /// Syncs pending local.
     func syncPendingLocal(spaceId: UUID) async throws {
         guard let context else { return }
         let pending = try context.fetch(

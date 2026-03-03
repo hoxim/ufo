@@ -30,6 +30,7 @@ final class MissionRepository {
         let updatedBy: UUID?
         let deletedAt: Date?
         let iconName: String?
+        let iconColorHex: String?
 
         enum CodingKeys: String, CodingKey {
             case id, title, description, difficulty, version
@@ -42,6 +43,7 @@ final class MissionRepository {
             case updatedBy = "updated_by"
             case deletedAt = "deleted_at"
             case iconName = "icon_name"
+            case iconColorHex = "icon_color_hex"
         }
     }
 
@@ -59,10 +61,12 @@ final class MissionRepository {
         let updated_by: UUID?
         let deleted_at: Date?
         let icon_name: String?
+        let icon_color_hex: String?
     }
 
     // MARK: - Backward compatibility (old API used in MissionStore)
 
+    /// Fetches mission.
     func fetchMission(id: UUID) async throws -> MissionRecord? {
         let mission: MissionRecord? = try await client
             .from("missions")
@@ -74,6 +78,7 @@ final class MissionRepository {
         return mission
     }
 
+    /// Updates mission.
     func updateMission(_ mission: Mission) async throws {
         let payload = MissionUpsertPayload(
             id: mission.id,
@@ -88,7 +93,8 @@ final class MissionRepository {
             updated_at: mission.updatedAt,
             updated_by: mission.updatedBy,
             deleted_at: mission.deletedAt,
-            icon_name: mission.iconName
+            icon_name: mission.iconName,
+            icon_color_hex: mission.iconColorHex
         )
 
         try await client
@@ -99,6 +105,7 @@ final class MissionRepository {
 
     // MARK: - CRUD + helpers (local-first)
 
+    /// Fetches all remote.
     private func fetchAllRemote(spaceId: UUID) async throws -> [MissionRecord] {
         try await client
             .from("missions")
@@ -110,6 +117,7 @@ final class MissionRepository {
             .value
     }
 
+    /// Fetches by id remote.
     func fetchByIdRemote(id: UUID) async throws -> MissionRecord? {
         try await client
             .from("missions")
@@ -120,6 +128,7 @@ final class MissionRepository {
             .value
     }
 
+    /// Fetches all local.
     func fetchAllLocal(spaceId: UUID) throws -> [Mission] {
         guard let context else { return [] }
         let descriptor = FetchDescriptor<Mission>(
@@ -129,6 +138,7 @@ final class MissionRepository {
         return try context.fetch(descriptor)
     }
 
+    /// Fetches local.
     func fetchLocal(id: UUID) throws -> Mission? {
         guard let context else { return nil }
         let descriptor = FetchDescriptor<Mission>(
@@ -137,6 +147,7 @@ final class MissionRepository {
         return try context.fetch(descriptor).first
     }
 
+    /// Creates local.
     func createLocal(spaceId: UUID, title: String, description: String, difficulty: Int, createdBy: UUID?) throws -> Mission {
         guard let context else { throw RepositoryError.missingLocalContext }
         let mission = Mission(
@@ -152,6 +163,7 @@ final class MissionRepository {
         return mission
     }
 
+    /// Handles mark updated local.
     func markUpdatedLocal(_ mission: Mission, title: String? = nil, description: String? = nil, difficulty: Int? = nil, isCompleted: Bool? = nil, updatedBy: UUID?) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         if let title { mission.title = title }
@@ -166,6 +178,7 @@ final class MissionRepository {
         try context?.save()
     }
 
+    /// Handles soft delete local.
     func softDeleteLocal(_ mission: Mission, updatedBy: UUID?) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         mission.deletedAt = .now
@@ -177,10 +190,12 @@ final class MissionRepository {
         try context?.save()
     }
 
+    /// Handles upsert remote.
     func upsertRemote(_ mission: Mission) async throws {
         try await updateMission(mission)
     }
 
+    /// Handles pull remote to local.
     func pullRemoteToLocal(spaceId: UUID) async throws {
         guard let context else { return }
         let remote = try await fetchAllRemote(spaceId: spaceId)
@@ -201,6 +216,7 @@ final class MissionRepository {
                     local.version = record.version
                     local.deletedAt = record.deletedAt
                     local.iconName = record.iconName
+                    local.iconColorHex = record.iconColorHex
                     local.pendingSync = false
                 }
             } else {
@@ -211,6 +227,7 @@ final class MissionRepository {
                     missionDescription: record.description,
                     difficulty: record.difficulty,
                     iconName: record.iconName,
+                    iconColorHex: record.iconColorHex,
                     createdBy: record.createdBy
                 )
                 mission.isCompleted = record.isCompleted
@@ -227,6 +244,7 @@ final class MissionRepository {
         try context.save()
     }
 
+    /// Syncs pending local.
     func syncPendingLocal(spaceId: UUID) async throws {
         guard let context else { return }
         let pending = try context.fetch(

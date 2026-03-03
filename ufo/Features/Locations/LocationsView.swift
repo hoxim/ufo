@@ -6,89 +6,98 @@ struct LocationsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(SpaceRepository.self) private var spaceRepo
     @Environment(AuthRepository.self) private var authRepo
-
-    @State private var locationStore: LocationStore?
-    @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 52.2297, longitude: 21.0122),
-        span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2)
-    )
-    @State private var latitudeText = "52.2297"
-    @State private var longitudeText = "21.0122"
-
+    
+    @State private var locationViewModel: LocationViewModel
+    
+    init() {
+        _locationViewModel = State(wrappedValue: LocationViewModel())
+    }
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
-                Map(coordinateRegion: $region, annotationItems: latestPins()) { pin in
-                    MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)) {
-                        VStack(spacing: 4) {
-                            Image(systemName: "mappin.circle.fill")
+            ZStack {
+                Color(.systemGroupedBackground).ignoresSafeArea(edges: .all)
+                
+                VStack(spacing: 12) {
+                    MapSectionView(
+                        region: $locationViewModel.region,
+                        pins: latestPins(),
+                        currentLocation: locationViewModel.currentLocation,
+                        onAppear: centerOnLatestPin
+                    )
+                    
+                    Form {
+                        if let error = locationViewModel.locationErrorMessage {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+
+                        if let error = locationViewModel.locationStore?.lastErrorMessage {
+                            Text(error)
+                                .font(.caption)
                                 .foregroundStyle(.red)
-                            Text(pin.userDisplayName)
-                                .font(.caption2)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(.thinMaterial, in: Capsule())
+                        }
+                        Section("Add a new location") {
+                            Button {
+                                locationViewModel.useCurrentLocationForInput()
+                            } label: {
+                                Label("Use current location", systemImage: "location.fill")
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                            TextField("Latitude", text: $locationViewModel.latitudeText)
+#if os(iOS)
+                                .keyboardType(.decimalPad)
+#endif
+                            TextField("Longitude", text: $locationViewModel.longitudeText)
+#if os(iOS)
+                                .keyboardType(.decimalPad)
+#endif
+                            
+                            Button("Save my location") {
+                                Task { await addLocationPing() }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .disabled(authRepo.currentUser == nil)
+                        }
+                        
+                    }
+                }
+                .padding()
+                .navigationTitle("Family Map")
+                .toolbar {
+                    ToolbarItem(placement: .automatic) {
+                        Button {
+                            Task { await locationViewModel.locationStore?.syncPending() }
+                        } label: {
+                            Label("Sync", systemImage: "arrow.triangle.2.circlepath")
                         }
                     }
                 }
-                .frame(minHeight: 280)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .onAppear {
+                .task {
+                    await locationViewModel.setup(modelContext: modelContext, spaceRepo: spaceRepo, isPreview: isPreview)
+                }
+                .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
+                    Task { await locationViewModel.handleSpaceChange(newValue) }
+                }
+                .onChange(of: locationViewModel.locationStore?.pings.count) { _, _ in
                     centerOnLatestPin()
                 }
-
-                Form {
-                    if let error = locationStore?.lastErrorMessage {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                    }
-
-                    Section("Quick update") {
-                        TextField("Latitude", text: $latitudeText)
-                            #if os(iOS)
-                            .keyboardType(.decimalPad)
-                            #endif
-                        TextField("Longitude", text: $longitudeText)
-                            #if os(iOS)
-                            .keyboardType(.decimalPad)
-                            #endif
-
-                        Button("Save my location") {
-                            Task { await addLocationPing() }
-                        }
-                    }
+                .onDisappear {
+                    locationViewModel.stopTracking()
                 }
-            }
-            .padding()
-            .navigationTitle("Family Map")
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        Task { await locationStore?.syncPending() }
-                    } label: {
-                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                }
-            }
-            .task { await setupStoreIfNeeded() }
-            .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
-                locationStore?.setSpace(newValue)
-                Task { await locationStore?.refreshRemote() }
-            }
-            .onChange(of: locationStore?.pings.count) { _, _ in
-                centerOnLatestPin()
             }
         }
     }
 
+    /// Handles latest pins.
     private func latestPins() -> [LocationPing] {
         var seen: Set<UUID> = []
         var latest: [LocationPing] = []
 
-        for ping in locationStore?.pings ?? [] {
+        for ping in locationViewModel.locationStore?.pings ?? [] {
             if !seen.contains(ping.userId) {
                 seen.insert(ping.userId)
                 latest.append(ping)
@@ -98,43 +107,84 @@ struct LocationsView: View {
         return latest
     }
 
+    /// Handles center on latest pin.
     private func centerOnLatestPin() {
-        guard let first = latestPins().first else { return }
-        region.center = CLLocationCoordinate2D(latitude: first.latitude, longitude: first.longitude)
+        locationViewModel.centerOnLatestPin()
     }
 
+    /// Handles add location ping.
     private func addLocationPing() async {
         guard
-            let latitude = Double(latitudeText.replacingOccurrences(of: ",", with: ".")),
-            let longitude = Double(longitudeText.replacingOccurrences(of: ",", with: ".")),
+            let coordinate = locationViewModel.parsedInputCoordinate(),
             let user = authRepo.currentUser
         else {
-            locationStore?.lastErrorMessage = "Niepoprawne współrzędne lub użytkownik."
+            locationViewModel.locationStore?.lastErrorMessage = "Niepoprawne współrzędne lub użytkownik."
             return
         }
 
-        await locationStore?.addPing(
+        await locationViewModel.locationStore?.addPing(
             userId: user.id,
             userName: user.fullName ?? user.email,
-            latitude: latitude,
-            longitude: longitude,
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
             actor: user.id
         )
     }
+}
 
-    @MainActor
-    private func setupStoreIfNeeded() async {
-        guard locationStore == nil else { return }
+private struct MapSectionView: View {
+    @Binding var region: MKCoordinateRegion
+    let pins: [LocationPing]
+    let currentLocation: CLLocation?
+    let onAppear: () -> Void
 
-        let repo = LocationRepository(client: SupabaseConfig.client, context: modelContext)
-        let store = LocationStore(modelContext: modelContext, repository: repo)
-        locationStore = store
-        store.setSpace(spaceRepo.selectedSpace?.id)
-
-        if !isPreview {
-            await store.refreshRemote()
+    var body: some View {
+        Map(coordinateRegion: $region, annotationItems: annotationItems) { item in
+            MapMarker(coordinate: item.coordinate, tint: item.tint)
+        }
+        .overlay(alignment: .topLeading) {
+            if let currentLocation {
+                Label("Current position", systemImage: "location.fill")
+                    .font(.caption)
+                    .padding(8)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(8)
+            }
+        }
+        .frame(minHeight: 280)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .onAppear {
+            onAppear()
         }
     }
+
+    /// Builds one annotation item list for map.
+    private var annotationItems: [MapPoint] {
+        var values: [MapPoint] = pins.map { pin in
+            MapPoint(
+                id: pin.id,
+                coordinate: CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude),
+                tint: .red
+            )
+        }
+        if let currentLocation {
+            values.insert(
+                MapPoint(
+                    id: UUID(),
+                    coordinate: currentLocation.coordinate,
+                    tint: .blue
+                ),
+                at: 0
+            )
+        }
+        return values
+    }
+}
+
+private struct MapPoint: Identifiable {
+    let id: UUID
+    let coordinate: CLLocationCoordinate2D
+    let tint: Color
 }
 
 #Preview("Locations") {

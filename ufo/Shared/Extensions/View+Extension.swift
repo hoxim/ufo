@@ -8,8 +8,9 @@
 import SwiftUI
 
 extension View {
-    /// Ustawia styl tytułu na inline tylko na iOS. Na macOS nic nie robi.
+    /// Applies inline navigation title style on iOS only.
     @ViewBuilder
+    /// Handles inline navigation title.
     func inlineNavigationTitle() -> some View {
         #if os(iOS)
         self.navigationBarTitleDisplayMode(.inline)

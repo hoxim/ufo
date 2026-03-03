@@ -48,6 +48,7 @@ final class LinkRepository {
         }
     }
 
+    /// Fetches all local.
     func fetchAllLocal(scopeId: UUID) throws -> [LinkedThing] {
         guard let context else { return [] }
         return try context.fetch(
@@ -58,6 +59,7 @@ final class LinkRepository {
         )
     }
 
+    /// Creates local.
     func createLocal(thingId: UUID?, parentId: UUID, childId: UUID, actor: UUID?) throws -> LinkedThing {
         guard let context else { throw RepositoryError.missingLocalContext }
         let link = LinkedThing(
@@ -72,6 +74,7 @@ final class LinkRepository {
         return link
     }
 
+    /// Handles soft delete local.
     func softDeleteLocal(_ link: LinkedThing, actor: UUID?) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         link.deletedAt = .now
@@ -82,6 +85,7 @@ final class LinkRepository {
         try context?.save()
     }
 
+    /// Handles upsert remote.
     func upsertRemote(_ link: LinkedThing) async throws {
         let payload = LinkPayload(
             id: link.id,
@@ -101,6 +105,7 @@ final class LinkRepository {
             .execute()
     }
 
+    /// Fetches all remote.
     private func fetchAllRemote(scopeId: UUID) async throws -> [LinkRecord] {
         try await client
             .from("links")
@@ -112,6 +117,7 @@ final class LinkRepository {
             .value
     }
 
+    /// Handles pull remote to local.
     func pullRemoteToLocal(scopeId: UUID) async throws {
         guard let context else { return }
         let remote = try await fetchAllRemote(scopeId: scopeId)
@@ -155,6 +161,7 @@ final class LinkRepository {
         try context.save()
     }
 
+    /// Syncs pending local.
     func syncPendingLocal(scopeId: UUID) async throws {
         guard let context else { return }
         let pending = try context.fetch(

@@ -18,6 +18,7 @@ final class LinkStore {
         self.repository = repository
     }
 
+    /// Sets scope.
     func setScope(_ scopeId: UUID?) {
         currentScopeId = scopeId
         guard let scopeId else {
@@ -27,6 +28,7 @@ final class LinkStore {
         loadLocal(scopeId: scopeId)
     }
 
+    /// Loads local.
     func loadLocal(scopeId: UUID) {
         do {
             links = try repository.fetchAllLocal(scopeId: scopeId)
@@ -37,6 +39,7 @@ final class LinkStore {
         }
     }
 
+    /// Handles refresh remote.
     func refreshRemote() async {
         guard let scopeId = currentScopeId else { return }
         isSyncing = true
@@ -52,6 +55,7 @@ final class LinkStore {
         }
     }
 
+    /// Handles add link.
     func addLink(parentId: UUID, childId: UUID, actor: UUID?) async {
         guard let scopeId = currentScopeId else { return }
 
@@ -64,6 +68,7 @@ final class LinkStore {
         }
     }
 
+    /// Deletes link.
     func deleteLink(_ link: LinkedThing, actor: UUID?) async {
         guard let scopeId = currentScopeId else { return }
 
@@ -76,6 +81,7 @@ final class LinkStore {
         }
     }
 
+    /// Syncs pending.
     func syncPending() async {
         guard let scopeId = currentScopeId else { return }
         isSyncing = true

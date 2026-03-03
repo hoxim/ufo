@@ -6,6 +6,7 @@ ufo/Config.xcconfig
 
 # Pliki tymczasowe Xcode
 build/
+supabase/
 DerivedData/
 *.xcuserstate
 ufo.xcodeproj/xcuserdata/

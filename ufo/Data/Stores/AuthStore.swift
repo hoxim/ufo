@@ -30,6 +30,7 @@ final class AuthStore {
         authRepository.currentUser
     }
 
+    /// Handles bootstrap.
     func bootstrap() async {
         state = .checkingSession
         errorMessage = nil
@@ -43,6 +44,7 @@ final class AuthStore {
         await loadUserContext()
     }
 
+    /// Handles sign in.
     func signIn(email: String, password: String) async {
         errorMessage = nil
         state = .checkingSession
@@ -56,16 +58,19 @@ final class AuthStore {
         }
     }
 
+    /// Handles sign up.
     func signUp(email: String, password: String) async throws {
         try await authRepository.signUp(email: email, password: password)
     }
 
+    /// Handles sign out.
     func signOut() async {
         await authRepository.signOut()
         spaceRepository.selectedSpace = nil
         state = .signedOut
     }
 
+    /// Handles refresh profile and spaces.
     func refreshProfileAndSpaces() async {
         guard let userId = authRepository.currentUser?.id else { return }
         do {
@@ -76,6 +81,7 @@ final class AuthStore {
         }
     }
 
+    /// Loads user context.
     private func loadUserContext() async {
         state = .bootstrapping
 
@@ -107,6 +113,7 @@ final class AuthStore {
         }
     }
 
+    /// Handles ensure space selection.
     private func ensureSpaceSelection() async {
         let spaces = authRepository.currentUser?.memberships.compactMap(\.space) ?? []
         spaceRepository.restoreLastSelectedSpace(from: spaces)

@@ -82,6 +82,7 @@ struct MissionsListView: View {
     }
 
     @ViewBuilder
+    /// Handles content.
     private func content(store: MissionStore) -> some View {
         List {
             if let error = store.lastErrorMessage {
@@ -94,7 +95,7 @@ struct MissionsListView: View {
                 HStack {
                     if let iconName = mission.iconName, !iconName.isEmpty {
                         Image(systemName: iconName)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color(hex: mission.iconColorHex ?? "#F59E0B"))
                     }
                     Image(systemName: mission.isCompleted ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(mission.isCompleted ? .green : .gray)
@@ -169,6 +170,7 @@ struct MissionsListView: View {
     }
 
     @MainActor
+    /// Sets up store if needed.
     private func setupStoreIfNeeded() async {
         guard missionStore == nil else { return }
 
@@ -200,6 +202,7 @@ private struct EditMissionView: View {
     @State private var description: String
     @State private var difficulty: Int
     @State private var iconName: String
+    @State private var iconColorHex: String
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var imageData: Data?
     @State private var isSaving = false
@@ -211,7 +214,8 @@ private struct EditMissionView: View {
         _title = State(initialValue: mission.title)
         _description = State(initialValue: mission.missionDescription)
         _difficulty = State(initialValue: mission.difficulty)
-        _iconName = State(initialValue: mission.iconName ?? "")
+        _iconName = State(initialValue: mission.iconName ?? "target")
+        _iconColorHex = State(initialValue: mission.iconColorHex ?? "#F59E0B")
         _imageData = State(initialValue: mission.imageData)
     }
 
@@ -220,8 +224,8 @@ private struct EditMissionView: View {
             Form {
                 TextField("Mission Title", text: $title)
                 TextField("Briefing (Desc)", text: $description)
-                TextField("Icon (SF Symbol)", text: $iconName)
                 Stepper("Difficulty: \(difficulty)", value: $difficulty, in: 1...5)
+                OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                     Label("Select image", systemImage: "photo")
                 }
@@ -258,6 +262,7 @@ private struct EditMissionView: View {
     }
 
     @MainActor
+    /// Saves .
     private func save() async {
         isSaving = true
         defer { isSaving = false }
@@ -268,6 +273,7 @@ private struct EditMissionView: View {
             description: description,
             difficulty: difficulty,
             iconName: iconName.isEmpty ? nil : iconName,
+            iconColorHex: iconColorHex,
             imageData: imageData,
             userId: userId
         )
@@ -284,7 +290,8 @@ private struct AddMissionView: View {
     @State private var title = ""
     @State private var description = ""
     @State private var difficulty = 1
-    @State private var iconName = ""
+    @State private var iconName = "target"
+    @State private var iconColorHex = "#F59E0B"
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var imageData: Data?
     @State private var isSaving = false
@@ -294,8 +301,8 @@ private struct AddMissionView: View {
             Form {
                 TextField("Mission Title", text: $title)
                 TextField("Briefing (Desc)", text: $description)
-                TextField("Icon (SF Symbol)", text: $iconName)
                 Stepper("Difficulty: \(difficulty)", value: $difficulty, in: 1...5)
+                OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                     Label("Select image", systemImage: "photo")
                 }
@@ -332,6 +339,7 @@ private struct AddMissionView: View {
     }
 
     @MainActor
+    /// Saves .
     private func save() async {
         isSaving = true
         defer { isSaving = false }
@@ -341,6 +349,7 @@ private struct AddMissionView: View {
             description: description,
             difficulty: difficulty,
             iconName: iconName.isEmpty ? nil : iconName,
+            iconColorHex: iconColorHex,
             imageData: imageData,
             userId: userId
         )

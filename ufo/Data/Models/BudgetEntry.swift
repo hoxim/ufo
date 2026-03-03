@@ -9,6 +9,8 @@ final class BudgetEntry {
     var kind: String
     var amount: Double
     var category: String
+    var iconName: String?
+    var iconColorHex: String?
     var notes: String?
     var entryDate: Date
     var isRecurring: Bool
@@ -28,6 +30,8 @@ final class BudgetEntry {
         kind: String,
         amount: Double,
         category: String = "General",
+        iconName: String? = "dollarsign.circle",
+        iconColorHex: String? = "#22C55E",
         notes: String? = nil,
         entryDate: Date = .now,
         isRecurring: Bool = false,
@@ -40,6 +44,8 @@ final class BudgetEntry {
         self.kind = kind
         self.amount = amount
         self.category = category
+        self.iconName = iconName
+        self.iconColorHex = iconColorHex
         self.notes = notes
         self.entryDate = entryDate
         self.isRecurring = isRecurring

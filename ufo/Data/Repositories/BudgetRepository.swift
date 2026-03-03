@@ -19,6 +19,8 @@ final class BudgetRepository {
         let kind: String
         let amount: Double
         let category: String
+        let iconName: String?
+        let iconColorHex: String?
         let notes: String?
         let entryDate: Date
         let isRecurring: Bool
@@ -33,6 +35,8 @@ final class BudgetRepository {
         enum CodingKeys: String, CodingKey {
             case id, title, kind, amount, category, notes, version
             case spaceId = "space_id"
+            case iconName = "icon_name"
+            case iconColorHex = "icon_color_hex"
             case entryDate = "entry_date"
             case isRecurring = "is_recurring"
             case recurringInterval = "recurring_interval"
@@ -79,6 +83,8 @@ final class BudgetRepository {
         let kind: String
         let amount: Double
         let category: String
+        let icon_name: String?
+        let icon_color_hex: String?
         let notes: String?
         let entry_date: Date
         let is_recurring: Bool
@@ -104,6 +110,7 @@ final class BudgetRepository {
         let deleted_at: Date?
     }
 
+    /// Fetches entries local.
     func fetchEntriesLocal(spaceId: UUID) throws -> [BudgetEntry] {
         guard let context else { return [] }
         return try context.fetch(
@@ -114,6 +121,7 @@ final class BudgetRepository {
         )
     }
 
+    /// Fetches goals local.
     func fetchGoalsLocal(spaceId: UUID) throws -> [BudgetGoal] {
         guard let context else { return [] }
         return try context.fetch(
@@ -124,7 +132,8 @@ final class BudgetRepository {
         )
     }
 
-    func createEntryLocal(spaceId: UUID, title: String, kind: BudgetEntryKind, amount: Double, category: String, notes: String?, date: Date, recurring: Bool, recurringInterval: String?, actor: UUID?) throws -> BudgetEntry {
+    /// Creates entry local.
+    func createEntryLocal(spaceId: UUID, title: String, kind: BudgetEntryKind, amount: Double, category: String, iconName: String?, iconColorHex: String?, notes: String?, date: Date, recurring: Bool, recurringInterval: String?, actor: UUID?) throws -> BudgetEntry {
         guard let context else { throw RepositoryError.missingLocalContext }
         let entry = BudgetEntry(
             spaceId: spaceId,
@@ -132,6 +141,8 @@ final class BudgetRepository {
             kind: kind.rawValue,
             amount: amount,
             category: category,
+            iconName: iconName,
+            iconColorHex: iconColorHex,
             notes: notes,
             entryDate: date,
             isRecurring: recurring,
@@ -144,6 +155,7 @@ final class BudgetRepository {
         return entry
     }
 
+    /// Creates goal local.
     func createGoalLocal(spaceId: UUID, title: String, targetAmount: Double, currentAmount: Double, dueDate: Date?, actor: UUID?) throws -> BudgetGoal {
         guard let context else { throw RepositoryError.missingLocalContext }
         let goal = BudgetGoal(
@@ -160,6 +172,7 @@ final class BudgetRepository {
         return goal
     }
 
+    /// Handles mark entry deleted local.
     func markEntryDeletedLocal(_ entry: BudgetEntry, actor: UUID?) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         entry.deletedAt = .now
@@ -170,6 +183,7 @@ final class BudgetRepository {
         try context?.save()
     }
 
+    /// Handles mark goal updated local.
     func markGoalUpdatedLocal(_ goal: BudgetGoal, currentAmount: Double, actor: UUID?) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         goal.currentAmount = currentAmount
@@ -180,6 +194,7 @@ final class BudgetRepository {
         try context?.save()
     }
 
+    /// Handles upsert entry remote.
     private func upsertEntryRemote(_ entry: BudgetEntry) async throws {
         let payload = BudgetEntryPayload(
             id: entry.id,
@@ -188,6 +203,8 @@ final class BudgetRepository {
             kind: entry.kind,
             amount: entry.amount,
             category: entry.category,
+            icon_name: entry.iconName,
+            icon_color_hex: entry.iconColorHex,
             notes: entry.notes,
             entry_date: entry.entryDate,
             is_recurring: entry.isRecurring,
@@ -202,6 +219,7 @@ final class BudgetRepository {
         try await client.from("budget_entries").upsert(payload).execute()
     }
 
+    /// Handles upsert goal remote.
     private func upsertGoalRemote(_ goal: BudgetGoal) async throws {
         let payload = BudgetGoalPayload(
             id: goal.id,
@@ -220,6 +238,7 @@ final class BudgetRepository {
         try await client.from("budget_goals").upsert(payload).execute()
     }
 
+    /// Handles pull remote to local.
     func pullRemoteToLocal(spaceId: UUID) async throws {
         guard let context else { return }
 
@@ -240,6 +259,8 @@ final class BudgetRepository {
                     local.kind = record.kind
                     local.amount = record.amount
                     local.category = record.category
+                    local.iconName = record.iconName
+                    local.iconColorHex = record.iconColorHex
                     local.notes = record.notes
                     local.entryDate = record.entryDate
                     local.isRecurring = record.isRecurring
@@ -260,6 +281,8 @@ final class BudgetRepository {
                     kind: record.kind,
                     amount: record.amount,
                     category: record.category,
+                    iconName: record.iconName,
+                    iconColorHex: record.iconColorHex,
                     notes: record.notes,
                     entryDate: record.entryDate,
                     isRecurring: record.isRecurring,
@@ -324,6 +347,7 @@ final class BudgetRepository {
         try context.save()
     }
 
+    /// Syncs pending local.
     func syncPendingLocal(spaceId: UUID) async throws {
         guard let context else { return }
 

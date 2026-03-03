@@ -18,6 +18,7 @@ final class MessageStore {
         self.repository = repository
     }
 
+    /// Sets space.
     func setSpace(_ spaceId: UUID?) {
         currentSpaceId = spaceId
         guard let spaceId else {
@@ -27,6 +28,7 @@ final class MessageStore {
         loadLocal(spaceId: spaceId)
     }
 
+    /// Loads local.
     func loadLocal(spaceId: UUID) {
         do {
             messages = try repository.fetchLocal(spaceId: spaceId)
@@ -37,6 +39,7 @@ final class MessageStore {
         }
     }
 
+    /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true
@@ -52,6 +55,7 @@ final class MessageStore {
         }
     }
 
+    /// Handles send message.
     func sendMessage(body: String, senderId: UUID, senderName: String, recipientIds: [UUID]) async {
         guard let spaceId = currentSpaceId else { return }
         do {
@@ -69,6 +73,7 @@ final class MessageStore {
         }
     }
 
+    /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true

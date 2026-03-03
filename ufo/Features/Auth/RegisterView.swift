@@ -75,6 +75,7 @@ struct RegisterView: View {
         }
     }
     
+    /// Handles sign up.
     func signUp() async {
         guard isEmailValid else {
             error = "Email jest niepoprawny."

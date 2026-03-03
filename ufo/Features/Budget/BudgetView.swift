@@ -59,7 +59,13 @@ struct BudgetView: View {
                     ForEach(budgetStore?.entries ?? []) { entry in
                         HStack {
                             VStack(alignment: .leading) {
-                                Text(entry.title).font(.headline)
+                                HStack {
+                                    if let icon = entry.iconName {
+                                        Image(systemName: icon)
+                                            .foregroundStyle(Color(hex: entry.iconColorHex ?? "#22C55E"))
+                                    }
+                                    Text(entry.title).font(.headline)
+                                }
                                 Text(entry.category)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -124,11 +130,13 @@ struct BudgetView: View {
         }
     }
 
+    /// Handles last entries for chart.
     private func lastEntriesForChart(from entries: [BudgetEntry]) -> [BudgetEntry] {
         Array(entries.sorted(by: { $0.entryDate < $1.entryDate }).suffix(14))
     }
 
     @MainActor
+    /// Sets up store if needed.
     private func setupStoreIfNeeded() async {
         guard budgetStore == nil else { return }
         let repo = BudgetRepository(client: SupabaseConfig.client, context: modelContext)
@@ -152,6 +160,8 @@ private struct AddBudgetEntryView: View {
     @State private var kind: BudgetEntryKind = .expense
     @State private var amountText = ""
     @State private var category = "General"
+    @State private var iconName = "dollarsign.circle"
+    @State private var iconColorHex = "#22C55E"
     @State private var notes = ""
     @State private var date = Date()
 
@@ -168,6 +178,7 @@ private struct AddBudgetEntryView: View {
                 .keyboardType(.decimalPad)
                 #endif
             TextField("Category", text: $category)
+            OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
             TextField("Notes", text: $notes)
             DatePicker("Date", selection: $date, displayedComponents: [.date])
 
@@ -179,6 +190,8 @@ private struct AddBudgetEntryView: View {
                         kind: kind,
                         amount: amount,
                         category: category,
+                        iconName: iconName,
+                        iconColorHex: iconColorHex,
                         notes: notes.isEmpty ? nil : notes,
                         date: date,
                         recurring: false,

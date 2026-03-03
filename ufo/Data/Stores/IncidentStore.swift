@@ -18,6 +18,7 @@ final class IncidentStore {
         self.repository = repository
     }
 
+    /// Sets space.
     func setSpace(_ spaceId: UUID?) {
         currentSpaceId = spaceId
         guard let spaceId else {
@@ -27,6 +28,7 @@ final class IncidentStore {
         loadLocal(spaceId: spaceId)
     }
 
+    /// Loads local.
     func loadLocal(spaceId: UUID) {
         do {
             incidents = try repository.fetchAllLocal(spaceId: spaceId)
@@ -37,6 +39,7 @@ final class IncidentStore {
         }
     }
 
+    /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true
@@ -52,7 +55,8 @@ final class IncidentStore {
         }
     }
 
-    func addIncident(title: String, description: String?, occurrenceDate: Date, iconName: String?, imageData: Data?, userId: UUID?) async {
+    /// Handles add incident.
+    func addIncident(title: String, description: String?, occurrenceDate: Date, iconName: String?, iconColorHex: String?, imageData: Data?, userId: UUID?) async {
         guard let spaceId = currentSpaceId else { return }
         do {
             let incident = try repository.createLocal(
@@ -63,6 +67,7 @@ final class IncidentStore {
                 createdBy: userId
             )
             incident.iconName = iconName
+            incident.iconColorHex = iconColorHex
             incident.imageData = imageData
             incident.pendingSync = true
             incidents = try repository.fetchAllLocal(spaceId: spaceId)
@@ -72,12 +77,14 @@ final class IncidentStore {
         }
     }
 
+    /// Updates incident.
     func updateIncident(
         _ incident: Incident,
         title: String? = nil,
         description: String? = nil,
         occurrenceDate: Date? = nil,
         iconName: String? = nil,
+        iconColorHex: String? = nil,
         imageData: Data? = nil,
         userId: UUID?
     ) async {
@@ -92,6 +99,9 @@ final class IncidentStore {
             if let iconName {
                 incident.iconName = iconName
             }
+            if let iconColorHex {
+                incident.iconColorHex = iconColorHex
+            }
             if let imageData {
                 incident.imageData = imageData
             }
@@ -105,6 +115,7 @@ final class IncidentStore {
         }
     }
 
+    /// Deletes incident.
     func deleteIncident(_ incident: Incident, userId: UUID?) async {
         do {
             try repository.softDeleteLocal(incident, updatedBy: userId)
@@ -117,6 +128,7 @@ final class IncidentStore {
         }
     }
 
+    /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true

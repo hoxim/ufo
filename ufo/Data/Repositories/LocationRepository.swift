@@ -53,6 +53,7 @@ final class LocationRepository {
         let deleted_at: Date?
     }
 
+    /// Fetches local.
     func fetchLocal(spaceId: UUID) throws -> [LocationPing] {
         guard let context else { return [] }
         return try context.fetch(
@@ -63,6 +64,7 @@ final class LocationRepository {
         )
     }
 
+    /// Creates local.
     func createLocal(spaceId: UUID, userId: UUID, userName: String, latitude: Double, longitude: Double, actor: UUID?) throws -> LocationPing {
         guard let context else { throw RepositoryError.missingLocalContext }
         let ping = LocationPing(
@@ -80,6 +82,7 @@ final class LocationRepository {
         return ping
     }
 
+    /// Handles upsert remote.
     private func upsertRemote(_ ping: LocationPing) async throws {
         let payload = LocationPayload(
             id: ping.id,
@@ -97,6 +100,7 @@ final class LocationRepository {
         try await client.from("location_pings").upsert(payload).execute()
     }
 
+    /// Handles pull remote to local.
     func pullRemoteToLocal(spaceId: UUID) async throws {
         guard let context else { return }
         let remote: [LocationRecord] = try await client
@@ -148,6 +152,7 @@ final class LocationRepository {
         try context.save()
     }
 
+    /// Syncs pending local.
     func syncPendingLocal(spaceId: UUID) async throws {
         guard let context else { return }
         let pending = try context.fetch(

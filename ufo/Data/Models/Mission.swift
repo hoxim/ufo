@@ -27,6 +27,7 @@ final class Mission: Thing {
     var deletedAt: Date?
     var pendingSync: Bool = false
     var iconName: String?
+    var iconColorHex: String?
     var imageData: Data?
     
     // relation to  UserProfile
@@ -43,6 +44,7 @@ final class Mission: Thing {
         missionDescription: String = "",
         difficulty: Int = 1,
         iconName: String? = nil,
+        iconColorHex: String? = "#F59E0B",
         imageData: Data? = nil,
         createdBy: UUID? = nil
     ) {
@@ -54,6 +56,7 @@ final class Mission: Thing {
         self.missionDescription = missionDescription
         self.difficulty = difficulty
         self.iconName = iconName
+        self.iconColorHex = iconColorHex
         self.imageData = imageData
         self.isCompleted = false
         self.lastUpdatedAt = .now

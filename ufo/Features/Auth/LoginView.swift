@@ -52,9 +52,10 @@ struct LoginView: View {
             } message: {
                 Text(error ?? String(localized: "auth.login.error.unknown"))
             }
-        }
+        }.ignoresSafeArea()
     }
     
+    /// Returns whether valid email.
     private func isValidEmail(_ email: String) -> Bool {
         email.contains("@") &&
         email.contains(".") &&
@@ -63,6 +64,7 @@ struct LoginView: View {
     
     
     
+    /// Handles sign in.
     private func signIn() async {
         await authStore.signIn(email: email, password: password)
         if let storeError = authStore.errorMessage {

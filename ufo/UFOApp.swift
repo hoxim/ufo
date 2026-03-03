@@ -25,7 +25,9 @@ struct UFOApp: App {
             SharedList.self,
             SharedListItem.self,
             LocationPing.self,
-            SpaceMessage.self
+            SpaceMessage.self,
+            Note.self,
+            NoteFolder.self
         ])
         // New local store name to avoid loading an old incompatible SwiftData file.
         let config = ModelConfiguration("UFO_Clean_DB_v2", isStoredInMemoryOnly: false)

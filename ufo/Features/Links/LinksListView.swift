@@ -75,6 +75,7 @@ struct LinksListView: View {
         }
     }
 
+    /// Handles add link.
     private func addLink() async {
         guard
             let parentId = UUID(uuidString: parentIdText.trimmingCharacters(in: .whitespacesAndNewlines)),
@@ -90,6 +91,7 @@ struct LinksListView: View {
     }
 
     @MainActor
+    /// Sets up store if needed.
     private func setupStoreIfNeeded() async {
         guard linkStore == nil else { return }
         let repo = LinkRepository(client: SupabaseConfig.client, context: modelContext)

@@ -11,6 +11,7 @@ struct DestructiveButtonStyle: ButtonStyle {
     
     @Environment(\.isEnabled) private var isEnabled
     
+    /// Handles make body.
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
@@ -28,6 +29,7 @@ struct DestructiveButtonStyle: ButtonStyle {
 }
 
 extension View {
+    /// Handles ufo destructive button.
     func ufoDestructiveButton() -> some View {
         self.buttonStyle(DestructiveButtonStyle())
     }

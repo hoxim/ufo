@@ -18,11 +18,12 @@ class InviteViewModel {
         self.spaceId = spaceId
     }
     
+    /// Handles send invite.
     func sendInvite() async {
         guard !email.isEmpty else { return }
         
         isProcessing = true
-        isSuccess = false // Resetujemy stan przed nową próbą
+        isSuccess = false
         defer { isProcessing = false }
         
         do {

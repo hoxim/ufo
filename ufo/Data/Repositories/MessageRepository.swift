@@ -54,6 +54,7 @@ final class MessageRepository {
         let deleted_at: Date?
     }
 
+    /// Fetches local.
     func fetchLocal(spaceId: UUID) throws -> [SpaceMessage] {
         guard let context else { return [] }
         return try context.fetch(
@@ -64,6 +65,7 @@ final class MessageRepository {
         )
     }
 
+    /// Creates local.
     func createLocal(spaceId: UUID, senderId: UUID, senderName: String, body: String, recipientIds: [UUID]) throws -> SpaceMessage {
         guard let context else { throw RepositoryError.missingLocalContext }
         let message = SpaceMessage(
@@ -80,6 +82,7 @@ final class MessageRepository {
         return message
     }
 
+    /// Handles upsert remote.
     private func upsertRemote(_ message: SpaceMessage) async throws {
         let payload = MessagePayload(
             id: message.id,
@@ -98,6 +101,7 @@ final class MessageRepository {
         try await client.from("space_messages").upsert(payload).execute()
     }
 
+    /// Handles pull remote to local.
     func pullRemoteToLocal(spaceId: UUID) async throws {
         guard let context else { return }
         let remote: [MessageRecord] = try await client
@@ -150,6 +154,7 @@ final class MessageRepository {
         try context.save()
     }
 
+    /// Syncs pending local.
     func syncPendingLocal(spaceId: UUID) async throws {
         guard let context else { return }
         let pending = try context.fetch(

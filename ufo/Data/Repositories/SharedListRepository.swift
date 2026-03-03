@@ -17,6 +17,8 @@ final class SharedListRepository {
         let spaceId: UUID
         let name: String
         let type: String
+        let iconName: String?
+        let iconColorHex: String?
         let createdBy: UUID?
         let createdAt: Date?
         let updatedAt: Date?
@@ -27,6 +29,8 @@ final class SharedListRepository {
         enum CodingKeys: String, CodingKey {
             case id, name, type, version
             case spaceId = "space_id"
+            case iconName = "icon_name"
+            case iconColorHex = "icon_color_hex"
             case createdBy = "created_by"
             case createdAt = "created_at"
             case updatedAt = "updated_at"
@@ -63,6 +67,33 @@ final class SharedListRepository {
         let space_id: UUID
         let name: String
         let type: String
+        let icon_name: String?
+        let icon_color_hex: String?
+        let created_by: UUID?
+        let updated_at: Date
+        let version: Int
+        let updated_by: UUID?
+        let deleted_at: Date?
+    }
+
+    private struct SharedListPayloadLegacy: Encodable {
+        let id: UUID
+        let space_id: UUID
+        let name: String
+        let type: String
+        let icon_name: String?
+        let created_by: UUID?
+        let updated_at: Date
+        let version: Int
+        let updated_by: UUID?
+        let deleted_at: Date?
+    }
+
+    private struct SharedListPayloadMinimal: Encodable {
+        let id: UUID
+        let space_id: UUID
+        let name: String
+        let type: String
         let created_by: UUID?
         let updated_at: Date
         let version: Int
@@ -82,6 +113,7 @@ final class SharedListRepository {
         let deleted_at: Date?
     }
 
+    /// Fetches lists local.
     func fetchListsLocal(spaceId: UUID) throws -> [SharedList] {
         guard let context else { return [] }
         return try context.fetch(
@@ -92,6 +124,7 @@ final class SharedListRepository {
         )
     }
 
+    /// Fetches items local.
     func fetchItemsLocal(listId: UUID) throws -> [SharedListItem] {
         guard let context else { return [] }
         return try context.fetch(
@@ -102,15 +135,24 @@ final class SharedListRepository {
         )
     }
 
-    func createListLocal(spaceId: UUID, name: String, type: SharedListType, actor: UUID?) throws -> SharedList {
+    /// Creates list local.
+    func createListLocal(spaceId: UUID, name: String, type: SharedListType, iconName: String?, iconColorHex: String?, actor: UUID?) throws -> SharedList {
         guard let context else { throw RepositoryError.missingLocalContext }
-        let list = SharedList(spaceId: spaceId, name: name, type: type.rawValue, createdBy: actor)
+        let list = SharedList(
+            spaceId: spaceId,
+            name: name,
+            type: type.rawValue,
+            iconName: iconName,
+            iconColorHex: iconColorHex,
+            createdBy: actor
+        )
         list.pendingSync = true
         context.insert(list)
         try context.save()
         return list
     }
 
+    /// Creates item local.
     func createItemLocal(listId: UUID, title: String, position: Int) throws -> SharedListItem {
         guard let context else { throw RepositoryError.missingLocalContext }
         let item = SharedListItem(listId: listId, title: title, position: position)
@@ -120,6 +162,7 @@ final class SharedListRepository {
         return item
     }
 
+    /// Toggles item local.
     func toggleItemLocal(_ item: SharedListItem, actor: UUID?) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         item.isCompleted.toggle()
@@ -130,21 +173,69 @@ final class SharedListRepository {
         try context?.save()
     }
 
+    /// Deletes item locally by soft delete.
+    func deleteItemLocal(_ item: SharedListItem, actor: UUID?) throws {
+        guard context != nil else { throw RepositoryError.missingLocalContext }
+        item.deletedAt = .now
+        item.updatedBy = actor
+        item.updatedAt = .now
+        item.version += 1
+        item.pendingSync = true
+        try context?.save()
+    }
+
+    /// Handles upsert list remote.
     private func upsertListRemote(_ list: SharedList) async throws {
         let payload = SharedListPayload(
             id: list.id,
             space_id: list.spaceId,
             name: list.name,
             type: list.type,
+            icon_name: list.iconName,
+            icon_color_hex: list.iconColorHex,
             created_by: list.createdBy,
             updated_at: list.updatedAt,
             version: list.version,
             updated_by: list.updatedBy,
             deleted_at: list.deletedAt
         )
-        try await client.from("shared_lists").upsert(payload).execute()
+        do {
+            try await client.from("shared_lists").upsert(payload).execute()
+        } catch {
+            guard shouldFallbackForMissingStyleColumns(error) else { throw error }
+            let legacyPayload = SharedListPayloadLegacy(
+                id: list.id,
+                space_id: list.spaceId,
+                name: list.name,
+                type: list.type,
+                icon_name: list.iconName,
+                created_by: list.createdBy,
+                updated_at: list.updatedAt,
+                version: list.version,
+                updated_by: list.updatedBy,
+                deleted_at: list.deletedAt
+            )
+            do {
+                try await client.from("shared_lists").upsert(legacyPayload).execute()
+            } catch {
+                guard shouldFallbackForMissingStyleColumns(error) else { throw error }
+                let minimalPayload = SharedListPayloadMinimal(
+                    id: list.id,
+                    space_id: list.spaceId,
+                    name: list.name,
+                    type: list.type,
+                    created_by: list.createdBy,
+                    updated_at: list.updatedAt,
+                    version: list.version,
+                    updated_by: list.updatedBy,
+                    deleted_at: list.deletedAt
+                )
+                try await client.from("shared_lists").upsert(minimalPayload).execute()
+            }
+        }
     }
 
+    /// Handles upsert item remote.
     private func upsertItemRemote(_ item: SharedListItem) async throws {
         let payload = SharedListItemPayload(
             id: item.id,
@@ -160,6 +251,7 @@ final class SharedListRepository {
         try await client.from("shared_list_items").upsert(payload).execute()
     }
 
+    /// Handles pull remote to local.
     func pullRemoteToLocal(spaceId: UUID) async throws {
         guard let context else { return }
 
@@ -178,6 +270,8 @@ final class SharedListRepository {
                 if local.version <= record.version {
                     local.name = record.name
                     local.type = record.type
+                    local.iconName = record.iconName
+                    local.iconColorHex = record.iconColorHex
                     local.createdBy = record.createdBy
                     local.createdAt = record.createdAt ?? local.createdAt
                     local.updatedAt = record.updatedAt ?? local.updatedAt
@@ -192,6 +286,8 @@ final class SharedListRepository {
                     spaceId: record.spaceId,
                     name: record.name,
                     type: record.type,
+                    iconName: record.iconName,
+                    iconColorHex: record.iconColorHex,
                     createdBy: record.createdBy
                 )
                 list.createdAt = record.createdAt ?? .now
@@ -253,6 +349,7 @@ final class SharedListRepository {
         try context.save()
     }
 
+    /// Syncs pending local.
     func syncPendingLocal(spaceId: UUID) async throws {
         guard let context else { return }
 
@@ -277,5 +374,11 @@ final class SharedListRepository {
         }
 
         try context.save()
+    }
+
+    /// Returns true when remote schema does not include style columns yet.
+    private func shouldFallbackForMissingStyleColumns(_ error: Error) -> Bool {
+        let text = String(describing: error).lowercased()
+        return text.contains("pgrst204") && (text.contains("icon_color_hex") || text.contains("icon_name"))
     }
 }

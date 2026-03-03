@@ -25,6 +25,7 @@ final class AssignmentRepository {
         let deleted_at: Date?
     }
 
+    /// Fetches all local.
     func fetchAllLocal(thingId: UUID) throws -> [Assignment] {
         guard let context else { return [] }
         return try context.fetch(
@@ -35,6 +36,7 @@ final class AssignmentRepository {
         )
     }
 
+    /// Creates local.
     func createLocal(thingId: UUID, userId: UUID?, role: String, actor: UUID?) throws -> Assignment {
         guard let context else { throw RepositoryError.missingLocalContext }
         let assignment = Assignment(
@@ -48,6 +50,7 @@ final class AssignmentRepository {
         return assignment
     }
 
+    /// Updates local.
     func updateLocal(_ assignment: Assignment, role: String, actor: UUID?) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         assignment.role = role
@@ -57,6 +60,7 @@ final class AssignmentRepository {
         try context?.save()
     }
 
+    /// Handles soft delete local.
     func softDeleteLocal(_ assignment: Assignment, actor: UUID?) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         assignment.deletedAt = .now
@@ -66,6 +70,7 @@ final class AssignmentRepository {
         try context?.save()
     }
 
+    /// Handles upsert remote.
     func upsertRemote(_ assignment: Assignment) async throws {
         let payload = AssignmentPayload(
             id: assignment.id,

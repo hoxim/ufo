@@ -75,6 +75,7 @@ struct IncidentsListView: View {
     }
 
     @ViewBuilder
+    /// Handles content.
     private func content(store: IncidentStore) -> some View {
         List {
             if let error = store.lastErrorMessage {
@@ -87,7 +88,7 @@ struct IncidentsListView: View {
                 HStack {
                     if let iconName = incident.iconName, !iconName.isEmpty {
                         Image(systemName: iconName)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color(hex: incident.iconColorHex ?? "#F59E0B"))
                     }
                     VStack(alignment: .leading) {
                         Text(incident.title)
@@ -143,6 +144,7 @@ struct IncidentsListView: View {
     }
 
     @MainActor
+    /// Sets up store if needed.
     private func setupStoreIfNeeded() async {
         guard incidentStore == nil else { return }
 
@@ -166,7 +168,8 @@ private struct AddIncidentView: View {
     @State private var title = ""
     @State private var details = ""
     @State private var date = Date()
-    @State private var iconName = ""
+    @State private var iconName = "bolt.horizontal"
+    @State private var iconColorHex = "#F59E0B"
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var imageData: Data?
 
@@ -175,8 +178,8 @@ private struct AddIncidentView: View {
             Form {
                 TextField("Incident title", text: $title)
                 TextField("Description", text: $details)
-                TextField("Icon (SF Symbol)", text: $iconName)
                 DatePicker("Date", selection: $date)
+                OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                     Label("Select image", systemImage: "photo")
                 }
@@ -193,6 +196,7 @@ private struct AddIncidentView: View {
                             description: details.isEmpty ? nil : details,
                             occurrenceDate: date,
                             iconName: iconName.isEmpty ? nil : iconName,
+                            iconColorHex: iconColorHex,
                             imageData: imageData,
                             userId: userId
                         )
@@ -228,6 +232,7 @@ private struct EditIncidentView: View {
     @State private var details: String
     @State private var date: Date
     @State private var iconName: String
+    @State private var iconColorHex: String
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var imageData: Data?
 
@@ -238,7 +243,8 @@ private struct EditIncidentView: View {
         _title = State(initialValue: incident.title)
         _details = State(initialValue: incident.incidentDescription ?? "")
         _date = State(initialValue: incident.occurrenceDate)
-        _iconName = State(initialValue: incident.iconName ?? "")
+        _iconName = State(initialValue: incident.iconName ?? "bolt.horizontal")
+        _iconColorHex = State(initialValue: incident.iconColorHex ?? "#F59E0B")
         _imageData = State(initialValue: incident.imageData)
     }
 
@@ -247,8 +253,8 @@ private struct EditIncidentView: View {
             Form {
                 TextField("Incident title", text: $title)
                 TextField("Description", text: $details)
-                TextField("Icon (SF Symbol)", text: $iconName)
                 DatePicker("Date", selection: $date)
+                OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                     Label("Select image", systemImage: "photo")
                 }
@@ -266,6 +272,7 @@ private struct EditIncidentView: View {
                             description: details.isEmpty ? nil : details,
                             occurrenceDate: date,
                             iconName: iconName.isEmpty ? nil : iconName,
+                            iconColorHex: iconColorHex,
                             imageData: imageData,
                             userId: userId
                         )

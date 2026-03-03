@@ -19,6 +19,7 @@ final class SharedListStore {
         self.repository = repository
     }
 
+    /// Sets space.
     func setSpace(_ spaceId: UUID?) {
         currentSpaceId = spaceId
         guard let spaceId else {
@@ -29,6 +30,7 @@ final class SharedListStore {
         loadLocal(spaceId: spaceId)
     }
 
+    /// Loads local.
     func loadLocal(spaceId: UUID) {
         do {
             lists = try repository.fetchListsLocal(spaceId: spaceId)
@@ -45,6 +47,7 @@ final class SharedListStore {
         }
     }
 
+    /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true
@@ -60,17 +63,29 @@ final class SharedListStore {
         }
     }
 
-    func addList(name: String, type: SharedListType, actor: UUID?) async {
-        guard let spaceId = currentSpaceId else { return }
+    @discardableResult
+    /// Adds list and returns new list id when success.
+    func addList(name: String, type: SharedListType, iconName: String?, iconColorHex: String?, actor: UUID?) async -> UUID? {
+        guard let spaceId = currentSpaceId else { return nil }
         do {
-            _ = try repository.createListLocal(spaceId: spaceId, name: name, type: type, actor: actor)
+            let list = try repository.createListLocal(
+                spaceId: spaceId,
+                name: name,
+                type: type,
+                iconName: iconName,
+                iconColorHex: iconColorHex,
+                actor: actor
+            )
             loadLocal(spaceId: spaceId)
             await syncPending()
+            return list.id
         } catch {
             lastErrorMessage = "Nie udało się dodać listy: \(error)"
+            return nil
         }
     }
 
+    /// Handles add item.
     func addItem(listId: UUID, title: String) async {
         guard currentSpaceId != nil else { return }
         do {
@@ -83,6 +98,7 @@ final class SharedListStore {
         }
     }
 
+    /// Toggles item.
     func toggleItem(_ item: SharedListItem, actor: UUID?) async {
         guard let spaceId = currentSpaceId else { return }
         do {
@@ -94,6 +110,19 @@ final class SharedListStore {
         }
     }
 
+    /// Deletes item.
+    func deleteItem(_ item: SharedListItem, actor: UUID?) async {
+        guard let spaceId = currentSpaceId else { return }
+        do {
+            try repository.deleteItemLocal(item, actor: actor)
+            loadLocal(spaceId: spaceId)
+            await syncPending()
+        } catch {
+            lastErrorMessage = "Nie udało się usunąć pozycji listy: \(error)"
+        }
+    }
+
+    /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true

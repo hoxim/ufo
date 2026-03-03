@@ -73,6 +73,7 @@ struct InvitationAlertView: View {
         }
     }
     
+    /// Handles accept.
     private func accept() {
         isProcessing = true
         Task {
@@ -88,6 +89,7 @@ struct InvitationAlertView: View {
         }
     }
     
+    /// Handles reject.
     private func reject() {
         isProcessing = true
         Task {
@@ -95,6 +97,7 @@ struct InvitationAlertView: View {
         }
     }
     
+    /// Handles dismiss.
     private func dismiss() {
         // rseting the variable -> this view closes
         spaceRepo.pendingInvitation = nil

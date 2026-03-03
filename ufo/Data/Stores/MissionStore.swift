@@ -18,6 +18,7 @@ final class MissionStore {
         self.repository = missionRepository
     }
 
+    /// Sets space.
     func setSpace(_ spaceId: UUID?) {
         currentSpaceId = spaceId
         guard let spaceId else {
@@ -27,6 +28,7 @@ final class MissionStore {
         loadLocal(spaceId: spaceId)
     }
 
+    /// Loads local.
     func loadLocal(spaceId: UUID) {
         do {
             missions = try repository.fetchAllLocal(spaceId: spaceId)
@@ -37,6 +39,7 @@ final class MissionStore {
         }
     }
 
+    /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true
@@ -52,7 +55,8 @@ final class MissionStore {
         }
     }
 
-    func addMission(title: String, description: String, difficulty: Int, iconName: String?, imageData: Data?, userId: UUID?) async {
+    /// Handles add mission.
+    func addMission(title: String, description: String, difficulty: Int, iconName: String?, iconColorHex: String?, imageData: Data?, userId: UUID?) async {
         guard let spaceId = currentSpaceId else { return }
         do {
             let mission = try repository.createLocal(
@@ -63,6 +67,7 @@ final class MissionStore {
                 createdBy: userId
             )
             mission.iconName = iconName
+            mission.iconColorHex = iconColorHex
             mission.imageData = imageData
             mission.pendingSync = true
             missions = try repository.fetchAllLocal(spaceId: spaceId)
@@ -72,12 +77,14 @@ final class MissionStore {
         }
     }
 
+    /// Updates mission.
     func updateMission(
         _ mission: Mission,
         title: String? = nil,
         description: String? = nil,
         difficulty: Int? = nil,
         iconName: String? = nil,
+        iconColorHex: String? = nil,
         imageData: Data? = nil,
         isCompleted: Bool? = nil,
         userId: UUID?
@@ -94,6 +101,9 @@ final class MissionStore {
             if let iconName {
                 mission.iconName = iconName
             }
+            if let iconColorHex {
+                mission.iconColorHex = iconColorHex
+            }
             if let imageData {
                 mission.imageData = imageData
             }
@@ -107,10 +117,12 @@ final class MissionStore {
         }
     }
 
+    /// Toggles completed.
     func toggleCompleted(_ mission: Mission, userId: UUID?) async {
         await updateMission(mission, isCompleted: !mission.isCompleted, userId: userId)
     }
 
+    /// Deletes mission.
     func deleteMission(_ mission: Mission, userId: UUID?) async {
         do {
             try repository.softDeleteLocal(mission, updatedBy: userId)
@@ -123,6 +135,7 @@ final class MissionStore {
         }
     }
 
+    /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true

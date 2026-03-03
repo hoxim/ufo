@@ -9,6 +9,11 @@ import Foundation
 import Supabase
 import SwiftData
 import UniformTypeIdentifiers
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 @Observable
 final class AuthRepository: AuthRepositoryProtocol {
@@ -18,6 +23,52 @@ final class AuthRepository: AuthRepositoryProtocol {
     var currentUser: UserProfile? // Your SwiftData Domain Model
     
     private let client: SupabaseClient
+
+    private struct SpaceRecord: Codable {
+        let id: UUID
+        let name: String
+        let inviteCode: String
+        let category: String?
+        let version: Int?
+        let updatedAt: Date?
+
+        enum CodingKeys: String, CodingKey {
+            case id, name, category, version
+            case inviteCode = "invite_code"
+            case updatedAt = "updated_at"
+        }
+    }
+
+    private struct SpaceMembershipRecord: Codable {
+        let userId: UUID
+        let role: String
+        let joinedAt: Date
+        let space: SpaceRecord?
+
+        enum CodingKeys: String, CodingKey {
+            case userId = "user_id"
+            case role
+            case joinedAt = "joined_at"
+            case space = "spaces"
+        }
+    }
+
+    private struct UserProfileRecord: Codable {
+        let id: UUID
+        let email: String?
+        let fullName: String?
+        let avatarUrl: String?
+        let avatarVersion: Int?
+        let spaceMembers: [SpaceMembershipRecord]?
+
+        enum CodingKeys: String, CodingKey {
+            case id, email
+            case fullName = "full_name"
+            case avatarUrl = "avatar_url"
+            case avatarVersion = "avatar_version"
+            case spaceMembers = "space_members"
+        }
+    }
     
     init(client: SupabaseClient, isLoggedIn: Bool = false, currentUser: UserProfile? = nil) {
         self.client = client
@@ -59,6 +110,7 @@ final class AuthRepository: AuthRepositoryProtocol {
         }
     }
     
+    /// Handles sign in.
     func signIn(email: String, password: String) async throws {
         isBusy = true
         defer { isBusy = false }
@@ -81,6 +133,7 @@ final class AuthRepository: AuthRepositoryProtocol {
         }
     }
     
+    /// Handles sign up.
     func signUp(email: String, password: String) async throws {
         isBusy = true
         defer { isBusy = false }
@@ -106,6 +159,7 @@ final class AuthRepository: AuthRepositoryProtocol {
         }
     }
     
+    /// Handles sign out.
     func signOut() async {
         do {
             try await client.auth.signOut()
@@ -121,6 +175,7 @@ final class AuthRepository: AuthRepositoryProtocol {
         }
     }
     
+    /// Handles complete profile.
     func completeProfile(fullName: String, avatarUrl: String? = nil) async throws {
         guard let userId = client.auth.currentUser?.id else {
             throw AuthError.notAuthenticated
@@ -131,27 +186,29 @@ final class AuthRepository: AuthRepositoryProtocol {
         
         Log.msg("Updating profile for user ID: \(userId)")
         
-        struct UpdateProfilePayload: Encodable {
-            let full_name: String
-            let avatar_url: String?
+        if let avatarUrl {
+            try await client
+                .from("profiles")
+                .update(["full_name": fullName, "avatar_url": avatarUrl])
+                .eq("id", value: userId)
+                .execute()
+        } else {
+            try await client
+                .from("profiles")
+                .update(["full_name": fullName])
+                .eq("id", value: userId)
+                .execute()
         }
-        
-        let payload = UpdateProfilePayload(full_name: fullName, avatar_url: avatarUrl)
-        
-        try await client
-            .from("profiles")
-            .update(payload)
-            .eq("id", value: userId)
-            .execute()
             
         Log.msg("Profile updated on server. Refreshing local data...")
         
         try await fetchUserProfile(id: userId)
     }
     
+    /// Fetches user profile.
     func fetchUserProfile(id: UUID) async throws {
         do {
-            let profileDTO: UserProfileDTO = try await client
+            let profileDTO: UserProfileRecord = try await client
                 .from("profiles")
                 .select("*, space_members(*, spaces(*))")
                 .eq("id", value: id)
@@ -162,6 +219,7 @@ final class AuthRepository: AuthRepositoryProtocol {
             Log.msg("Profile fetched: \(profileDTO.fullName ?? "No Name"). Syncing with SwiftData...")
             
             syncWithSwiftData(dto: profileDTO)
+            await cacheAvatarIfNeeded(from: profileDTO)
             
         } catch {
             Log.error(error)
@@ -170,14 +228,17 @@ final class AuthRepository: AuthRepositoryProtocol {
     }
 
     @MainActor
-    private func syncWithSwiftData(dto: UserProfileDTO) {
+    /// Syncs with swift data.
+    private func syncWithSwiftData(dto: UserProfileRecord) {
         // 1. Create UserProfile (Domain Model)
         let userProfile = UserProfile(
             id: dto.id,
             email: dto.email ?? "",
             fullName: dto.fullName,
+            avatarVersion: dto.avatarVersion ?? 1,
             role: "user"
         )
+        userProfile.avatarURL = dto.avatarUrl
         
         // 2. Map Memberships and Spaces
         if let membersDTO = dto.spaceMembers {
@@ -214,42 +275,117 @@ final class AuthRepository: AuthRepositoryProtocol {
         Log.msg("Local state updated. User is logged in.")
     }
 
-    func uploadAvatar(imageData: Data, fileName: String) async throws {
+    /// Uploads avatar.
+    func uploadAvatar(imageData: Data) async throws {
         guard let userId = currentUser?.id else { return }
-        
-        // 1. Upload do Supabase Storage
-        let fileExtension = fileName.split(separator: ".").last.map(String.init) ?? "jpg"
-        let type = UTType(filenameExtension: fileExtension) ?? .jpeg
-        let storagePath = "avatars/\(userId.uuidString).\(fileExtension)"
-        
+
+        let preparedData = try prepareAvatarData(imageData)
+        let storagePath = "avatar_\(userId.uuidString).jpg"
+
         try await client.storage
             .from("avatars")
             .upload(
                 storagePath,
-                data: imageData,
-                options: FileOptions(contentType: type.preferredMIMEType)
+                data: preparedData,
+                options: FileOptions(
+                    cacheControl: "3600",
+                    contentType: UTType.jpeg.preferredMIMEType,
+                    upsert: true
+                )
             )
-        
-        // 2. get public URL
+
         let publicURL = try client.storage
             .from("avatars")
             .getPublicURL(path: storagePath)
-        
-        // 3. update supabase
+
+        let nextAvatarVersion = (currentUser?.avatarVersion ?? 1) + 1
+        struct AvatarProfilePayload: Encodable {
+            let avatar_url: String
+            let avatar_version: Int
+        }
         try await client
             .from("profiles")
-            .update(["avatar_url": publicURL.absoluteString])
+            .update(
+                AvatarProfilePayload(
+                    avatar_url: publicURL.absoluteString,
+                    avatar_version: nextAvatarVersion
+                )
+            )
             .eq("id", value: userId)
             .execute()
-        
-        // 4. refresh local model
+
+        AvatarCache.shared.store(preparedData, userId: userId, version: nextAvatarVersion)
+
         await MainActor.run {
             currentUser?.avatarURL = publicURL.absoluteString
+            currentUser?.avatarVersion = nextAvatarVersion
+        }
+    }
+
+    /// Handles prepare avatar data.
+    private func prepareAvatarData(_ data: Data) throws -> Data {
+        let maxBytes = 1_000_000
+        #if os(iOS)
+        guard let image = UIImage(data: data) else {
+            throw AuthError.avatarTooLarge
+        }
+
+        let compressed = image.jpegData(compressionQuality: data.count > maxBytes ? 0.68 : 0.82)
+        guard let compressed,
+              compressed.count <= maxBytes else {
+            throw AuthError.avatarTooLarge
+        }
+        return compressed
+        #elseif os(macOS)
+        guard
+            let image = NSImage(data: data),
+            let tiffData = image.tiffRepresentation,
+            let rep = NSBitmapImageRep(data: tiffData),
+            let jpegData = rep.representation(
+                using: .jpeg,
+                properties: [.compressionFactor: data.count > maxBytes ? 0.68 : 0.82]
+            ),
+            jpegData.count <= maxBytes
+        else {
+            throw AuthError.avatarTooLarge
+        }
+        return jpegData
+        #else
+        throw AuthError.avatarTooLarge
+        #endif
+    }
+
+    /// Handles cache avatar if needed.
+    private func cacheAvatarIfNeeded(from profile: UserProfileRecord) async {
+        guard
+            let avatarURL = profile.avatarUrl,
+            let url = URL(string: avatarURL),
+            let version = profile.avatarVersion,
+            AvatarCache.shared.existingURL(userId: profile.id, version: version) == nil
+        else {
+            return
+        }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            AvatarCache.shared.store(data, userId: profile.id, version: version)
+        } catch {
+            Log.error("Avatar cache fetch failed: \(error.localizedDescription)")
         }
     }
 }
 
 // Simple Error Enum
-enum AuthError: Error {
+enum AuthError: LocalizedError {
     case notAuthenticated
+    case avatarTooLarge
+
+    var errorDescription: String? {
+        switch self {
+        case .notAuthenticated:
+            return "Użytkownik nie jest zalogowany."
+        case .avatarTooLarge:
+            return "Avatar jest za duży. Maksymalny rozmiar to 1 MB."
+        }
+    }
 }

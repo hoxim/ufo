@@ -20,6 +20,7 @@ final class SpaceStore {
         selectedSpace = spaceRepository.selectedSpace
     }
 
+    /// Loads local.
     func loadLocal() {
         do {
             spaces = try modelContext.fetch(
@@ -36,6 +37,7 @@ final class SpaceStore {
         }
     }
 
+    /// Handles refresh from remote.
     func refreshFromRemote() async {
         isLoading = true
         defer { isLoading = false }
@@ -64,6 +66,7 @@ final class SpaceStore {
         }
     }
 
+    /// Creates space.
     func createSpace(name: String, type: SpaceType) async {
         isLoading = true
         defer { isLoading = false }
@@ -75,6 +78,7 @@ final class SpaceStore {
         }
     }
 
+    /// Handles join space.
     func joinSpace(inviteCode: String) async {
         isLoading = true
         defer { isLoading = false }
@@ -86,6 +90,7 @@ final class SpaceStore {
         }
     }
 
+    /// Handles leave space.
     func leaveSpace(spaceId: UUID) async {
         isLoading = true
         defer { isLoading = false }
@@ -105,11 +110,13 @@ final class SpaceStore {
         }
     }
 
+    /// Handles select space.
     func selectSpace(_ space: Space?) {
         selectedSpace = space
         spaceRepository.selectedSpace = space
     }
 
+    /// Fetches local space.
     private func fetchLocalSpace(id: UUID) throws -> Space? {
         let descriptor = FetchDescriptor<Space>(
             predicate: #Predicate { $0.id == id }

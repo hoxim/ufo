@@ -20,6 +20,7 @@ final class UserStore {
     }
 
     @MainActor
+    /// Handles refresh user.
     func refreshUser() async {
         // Fetch latest data form Supabase and update local
         guard let userId = authRepository.currentUser?.id else { return }

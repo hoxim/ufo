@@ -11,33 +11,35 @@ struct AuthView: View {
     @State private var isShowingLogin: Bool = true
     
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
+        ZStack {
             
-            Group {
-                if isShowingLogin {
-                    LoginView()
-                } else {
-                    RegisterView()
+            Color(.systemGroupedBackground).ignoresSafeArea(edges: .all)
+            
+            VStack(spacing: 20) {
+                Group {
+                    if isShowingLogin {
+                        LoginView()
+                    } else {
+                        RegisterView()
+                    }
+                }
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isShowingLogin)
+                
+                Spacer()
+                
+                Button {
+                    isShowingLogin.toggle()
+                } label: {
+                    HStack {
+                        Text(isShowingLogin ? "auth.toggle.prompt.register" : "auth.toggle.prompt.login")
+                        Text(isShowingLogin ? "auth.toggle.action.register" : "auth.toggle.action.login")
+                            .bold()
+                    }
+                    .font(.footnote)
                 }
             }
-            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isShowingLogin)
-            
-            Spacer()
-            
-            Button {
-                isShowingLogin.toggle()
-            } label: {
-                HStack {
-                    Text(isShowingLogin ? "auth.toggle.prompt.register" : "auth.toggle.prompt.login")
-                    Text(isShowingLogin ? "auth.toggle.action.register" : "auth.toggle.action.login")
-                        .bold()
-                }
-                .font(.footnote)
-            }
-            .padding(.bottom, 20)
+            .padding()
         }
-        .padding()
     }
 }
 

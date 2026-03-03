@@ -11,6 +11,7 @@ struct SecondaryButtonStyle: ButtonStyle {
     
     @Environment(\.isEnabled) private var isEnabled
     
+    /// Handles make body.
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
@@ -28,6 +29,7 @@ struct SecondaryButtonStyle: ButtonStyle {
 }
 
 extension View {
+    /// Handles ufo secondary button.
     func ufoSecondaryButton() -> some View {
         self.buttonStyle(SecondaryButtonStyle())
     }

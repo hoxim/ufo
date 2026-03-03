@@ -87,6 +87,22 @@ struct UserProfileView: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
+            } else if let user = authRepo.currentUser,
+                      let localURL = AvatarCache.shared.existingURL(userId: user.id, version: user.avatarVersion) {
+                AsyncImage(url: localURL) { phase in
+                    switch phase {
+                    case .empty:
+                        placeholderAvatar
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        placeholderAvatar
+                    @unknown default:
+                        placeholderAvatar
+                    }
+                }
             } else if let avatarURL = authRepo.currentUser?.avatarURL,
                       let url = URL(string: avatarURL),
                       !avatarURL.isEmpty {
@@ -112,6 +128,22 @@ struct UserProfileView: View {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFill()
+            } else if let user = authRepo.currentUser,
+                      let localURL = AvatarCache.shared.existingURL(userId: user.id, version: user.avatarVersion) {
+                AsyncImage(url: localURL) { phase in
+                    switch phase {
+                    case .empty:
+                        placeholderAvatar
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        placeholderAvatar
+                    @unknown default:
+                        placeholderAvatar
+                    }
+                }
             } else if let avatarURL = authRepo.currentUser?.avatarURL,
                       let url = URL(string: avatarURL),
                       !avatarURL.isEmpty {
@@ -147,6 +179,7 @@ struct UserProfileView: View {
             .scaledToFill()
     }
 
+    /// Saves .
     private func save() async {
         isSaving = true
         defer { isSaving = false }
@@ -156,7 +189,7 @@ struct UserProfileView: View {
             try await authRepo.completeProfile(fullName: cleanName.isEmpty ? "User" : cleanName, avatarUrl: nil)
 
             if let selectedImageData {
-                try await authRepo.uploadAvatar(imageData: selectedImageData, fileName: "avatar.jpg")
+                try await authRepo.uploadAvatar(imageData: selectedImageData)
             }
 
             message = "Profile updated"

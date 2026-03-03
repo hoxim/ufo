@@ -141,6 +141,7 @@ struct MessagesView: View {
         }
     }
 
+    /// Handles send message.
     private func sendMessage() async {
         guard
             let currentUser = authRepo.currentUser
@@ -166,6 +167,7 @@ struct MessagesView: View {
     }
 
     @MainActor
+    /// Sets up store if needed.
     private func setupStoreIfNeeded() async {
         guard messageStore == nil else { return }
         let repo = MessageRepository(client: SupabaseConfig.client, context: modelContext)
@@ -190,6 +192,7 @@ struct MessagesView: View {
     }
 
     @MainActor
+    /// Loads recipients.
     private func loadRecipients() async {
         guard let spaceId = spaceRepo.selectedSpace?.id else {
             recipients = []
@@ -210,6 +213,7 @@ struct MessagesView: View {
         }
     }
 
+    /// Toggles recipient.
     private func toggleRecipient(_ id: UUID) {
         if selectedRecipientIds.contains(id) {
             selectedRecipientIds.remove(id)
@@ -218,6 +222,7 @@ struct MessagesView: View {
         }
     }
 
+    /// Handles recipient names.
     private func recipientNames(for ids: [UUID]) -> [String] {
         let map = Dictionary(uniqueKeysWithValues: recipients.map { ($0.id, $0.displayName) })
         return ids.compactMap { map[$0] }

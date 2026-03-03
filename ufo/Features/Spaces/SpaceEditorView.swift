@@ -75,6 +75,7 @@ struct SpaceEditorView: View {
         }
     }
     
+    /// Saves space.
     private func saveSpace() {
         isProcessing = true
         

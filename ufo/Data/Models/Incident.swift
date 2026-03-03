@@ -25,6 +25,7 @@ final class Incident: Thing {
     var deletedAt: Date?
     var pendingSync: Bool = false
     var iconName: String?
+    var iconColorHex: String?
     var imageData: Data?
     
 
@@ -38,6 +39,7 @@ final class Incident: Thing {
         incidentDescription: String? = nil,
         occurrenceDate: Date,
         iconName: String? = nil,
+        iconColorHex: String? = "#F59E0B",
         imageData: Data? = nil,
         createdBy: UUID? = nil
     ) {
@@ -47,6 +49,7 @@ final class Incident: Thing {
         self.title = title
         self.incidentDescription = incidentDescription
         self.iconName = iconName
+        self.iconColorHex = iconColorHex
         self.imageData = imageData
         self.createdAt = .now
         self.occurrenceDate = occurrenceDate

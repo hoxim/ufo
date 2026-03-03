@@ -19,6 +19,7 @@ final class BudgetStore {
         self.repository = repository
     }
 
+    /// Sets space.
     func setSpace(_ spaceId: UUID?) {
         currentSpaceId = spaceId
         guard let spaceId else {
@@ -29,6 +30,7 @@ final class BudgetStore {
         loadLocal(spaceId: spaceId)
     }
 
+    /// Loads local.
     func loadLocal(spaceId: UUID) {
         do {
             entries = try repository.fetchEntriesLocal(spaceId: spaceId)
@@ -41,6 +43,7 @@ final class BudgetStore {
         }
     }
 
+    /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true
@@ -57,7 +60,8 @@ final class BudgetStore {
         }
     }
 
-    func addEntry(title: String, kind: BudgetEntryKind, amount: Double, category: String, notes: String?, date: Date, recurring: Bool, recurringInterval: String?, actor: UUID?) async {
+    /// Handles add entry.
+    func addEntry(title: String, kind: BudgetEntryKind, amount: Double, category: String, iconName: String?, iconColorHex: String?, notes: String?, date: Date, recurring: Bool, recurringInterval: String?, actor: UUID?) async {
         guard let spaceId = currentSpaceId else { return }
         do {
             _ = try repository.createEntryLocal(
@@ -66,6 +70,8 @@ final class BudgetStore {
                 kind: kind,
                 amount: amount,
                 category: category,
+                iconName: iconName,
+                iconColorHex: iconColorHex,
                 notes: notes,
                 date: date,
                 recurring: recurring,
@@ -79,6 +85,7 @@ final class BudgetStore {
         }
     }
 
+    /// Handles add goal.
     func addGoal(title: String, target: Double, current: Double, dueDate: Date?, actor: UUID?) async {
         guard let spaceId = currentSpaceId else { return }
         do {
@@ -97,6 +104,7 @@ final class BudgetStore {
         }
     }
 
+    /// Updates goal progress.
     func updateGoalProgress(_ goal: BudgetGoal, currentAmount: Double, actor: UUID?) async {
         guard let spaceId = currentSpaceId else { return }
         do {
@@ -108,6 +116,7 @@ final class BudgetStore {
         }
     }
 
+    /// Deletes entry.
     func deleteEntry(_ entry: BudgetEntry, actor: UUID?) async {
         guard let spaceId = currentSpaceId else { return }
         do {
@@ -119,6 +128,7 @@ final class BudgetStore {
         }
     }
 
+    /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
         isSyncing = true
