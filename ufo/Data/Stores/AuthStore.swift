@@ -58,6 +58,20 @@ final class AuthStore {
         }
     }
 
+    /// Handles OAuth sign in / sign up.
+    func signInWithOAuth(provider: SocialAuthProvider) async {
+        errorMessage = nil
+        state = .checkingSession
+
+        do {
+            try await authRepository.signInWithOAuth(provider: provider)
+            await loadUserContext()
+        } catch {
+            state = .signedOut
+            errorMessage = error.localizedDescription
+        }
+    }
+
     /// Handles sign up.
     func signUp(email: String, password: String) async throws {
         try await authRepository.signUp(email: email, password: password)

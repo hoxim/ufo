@@ -19,14 +19,14 @@ struct RegisterView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Email", text: $email)
+                    TextField("auth.register.email", text: $email)
                         #if os(iOS)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         #endif
-                    SecureField("Hasło", text: $password)
-                    SecureField("Powtórz hasło", text: $confirmPassword)
+                    SecureField("auth.register.password", text: $password)
+                    SecureField("auth.register.confirm", text: $confirmPassword)
                 }
 
                 if let validationError = passwordValidationError, !password.isEmpty {
@@ -41,17 +41,37 @@ struct RegisterView: View {
                     Button {
                         Task { await signUp() }
                     } label: {
-                        Text("Załóż konto")
+                        Text("auth.register.button")
                             .frame(maxWidth: .infinity)
                     }
                     .disabled(passwordValidationError != nil || !isEmailValid)
                 }
+
+                Section {
+                    Button {
+                        Task { await signInWithOAuth(.google) }
+                    } label: {
+                        Text("auth.social.google")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .disabled(authStore.state == .checkingSession)
+
+                    Button {
+                        Task { await signInWithOAuth(.apple) }
+                    } label: {
+                        Text("auth.social.apple")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .disabled(authStore.state == .checkingSession)
+                } header: {
+                    Text("auth.social.section")
+                }
             }
-            .navigationTitle("Rejestracja")
-            .alert("Błąd", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
+            .navigationTitle("auth.register.title")
+            .alert("common.error", isPresented: $showError) {
+                Button("common.ok", role: .cancel) { }
             } message: {
-                Text(error ?? "Nie udało się utworzyć konta.")
+                Text(error ?? String(localized: "auth.register.error.create"))
             }
         }
     }
@@ -78,7 +98,7 @@ struct RegisterView: View {
     /// Handles sign up.
     func signUp() async {
         guard isEmailValid else {
-            error = "Email jest niepoprawny."
+            error = String(localized: "auth.register.error.invalidEmail")
             showError = true
             return
         }
@@ -87,6 +107,15 @@ struct RegisterView: View {
         }
         catch (let error){
             self.error = error.localizedDescription
+            showError = true
+        }
+    }
+
+    /// Handles social sign in.
+    func signInWithOAuth(_ provider: SocialAuthProvider) async {
+        await authStore.signInWithOAuth(provider: provider)
+        if let storeError = authStore.errorMessage {
+            error = storeError
             showError = true
         }
     }

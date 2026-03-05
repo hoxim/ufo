@@ -7,6 +7,8 @@
 
 import SwiftUI
 import SwiftData
+import Supabase
+import Auth
 
 @main
 struct UFOApp: App {
@@ -64,6 +66,9 @@ struct UFOApp: App {
                 .environment(spaceRepository)
                 .environment(authStore)
                 .background(Color.backgroundSolid)
+                .onOpenURL { url in
+                    SupabaseConfig.client.auth.handle(url)
+                }
         }
         .modelContainer(container)
     }

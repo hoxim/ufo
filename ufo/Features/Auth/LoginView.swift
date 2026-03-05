@@ -22,13 +22,13 @@ struct LoginView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Email", text: $email)
+                    TextField("auth.login.email", text: $email)
                         #if os(iOS)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         #endif
-                    SecureField("Hasło", text: $password)
+                    SecureField("auth.login.password", text: $password)
                 }
 
                 Section {
@@ -39,14 +39,34 @@ struct LoginView: View {
                             ProgressView()
                                 .frame(maxWidth: .infinity)
                         } else {
-                            Text("Zaloguj się")
+                            Text("auth.login.button")
                                 .frame(maxWidth: .infinity)
                         }
                     }
                     .disabled(!isFormValid || authStore.state == .checkingSession)
                 }
+
+                Section {
+                    Button {
+                        Task { await signInWithOAuth(.google) }
+                    } label: {
+                        Text("auth.social.google")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .disabled(authStore.state == .checkingSession)
+
+                    Button {
+                        Task { await signInWithOAuth(.apple) }
+                    } label: {
+                        Text("auth.social.apple")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .disabled(authStore.state == .checkingSession)
+                } header: {
+                    Text("auth.social.section")
+                }
             }
-            .navigationTitle("Logowanie")
+            .navigationTitle("auth.login.title")
             .alert("auth.login.error.title", isPresented: $showError) {
                 Button("auth.login.ok", role: .cancel) { }
             } message: {
@@ -67,6 +87,15 @@ struct LoginView: View {
     /// Handles sign in.
     private func signIn() async {
         await authStore.signIn(email: email, password: password)
+        if let storeError = authStore.errorMessage {
+            self.error = storeError
+            showError = true
+        }
+    }
+
+    /// Handles social sign in.
+    private func signInWithOAuth(_ provider: SocialAuthProvider) async {
+        await authStore.signInWithOAuth(provider: provider)
         if let storeError = authStore.errorMessage {
             self.error = storeError
             showError = true

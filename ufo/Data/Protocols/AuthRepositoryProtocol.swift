@@ -7,7 +7,10 @@
 
 import Foundation
 
-import Foundation
+enum SocialAuthProvider {
+    case google
+    case apple
+}
 
 protocol AuthRepositoryProtocol {
 
@@ -15,6 +18,8 @@ protocol AuthRepositoryProtocol {
     
     /// Handles sign in.
     func signIn(email: String, password: String) async throws
+    /// Handles social sign in / sign up.
+    func signInWithOAuth(provider: SocialAuthProvider) async throws
     /// Handles sign up.
     func signUp(email: String, password: String) async throws
     /// Handles complete profile.

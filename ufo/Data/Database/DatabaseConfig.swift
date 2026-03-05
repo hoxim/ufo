@@ -27,12 +27,21 @@ enum SupabaseConfig {
         }
         return key
     }()
+
+    static let redirectURL: URL = {
+        guard let rawValue = infoDictionary["SupabaseRedirectURL"] as? String,
+              let redirectURL = URL(string: rawValue) else {
+            fatalError("SUPABASE_REDIRECT_URL not found in Info.plist")
+        }
+        return redirectURL
+    }()
     
     static let client = SupabaseClient(
         supabaseURL: url,
         supabaseKey: anonKey,
         options: SupabaseClientOptions(
             auth: .init(
+                redirectToURL: redirectURL,
                 emitLocalSessionAsInitialSession: true
             )
         )

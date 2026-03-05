@@ -6,9 +6,22 @@
 	<string>Aplikacja potrzebuje lokalizacji, aby pokazać aktualną pozycję na mapie Space.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Aplikacja potrzebuje lokalizacji, aby pokazać aktualną pozycję na mapie Space.</string>
+	<key>SupabaseRedirectURL</key>
+	<string>$(SUPABASE_REDIRECT_URL)</string>
 	<key>SupabaseAnonKey</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SupabaseURL</key>
 	<string>$(SUPABASE_URL)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>supabase-oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ufo</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -9,6 +9,9 @@ import Foundation
 import Supabase
 import SwiftData
 import UniformTypeIdentifiers
+#if canImport(AuthenticationServices)
+import AuthenticationServices
+#endif
 #if os(iOS)
 import UIKit
 #elseif os(macOS)
@@ -132,6 +135,113 @@ final class AuthRepository: AuthRepositoryProtocol {
             throw error
         }
     }
+
+    /// Handles social sign in / sign up via OAuth provider.
+    func signInWithOAuth(provider: SocialAuthProvider) async throws {
+        isBusy = true
+        defer { isBusy = false }
+
+        let redirectURL = SupabaseConfig.redirectURL
+        guard let callbackScheme = redirectURL.scheme, !callbackScheme.isEmpty else {
+            throw AuthError.oauthInvalidRedirectConfiguration
+        }
+        let supabaseProvider = provider.supabaseProvider
+
+        Log.msg("Starting OAuth sign in flow for: \(provider). redirectURL=\(redirectURL.absoluteString)")
+
+        do {
+            let authorizeURL = try client.auth.getOAuthSignInURL(
+                provider: supabaseProvider,
+                redirectTo: redirectURL
+            )
+            Log.msg("OAuth authorize URL host=\(authorizeURL.host ?? "nil") path=\(authorizeURL.path)")
+
+            #if canImport(AuthenticationServices)
+            let session = try await client.auth.signInWithOAuth(
+                provider: supabaseProvider,
+                redirectTo: redirectURL
+            ) { @MainActor launchURL in
+                Log.msg("Launching web auth session. callbackScheme=\(callbackScheme)")
+                return try await Self.launchWebAuthenticationSession(
+                    url: launchURL,
+                    callbackScheme: callbackScheme
+                )
+            }
+            #else
+            let session = try await client.auth.signInWithOAuth(
+                provider: supabaseProvider,
+                redirectTo: redirectURL
+            )
+            #endif
+            let userId = session.user.id
+
+            Log.msg("OAuth auth successful. Fetching profile and spaces data...")
+            try await fetchUserProfile(id: userId)
+        } catch {
+            if let nsError = error as NSError?,
+               nsError.domain == "com.apple.AuthenticationServices.WebAuthenticationSession",
+               nsError.code == 1 {
+                Log.error("OAuth was cancelled or callback did not return to app. Verify redirect URL '\(redirectURL.absoluteString)' in Supabase Auth settings.")
+            }
+            Log.error(error)
+            throw error
+        }
+    }
+
+#if canImport(AuthenticationServices)
+    @MainActor
+    private static func launchWebAuthenticationSession(url: URL, callbackScheme: String) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            let presentationContextProvider = OAuthPresentationContextProvider()
+            let session = ASWebAuthenticationSession(
+                url: url,
+                callbackURLScheme: callbackScheme
+            ) { callbackURL, error in
+                if let error {
+                    Log.error("ASWebAuthenticationSession completion error: \((error as NSError).domain) code=\((error as NSError).code)")
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                guard let callbackURL else {
+                    continuation.resume(throwing: AuthError.oauthMissingCallbackURL)
+                    return
+                }
+
+                Log.msg("OAuth callback received: \(callbackURL.absoluteString)")
+                continuation.resume(returning: callbackURL)
+            }
+
+            session.presentationContextProvider = presentationContextProvider
+            session.prefersEphemeralWebBrowserSession = false
+
+            if !session.start() {
+                continuation.resume(throwing: AuthError.oauthSessionStartFailed)
+                return
+            }
+
+            // Keep strong refs alive for the whole auth session lifetime.
+            _ = presentationContextProvider
+            _ = session
+        }
+    }
+
+    private final class OAuthPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+        func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+            #if os(iOS)
+            let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            if let keyWindow = scenes.flatMap(\.windows).first(where: \.isKeyWindow) {
+                return keyWindow
+            }
+            return ASPresentationAnchor()
+            #elseif os(macOS)
+            return NSApplication.shared.keyWindow ?? ASPresentationAnchor()
+            #else
+            return ASPresentationAnchor()
+            #endif
+        }
+    }
+#endif
     
     /// Handles sign up.
     func signUp(email: String, password: String) async throws {
@@ -186,23 +296,27 @@ final class AuthRepository: AuthRepositoryProtocol {
         
         Log.msg("Updating profile for user ID: \(userId)")
         
-        if let avatarUrl {
-            try await client
-                .from("profiles")
-                .update(["full_name": fullName, "avatar_url": avatarUrl])
-                .eq("id", value: userId)
-                .execute()
-        } else {
-            try await client
-                .from("profiles")
-                .update(["full_name": fullName])
-                .eq("id", value: userId)
-                .execute()
+        do {
+            if let avatarUrl {
+                try await client
+                    .from("profiles")
+                    .update(["full_name": fullName, "avatar_url": avatarUrl])
+                    .eq("id", value: userId)
+                    .execute()
+            } else {
+                try await client
+                    .from("profiles")
+                    .update(["full_name": fullName])
+                    .eq("id", value: userId)
+                    .execute()
+            }
+
+            Log.msg("Profile updated on server. Refreshing local data...")
+            try await fetchUserProfile(id: userId)
+        } catch {
+            Log.dbError("profiles.update (completeProfile)", error)
+            throw error
         }
-            
-        Log.msg("Profile updated on server. Refreshing local data...")
-        
-        try await fetchUserProfile(id: userId)
     }
     
     /// Fetches user profile.
@@ -222,7 +336,7 @@ final class AuthRepository: AuthRepositoryProtocol {
             await cacheAvatarIfNeeded(from: profileDTO)
             
         } catch {
-            Log.error(error)
+            Log.dbError("profiles.select (fetchUserProfile)", error)
             throw error
         }
     }
@@ -279,46 +393,51 @@ final class AuthRepository: AuthRepositoryProtocol {
     func uploadAvatar(imageData: Data) async throws {
         guard let userId = currentUser?.id else { return }
 
-        let preparedData = try prepareAvatarData(imageData)
-        let storagePath = "avatar_\(userId.uuidString).jpg"
+        do {
+            let preparedData = try prepareAvatarData(imageData)
+            let storagePath = "avatar_\(userId.uuidString).jpg"
 
-        try await client.storage
-            .from("avatars")
-            .upload(
-                storagePath,
-                data: preparedData,
-                options: FileOptions(
-                    cacheControl: "3600",
-                    contentType: UTType.jpeg.preferredMIMEType,
-                    upsert: true
+            try await client.storage
+                .from("avatars")
+                .upload(
+                    storagePath,
+                    data: preparedData,
+                    options: FileOptions(
+                        cacheControl: "3600",
+                        contentType: UTType.jpeg.preferredMIMEType,
+                        upsert: true
+                    )
                 )
-            )
 
-        let publicURL = try client.storage
-            .from("avatars")
-            .getPublicURL(path: storagePath)
+            let publicURL = try client.storage
+                .from("avatars")
+                .getPublicURL(path: storagePath)
 
-        let nextAvatarVersion = (currentUser?.avatarVersion ?? 1) + 1
-        struct AvatarProfilePayload: Encodable {
-            let avatar_url: String
-            let avatar_version: Int
-        }
-        try await client
-            .from("profiles")
-            .update(
-                AvatarProfilePayload(
-                    avatar_url: publicURL.absoluteString,
-                    avatar_version: nextAvatarVersion
+            let nextAvatarVersion = (currentUser?.avatarVersion ?? 1) + 1
+            struct AvatarProfilePayload: Encodable {
+                let avatar_url: String
+                let avatar_version: Int
+            }
+            try await client
+                .from("profiles")
+                .update(
+                    AvatarProfilePayload(
+                        avatar_url: publicURL.absoluteString,
+                        avatar_version: nextAvatarVersion
+                    )
                 )
-            )
-            .eq("id", value: userId)
-            .execute()
+                .eq("id", value: userId)
+                .execute()
 
-        AvatarCache.shared.store(preparedData, userId: userId, version: nextAvatarVersion)
+            AvatarCache.shared.store(preparedData, userId: userId, version: nextAvatarVersion)
 
-        await MainActor.run {
-            currentUser?.avatarURL = publicURL.absoluteString
-            currentUser?.avatarVersion = nextAvatarVersion
+            await MainActor.run {
+                currentUser?.avatarURL = publicURL.absoluteString
+                currentUser?.avatarVersion = nextAvatarVersion
+            }
+        } catch {
+            Log.dbError("avatars.upload / profiles.update (uploadAvatar)", error)
+            throw error
         }
     }
 
@@ -375,10 +494,24 @@ final class AuthRepository: AuthRepositoryProtocol {
     }
 }
 
+private extension SocialAuthProvider {
+    var supabaseProvider: Provider {
+        switch self {
+        case .google:
+            return .google
+        case .apple:
+            return .apple
+        }
+    }
+}
+
 // Simple Error Enum
 enum AuthError: LocalizedError {
     case notAuthenticated
     case avatarTooLarge
+    case oauthInvalidRedirectConfiguration
+    case oauthMissingCallbackURL
+    case oauthSessionStartFailed
 
     var errorDescription: String? {
         switch self {
@@ -386,6 +519,12 @@ enum AuthError: LocalizedError {
             return "Użytkownik nie jest zalogowany."
         case .avatarTooLarge:
             return "Avatar jest za duży. Maksymalny rozmiar to 1 MB."
+        case .oauthInvalidRedirectConfiguration:
+            return "Błędna konfiguracja redirect URL dla OAuth."
+        case .oauthMissingCallbackURL:
+            return "Brak callback URL po zakończeniu logowania OAuth."
+        case .oauthSessionStartFailed:
+            return "Nie udało się uruchomić sesji logowania OAuth."
         }
     }
 }
