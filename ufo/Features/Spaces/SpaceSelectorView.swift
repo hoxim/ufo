@@ -54,7 +54,7 @@ struct SpaceSelectorView: View {
                                 .frame(width: 80, height: 80)
                                 .frame(maxWidth: .infinity)
                                 
-                            Text("Create New")
+                            Text("spaces.selector.create")
                                 .font(.headline)
                                 .foregroundStyle(.primary)
                                 .frame(maxWidth: .infinity)
@@ -64,7 +64,7 @@ struct SpaceSelectorView: View {
                     }
                 }
             }
-            .navigationTitle("Select Base")
+            .navigationTitle("spaces.selector.title")
             .sheet(isPresented: $showCreator) {
                 SpaceEditorView()
             }

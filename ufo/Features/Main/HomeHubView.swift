@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Charts
 
 struct HomeHubView: View {
     @Environment(\.modelContext) private var modelContext
@@ -8,98 +9,136 @@ struct HomeHubView: View {
 
     @State private var showProfileSheet = false
     @State private var widget = HomeWidgetState()
+    @State private var budgetRange: BudgetWidgetRange = .month
+    @State private var activeRoute: HomeRoute?
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
-                    HomeWidgetLink {
-                        MissionsListView()
-                    } content: {
+                    Button {
+                        open(.missions)
+                    } label: {
                         HomeMetricCard(
-                            title: "Next mission",
-                            value: widget.nextMissionTitle ?? "No active mission",
-                            subtitle: widget.nextMissionTitle == nil ? "Create one in Missions" : "Tap to open Missions",
+                            sectionTitle: String(localized: "home.hub.shortcut.missions.title"),
+                            title: String(localized: "home.hub.widget.nextMission.title"),
+                            value: widget.nextMissionTitle ?? String(localized: "home.hub.widget.nextMission.empty"),
+                            subtitle: widget.nextMissionTitle == nil
+                                ? String(localized: "home.hub.widget.nextMission.subtitleEmpty")
+                                : String(localized: "home.hub.widget.nextMission.subtitle"),
                             tint: .orange
                         )
                     }
+                    .buttonStyle(.plain)
 
                     HStack(spacing: 12) {
-                        HomeWidgetLink {
-                            SharedListsView()
-                        } content: {
+                        Button {
+                            open(.lists)
+                        } label: {
                             HomeMetricCard(
-                                title: "Active lists",
+                                sectionTitle: String(localized: "home.hub.shortcut.lists.title"),
+                                title: String(localized: "home.hub.widget.activeLists.title"),
                                 value: "\(widget.activeListsCount)",
-                                subtitle: "Shared list count",
+                                subtitle: String(localized: "home.hub.widget.activeLists.subtitle"),
                                 tint: .pink
                             )
                         }
-                        HomeWidgetLink {
-                            NotesView()
-                        } content: {
+                        .buttonStyle(.plain)
+
+                        Button {
+                            open(.notes)
+                        } label: {
                             HomeMetricCard(
-                                title: "Notes",
+                                sectionTitle: String(localized: "home.hub.shortcut.notes.title"),
+                                title: String(localized: "home.hub.widget.notes.title"),
                                 value: "\(widget.notesCount)",
-                                subtitle: "Notes in this space",
+                                subtitle: String(localized: "home.hub.widget.notes.subtitle"),
                                 tint: .blue
                             )
                         }
+                        .buttonStyle(.plain)
                     }
 
                     HStack(spacing: 12) {
-                        HomeWidgetLink {
-                            IncidentsListView()
-                        } content: {
+                        Button {
+                            open(.incidents)
+                        } label: {
                             HomeMetricCard(
-                                title: "Nearest incident",
-                                value: widget.nearestIncidentTitle ?? "No upcoming event",
-                                subtitle: widget.nearestIncidentDateText ?? "Tap to open Incidents",
+                                sectionTitle: String(localized: "home.hub.shortcut.incidents.title"),
+                                title: String(localized: "home.hub.widget.nearestIncident.title"),
+                                value: widget.nearestIncidentTitle ?? String(localized: "home.hub.widget.nearestIncident.empty"),
+                                subtitle: widget.nearestIncidentDateText ?? String(localized: "home.hub.widget.nearestIncident.subtitle"),
                                 tint: .red
                             )
                         }
-                        HomeWidgetLink {
-                            LinksListView()
-                        } content: {
+                        .buttonStyle(.plain)
+
+                        Button {
+                            open(.links)
+                        } label: {
                             HomeMetricCard(
-                                title: "Latest links",
+                                sectionTitle: String(localized: "home.hub.shortcut.links.title"),
+                                title: String(localized: "home.hub.widget.latestLinks.title"),
                                 value: "\(widget.linksCount)",
-                                subtitle: widget.latestLinkDateText ?? "No links yet",
+                                subtitle: widget.latestLinkDateText ?? String(localized: "home.hub.widget.latestLinks.empty"),
                                 tint: .green
                             )
                         }
+                        .buttonStyle(.plain)
                     }
 
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
-                        HomeShortcutCard(title: "Missions", subtitle: "Tasks and progress", icon: "target") {
-                            MissionsListView()
-                        }
-                        HomeShortcutCard(title: "Incidents", subtitle: "Events and history", icon: "bolt.horizontal") {
-                            IncidentsListView()
-                        }
-                        HomeShortcutCard(title: "Lists", subtitle: "Shared checklists", icon: "checklist") {
-                            SharedListsView()
-                        }
-                        HomeShortcutCard(title: "Links", subtitle: "Connected items", icon: "link") {
-                            LinksListView()
-                        }
-                        HomeShortcutCard(title: "Notes", subtitle: "Ideas and context", icon: "note.text") {
-                            NotesView()
-                        }
-                    }
+                    HomeBudgetCard(
+                        entries: widget.budgetEntries,
+                        range: $budgetRange,
+                        onOpen: { open(.budget) }
+                    )
                 }
                 .padding()
             }
-            .navigationTitle("Podsumowanie")
+            .navigationTitle("home.hub.title")
+            .navigationDestination(item: $activeRoute) { route in
+                destination(for: route)
+            }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button {
+                            open(.quickAddMission)
+                        } label: {
+                            Label("Add Mission", systemImage: "target")
+                        }
+
+                        Button {
+                            open(.quickAddIncident)
+                        } label: {
+                            Label("Add Incident", systemImage: "bolt.horizontal")
+                        }
+
+                        Button {
+                            open(.quickAddList)
+                        } label: {
+                            Label("Add List", systemImage: "checklist")
+                        }
+
+                        Button {
+                            open(.quickAddBudgetEntry)
+                        } label: {
+                            Label("Add Budget Entry", systemImage: "dollarsign.circle")
+                        }
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("Quick add")
+                }
+
+                ToolbarItem(placement: profileToolbarPlacement) {
                     Button {
                         showProfileSheet = true
                     } label: {
                         AvatarCircle(user: authStore.currentUser)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Open profile panel")
+                    .accessibilityLabel("home.hub.profile.open")
                 }
             }
             .task {
@@ -115,62 +154,162 @@ struct HomeHubView: View {
         }
     }
 
+    private func open(_ route: HomeRoute) {
+        activeRoute = route
+    }
+
+    @ViewBuilder
+    private func destination(for route: HomeRoute) -> some View {
+        switch route {
+        case .missions:
+            MissionsListView()
+        case .lists:
+            SharedListsView()
+        case .notes:
+            NotesView()
+        case .incidents:
+            IncidentsListView()
+        case .links:
+            LinksListView()
+        case .budget:
+            BudgetView()
+        case .quickAddMission:
+            MissionsListView(autoPresentAdd: true)
+        case .quickAddIncident:
+            IncidentsListView(autoPresentAdd: true)
+        case .quickAddList:
+            SharedListsView(autoPresentAdd: true)
+        case .quickAddBudgetEntry:
+            BudgetView(autoPresentAddEntry: true)
+        }
+    }
+
     /// Refreshes Home widgets using local data from current selected space.
     private func refreshWidgets() {
         guard let spaceId = spaceRepository.selectedSpace?.id else {
             widget = HomeWidgetState()
             return
         }
-
-        let missions = (try? modelContext.fetch(
-            FetchDescriptor<Mission>(
-                predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil && $0.isCompleted == false },
-                sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+        do {
+            let missions = try modelContext.fetch(
+                FetchDescriptor<Mission>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil && $0.isCompleted == false },
+                    sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+                )
             )
-        )) ?? []
 
-        let lists = (try? modelContext.fetch(
-            FetchDescriptor<SharedList>(
-                predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil }
+            let lists = try modelContext.fetch(
+                FetchDescriptor<SharedList>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil }
+                )
             )
-        )) ?? []
 
-        let notes = (try? modelContext.fetch(
-            FetchDescriptor<Note>(
-                predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil }
+            let notes = try modelContext.fetch(
+                FetchDescriptor<Note>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil }
+                )
             )
-        )) ?? []
 
-        let allIncidents = (try? modelContext.fetch(
-            FetchDescriptor<Incident>(
-                predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
-                sortBy: [SortDescriptor(\.occurrenceDate, order: .forward)]
+            let allIncidents = try modelContext.fetch(
+                FetchDescriptor<Incident>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.occurrenceDate, order: .forward)]
+                )
             )
-        )) ?? []
-        let nearestIncident = allIncidents.first(where: { $0.occurrenceDate >= Date.now })
+            let nearestIncident = allIncidents.first(where: { $0.occurrenceDate >= Date.now })
 
-        let latestLink = (try? modelContext.fetch(
-            FetchDescriptor<LinkedThing>(
-                predicate: #Predicate { $0.deletedAt == nil },
-                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+            let latestLink = try modelContext.fetch(
+                FetchDescriptor<LinkedThing>(
+                    predicate: #Predicate { $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+                )
+            ).first
+
+            let linksCount = try modelContext.fetch(
+                FetchDescriptor<LinkedThing>(
+                    predicate: #Predicate { $0.deletedAt == nil }
+                )
+            ).count
+
+            let budgetEntries = try modelContext.fetch(
+                FetchDescriptor<BudgetEntry>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.entryDate, order: .forward)]
+                )
             )
-        ))?.first
 
-        let linksCount = (try? modelContext.fetch(
-            FetchDescriptor<LinkedThing>(
-                predicate: #Predicate { $0.deletedAt == nil }
+            widget = HomeWidgetState(
+                nextMissionTitle: missions.first?.title,
+                activeListsCount: lists.count,
+                notesCount: notes.count,
+                nearestIncidentTitle: nearestIncident?.title,
+                nearestIncidentDateText: nearestIncident?.occurrenceDate.formatted(date: .abbreviated, time: .shortened),
+                linksCount: linksCount,
+                latestLinkDateText: latestLink?.updatedAt.formatted(date: .abbreviated, time: .shortened),
+                budgetEntries: budgetEntries
             )
-        ))?.count ?? 0
+        } catch {
+            Log.dbError("HomeHub.refreshWidgets (SwiftData fetch)", error)
+            widget = HomeWidgetState()
+        }
+    }
 
-        widget = HomeWidgetState(
-            nextMissionTitle: missions.first?.title,
-            activeListsCount: lists.count,
-            notesCount: notes.count,
-            nearestIncidentTitle: nearestIncident?.title,
-            nearestIncidentDateText: nearestIncident?.occurrenceDate.formatted(date: .abbreviated, time: .shortened),
-            linksCount: linksCount,
-            latestLinkDateText: latestLink?.updatedAt.formatted(date: .abbreviated, time: .shortened)
-        )
+    private var profileToolbarPlacement: ToolbarItemPlacement {
+#if os(macOS)
+        .automatic
+#else
+        .topBarTrailing
+#endif
+    }
+}
+
+private enum HomeRoute: Hashable, Identifiable {
+    case missions
+    case lists
+    case notes
+    case incidents
+    case links
+    case budget
+    case quickAddMission
+    case quickAddIncident
+    case quickAddList
+    case quickAddBudgetEntry
+
+    var id: String {
+        switch self {
+        case .missions: "missions"
+        case .lists: "lists"
+        case .notes: "notes"
+        case .incidents: "incidents"
+        case .links: "links"
+        case .budget: "budget"
+        case .quickAddMission: "quickAddMission"
+        case .quickAddIncident: "quickAddIncident"
+        case .quickAddList: "quickAddList"
+        case .quickAddBudgetEntry: "quickAddBudgetEntry"
+        }
+    }
+}
+
+private enum BudgetWidgetRange: CaseIterable {
+    case today
+    case week
+    case month
+
+    var title: String {
+        switch self {
+        case .today: "Today"
+        case .week: "Week"
+        case .month: "Month"
+        }
+    }
+
+    var days: Int {
+        switch self {
+        case .today: 1
+        case .week: 7
+        case .month: 30
+        }
     }
 }
 
@@ -182,31 +321,126 @@ private struct HomeWidgetState {
     var nearestIncidentDateText: String?
     var linksCount: Int = 0
     var latestLinkDateText: String?
+    var budgetEntries: [BudgetEntry] = []
 }
 
-private struct HomeWidgetLink<Destination: View, Content: View>: View {
-    @ViewBuilder let destination: Destination
-    @ViewBuilder let content: Content
+private struct HomeBudgetCard: View {
+    let entries: [BudgetEntry]
+    @Binding var range: BudgetWidgetRange
+    let onOpen: () -> Void
 
-    init(
-        @ViewBuilder destination: () -> Destination,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.destination = destination()
-        self.content = content()
+    private var filteredEntries: [BudgetEntry] {
+        let start = Calendar.current.date(byAdding: .day, value: -(range.days - 1), to: Date()) ?? Date()
+        return entries.filter { $0.entryDate >= start }
+    }
+
+    private var balance: Double {
+        filteredEntries.reduce(0) { partial, entry in
+            partial + (entry.kind == BudgetEntryKind.expense.rawValue ? -entry.amount : entry.amount)
+        }
+    }
+
+    private var income: Double {
+        filteredEntries
+            .filter { $0.kind == BudgetEntryKind.income.rawValue }
+            .reduce(0) { $0 + $1.amount }
+    }
+
+    private var expense: Double {
+        filteredEntries
+            .filter { $0.kind == BudgetEntryKind.expense.rawValue }
+            .reduce(0) { $0 + $1.amount }
     }
 
     var body: some View {
-        NavigationLink {
-            destination
-        } label: {
-            content
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Text("Budget")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(action: onOpen) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 8) {
+                ForEach(BudgetWidgetRange.allCases, id: \.self) { option in
+                    Button {
+                        range = option
+                    } label: {
+                        Text(option.title)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(range == option ? Color.accentColor.opacity(0.2) : Color.white.opacity(0.06))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Balance")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(balance.formatted(.currency(code: "PLN")))
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(balance >= 0 ? .green : .red)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Income")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(income.formatted(.currency(code: "PLN")))
+                        .font(.subheadline)
+                        .foregroundStyle(.green)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Expense")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(expense.formatted(.currency(code: "PLN")))
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+                }
+            }
+
+            if filteredEntries.isEmpty {
+                Text("No entries in selected period")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Chart(filteredEntries.suffix(10)) { entry in
+                    BarMark(
+                        x: .value("Date", entry.entryDate, unit: .day),
+                        y: .value("Amount", entry.kind == BudgetEntryKind.expense.rawValue ? -entry.amount : entry.amount)
+                    )
+                    .foregroundStyle(entry.kind == BudgetEntryKind.expense.rawValue ? .red : .green)
+                }
+                .frame(height: 140)
+            }
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .contentShape(RoundedRectangle(cornerRadius: 16))
+        .onTapGesture {
+            onOpen()
+        }
     }
 }
 
 private struct HomeMetricCard: View {
+    let sectionTitle: String
     let title: String
     let value: String
     let subtitle: String
@@ -214,8 +448,18 @@ private struct HomeMetricCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Text(sectionTitle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
             Text(title)
-                .font(.headline)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(tint)
             Text(value)
                 .font(.title2.bold())
                 .foregroundStyle(tint)
@@ -227,46 +471,6 @@ private struct HomeMetricCard: View {
         .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
         .padding()
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
-    }
-}
-
-private struct HomeShortcutCard<Destination: View>: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    @ViewBuilder var destination: Destination
-
-    init(
-        title: String,
-        subtitle: String,
-        icon: String,
-        @ViewBuilder destination: () -> Destination
-    ) {
-        // The initializer stores card metadata and eagerly builds destination view.
-        self.title = title
-        self.subtitle = subtitle
-        self.icon = icon
-        self.destination = destination()
-    }
-
-    var body: some View {
-        NavigationLink {
-            destination
-        } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                Image(systemName: icon)
-                    .font(.title2.weight(.semibold))
-                Text(title)
-                    .font(.headline)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
-            .padding()
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -319,7 +523,8 @@ private struct AvatarCircle: View {
         SpaceMembership.self,
         Mission.self,
         SharedList.self,
-        Note.self
+        Note.self,
+        BudgetEntry.self
     ])
     let container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     let context = container.mainContext
@@ -332,7 +537,13 @@ private struct AvatarCircle: View {
     context.insert(Mission(spaceId: space.id, title: "Buy food", missionDescription: "Weekly shopping", difficulty: 2))
     context.insert(SharedList(spaceId: space.id, name: "Shopping list", type: "shopping"))
     context.insert(Note(spaceId: space.id, title: "Reminder", content: "Take umbrella", createdBy: user.id))
-    try? context.save()
+    context.insert(BudgetEntry(spaceId: space.id, title: "Salary", kind: "income", amount: 4200, category: "Work"))
+    context.insert(BudgetEntry(spaceId: space.id, title: "Groceries", kind: "expense", amount: 300, category: "Food"))
+    do {
+        try context.save()
+    } catch {
+        Log.dbError("HomeHub preview context.save", error)
+    }
 
     let authRepo = AuthRepository(client: SupabaseConfig.client, isLoggedIn: true, currentUser: user)
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)

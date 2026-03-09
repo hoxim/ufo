@@ -13,13 +13,14 @@ struct UserProfileView: View {
     @State private var fullName: String = ""
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
+    @State private var cropperDraftData: Data?
     @State private var isSaving = false
     @State private var message: String?
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Avatar") {
+                Section("profile.user.section.avatar") {
                     HStack {
                         Spacer()
                         avatarView
@@ -27,13 +28,13 @@ struct UserProfileView: View {
                     }
 
                     PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                        Label("Choose avatar", systemImage: "photo")
+                        Label("profile.user.avatar.choose", systemImage: "photo")
                     }
                 }
 
-                Section("Account") {
-                    TextField("Full name", text: $fullName)
-                    LabeledContent("Email") {
+                Section("profile.user.section.account") {
+                    TextField("profile.user.account.fullName", text: $fullName)
+                    LabeledContent("profile.user.account.email") {
                         Text(authRepo.currentUser?.email ?? "-")
                             .foregroundStyle(.secondary)
                     }
@@ -47,10 +48,10 @@ struct UserProfileView: View {
                     }
                 }
             }
-            .navigationTitle("User Profile")
+            .navigationTitle("profile.user.title")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("common.cancel") { dismiss() }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -60,7 +61,7 @@ struct UserProfileView: View {
                         if isSaving {
                             ProgressView()
                         } else {
-                            Text("Save")
+                            Text("common.save")
                         }
                     }
                     .disabled(isSaving)
@@ -73,12 +74,46 @@ struct UserProfileView: View {
                 guard let newValue else { return }
                 Task {
                     if let data = try? await newValue.loadTransferable(type: Data.self) {
+                        #if os(iOS)
+                        cropperDraftData = data
+                        #else
                         selectedImageData = data
+                        #endif
                     }
                 }
             }
+            #if os(iOS)
+            .fullScreenCover(isPresented: cropperPresented) {
+                if let cropperDraftData {
+                    AvatarCropperView(
+                        imageData: cropperDraftData,
+                        onCancel: {
+                            self.cropperDraftData = nil
+                        },
+                        onSave: { data in
+                            self.selectedImageData = data
+                            self.cropperDraftData = nil
+                        }
+                    )
+                }
+            }
+            #endif
         }
     }
+
+    #if os(iOS)
+    /// Provides a writable binding for the cropper sheet presentation.
+    private var cropperPresented: Binding<Bool> {
+        Binding(
+            get: { cropperDraftData != nil },
+            set: { isPresented in
+                if !isPresented {
+                    cropperDraftData = nil
+                }
+            }
+        )
+    }
+    #endif
 
     private var avatarView: some View {
         Group {
@@ -179,23 +214,24 @@ struct UserProfileView: View {
             .scaledToFill()
     }
 
-    /// Saves .
+    /// Saves profile changes and uploads a prepared avatar when provided.
     private func save() async {
         isSaving = true
         defer { isSaving = false }
 
         do {
             let cleanName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-            try await authRepo.completeProfile(fullName: cleanName.isEmpty ? "User" : cleanName, avatarUrl: nil)
+            try await authRepo.completeProfile(fullName: cleanName.isEmpty ? String(localized: "profile.user.defaultName") : cleanName, avatarUrl: nil)
 
             if let selectedImageData {
                 try await authRepo.uploadAvatar(imageData: selectedImageData)
             }
 
-            message = "Profile updated"
+            message = String(localized: "profile.user.message.updated")
             dismiss()
         } catch {
-            message = "Failed to update profile: \(error.localizedDescription)"
+            Log.dbError("profile save flow", error)
+            message = "\(String(localized: "profile.user.message.failedPrefix")) \(error.localizedDescription)"
         }
     }
 }

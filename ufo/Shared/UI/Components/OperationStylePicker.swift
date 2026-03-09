@@ -14,7 +14,7 @@ struct OperationStylePicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Style")
+            Text("operation.stylePicker.title")
                 .font(.headline)
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 10)], spacing: 10) {
@@ -32,7 +32,7 @@ struct OperationStylePicker: View {
                 }
             }
 
-            HStack(spacing: 10) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 26), spacing: 10)], spacing: 10) {
                 ForEach(colors, id: \.self) { hex in
                     Button {
                         colorHex = hex
@@ -49,6 +49,7 @@ struct OperationStylePicker: View {
                     .buttonStyle(.plain)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 6)
     }

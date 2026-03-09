@@ -9,8 +9,14 @@ struct SharedListsView: View {
     @State private var listStore: SharedListStore?
     @State private var isAddingList = false
     @State private var navPath: [UUID] = []
+    @State private var didAutoPresentAdd = false
 
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    let autoPresentAdd: Bool
+
+    init(autoPresentAdd: Bool = false) {
+        self.autoPresentAdd = autoPresentAdd
+    }
 
     var body: some View {
         NavigationStack(path: $navPath) {
@@ -18,16 +24,16 @@ struct SharedListsView: View {
                 if let store = listStore {
                     content(store: store)
                 } else {
-                    ProgressView("Loading Lists...")
+                    ProgressView("lists.view.loading")
                 }
             }
-            .navigationTitle("Shared Lists")
+            .navigationTitle("lists.view.title")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         isAddingList = true
                     } label: {
-                        Label("Add List", systemImage: "plus")
+                        Label("lists.view.action.add", systemImage: "plus")
                     }
                     .disabled(spaceRepo.selectedSpace == nil || listStore == nil)
                 }
@@ -35,7 +41,7 @@ struct SharedListsView: View {
                     Button {
                         Task { await listStore?.syncPending() }
                     } label: {
-                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
                     }
                     .disabled(listStore?.isSyncing == true || spaceRepo.selectedSpace == nil)
                 }
@@ -64,10 +70,17 @@ struct SharedListsView: View {
                         actorId: authRepo.currentUser?.id
                     )
                 } else {
-                    ProgressView("Loading list...")
+                    ProgressView("lists.detail.loading")
                 }
             }
-            .task { await setupStoreIfNeeded() }
+            .task {
+                await setupStoreIfNeeded(performRemoteRefresh: !autoPresentAdd)
+                if autoPresentAdd && !didAutoPresentAdd && listStore != nil {
+                    didAutoPresentAdd = true
+                    try? await Task.sleep(for: .milliseconds(300))
+                    isAddingList = true
+                }
+            }
             .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
                 listStore?.setSpace(newValue)
                 navPath = []
@@ -84,9 +97,9 @@ struct SharedListsView: View {
                 Image(systemName: "list.bullet.clipboard")
                     .font(.title)
                     .foregroundStyle(.secondary)
-                Text("No lists yet")
+                Text("lists.view.empty")
                     .font(.headline)
-                Text("Use + in the top-right corner to create a list.")
+                Text("lists.view.emptyHint")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -125,14 +138,14 @@ struct SharedListsView: View {
 
     @MainActor
     /// Sets up store if needed.
-    private func setupStoreIfNeeded() async {
+    private func setupStoreIfNeeded(performRemoteRefresh: Bool = true) async {
         guard listStore == nil else { return }
         let repo = SharedListRepository(client: SupabaseConfig.client, context: modelContext)
         let store = SharedListStore(modelContext: modelContext, repository: repo)
         listStore = store
         store.setSpace(spaceRepo.selectedSpace?.id)
 
-        if !isPreview {
+        if performRemoteRefresh && !isPreview {
             await store.refreshRemote()
         }
     }
@@ -150,22 +163,25 @@ private struct AddSharedListView: View {
     @State private var selectedIconName = "checklist"
     @State private var selectedIconColorHex = "#6366F1"
     @State private var isSaving = false
+    @State private var showStylePicker = false
 
     var body: some View {
         NavigationStack {
             Form {
-                TextField("List name", text: $name)
-                Picker("Type", selection: $selectedType) {
+                TextField("lists.editor.field.name", text: $name)
+                Picker("lists.editor.field.type", selection: $selectedType) {
                     ForEach(SharedListType.allCases) { type in
                         Text(type.rawValue.capitalized).tag(type)
                     }
                 }
-                OperationStylePicker(iconName: $selectedIconName, colorHex: $selectedIconColorHex)
+                DisclosureGroup("Style", isExpanded: $showStylePicker) {
+                    OperationStylePicker(iconName: $selectedIconName, colorHex: $selectedIconColorHex)
+                }
             }
-            .navigationTitle("New List")
+            .navigationTitle("lists.editor.title.new")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("common.cancel") {
                         dismiss()
                     }
                 }
@@ -178,7 +194,7 @@ private struct AddSharedListView: View {
                         if isSaving {
                             ProgressView()
                         } else {
-                            Text("Create")
+                            Image(systemName: "checkmark")
                         }
                     }
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
@@ -229,9 +245,9 @@ private struct SharedListDetailView: View {
                     .foregroundStyle(.red)
             }
 
-            Section("New item") {
+            Section("lists.items.section.newItem") {
                 HStack {
-                    TextField("Item name", text: $newItemName)
+                    TextField("lists.items.field.name", text: $newItemName)
                     Button {
                         Task {
                             await addItem()
@@ -244,9 +260,9 @@ private struct SharedListDetailView: View {
                 }
             }
 
-            Section("Items") {
+            Section("lists.items.section.items") {
                 if items.isEmpty {
-                    Text("No items yet")
+                    Text("lists.items.empty")
                         .foregroundStyle(.secondary)
                 }
                 ForEach(items) { item in
@@ -269,7 +285,7 @@ private struct SharedListDetailView: View {
                                     await store.deleteItem(item, actor: actorId)
                                 }
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                Label("common.delete", systemImage: "trash")
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
@@ -288,7 +304,7 @@ private struct SharedListDetailView: View {
                 }
             }
         }
-        .navigationTitle(list?.name ?? "List")
+        .navigationTitle(list?.name ?? String(localized: "lists.detail.fallbackTitle"))
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
@@ -296,7 +312,7 @@ private struct SharedListDetailView: View {
                         await store.syncPending()
                     }
                 } label: {
-                    Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                    Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
                 }
             }
         }
@@ -312,7 +328,7 @@ private struct SharedListDetailView: View {
     }
 }
 
-#Preview("Shared Lists") {
+#Preview("lists.view.title") {
     let schema = Schema([
         UserProfile.self,
         Space.self,
@@ -339,7 +355,11 @@ private struct SharedListDetailView: View {
     context.insert(SharedListItem(listId: shopping.id, title: "Milk", isCompleted: true, position: 1))
     context.insert(SharedListItem(listId: shopping.id, title: "Bread", isCompleted: false, position: 2))
 
-    try? context.save()
+    do {
+        try context.save()
+    } catch {
+        Log.dbError("SharedLists preview context.save", error)
+    }
 
     let authRepo = AuthRepository(client: SupabaseConfig.client, isLoggedIn: true, currentUser: user)
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)

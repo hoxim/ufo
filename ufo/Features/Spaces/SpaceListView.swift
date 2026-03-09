@@ -20,10 +20,10 @@ struct SpaceListView: View {
         NavigationStack {
             List {
                 Section {
-                    Toggle("Pokaż wskazówkę o typach Space", isOn: $showSharingTip)
+                    Toggle("spaces.list.toggle.showTypeTip", isOn: $showSharingTip)
 
                     if showSharingTip {
-                        Label("Private: tylko dla Ciebie. Shared: możesz zapraszać osoby.", systemImage: "info.circle")
+                        Label("spaces.list.tip.typeInfo", systemImage: "info.circle")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }

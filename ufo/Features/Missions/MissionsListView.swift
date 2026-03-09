@@ -1,11 +1,5 @@
 import SwiftUI
 import SwiftData
-import PhotosUI
-#if os(iOS)
-import UIKit
-#elseif os(macOS)
-import AppKit
-#endif
 
 struct MissionsListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -15,7 +9,14 @@ struct MissionsListView: View {
     @State private var missionStore: MissionStore?
     @State private var isAddingMission = false
     @State private var editingMission: Mission?
+    @State private var viewingMission: Mission?
+    @State private var didAutoPresentAdd = false
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    let autoPresentAdd: Bool
+
+    init(autoPresentAdd: Bool = false) {
+        self.autoPresentAdd = autoPresentAdd
+    }
 
     var body: some View {
         NavigationStack {
@@ -23,14 +24,14 @@ struct MissionsListView: View {
                 if let missionStore {
                     content(store: missionStore)
                 } else {
-                    ProgressView("Loading Missions...")
+                    ProgressView("missions.list.loading")
                 }
             }
-            .navigationTitle("Active Missions")
+            .navigationTitle("missions.list.title")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { isAddingMission = true }) {
-                        Label("Add Mission", systemImage: "plus")
+                        Label("missions.list.action.add", systemImage: "plus")
                     }
                     .disabled(spaceRepo.selectedSpace == nil || missionStore == nil)
                 }
@@ -39,7 +40,7 @@ struct MissionsListView: View {
                     Button {
                         Task { await missionStore?.syncPending() }
                     } label: {
-                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
                     }
                     .disabled(missionStore?.isSyncing == true || spaceRepo.selectedSpace == nil)
                 }
@@ -48,10 +49,10 @@ struct MissionsListView: View {
                 if let missionStore {
                     AddMissionView(store: missionStore, userId: authRepo.currentUser?.id)
                         #if os(iOS)
-                        .presentationDetents([.medium])
+                        .presentationDetents([.medium, .large])
                         #endif
                         #if os(macOS)
-                        .frame(minWidth: 520, minHeight: 420)
+                        .frame(minWidth: 520, minHeight: 520)
                         #endif
                 }
             }
@@ -63,15 +64,37 @@ struct MissionsListView: View {
                         userId: authRepo.currentUser?.id
                     )
                     #if os(iOS)
-                    .presentationDetents([.medium])
+                    .presentationDetents([.medium, .large])
                     #endif
                     #if os(macOS)
-                    .frame(minWidth: 520, minHeight: 420)
+                    .frame(minWidth: 520, minHeight: 520)
                     #endif
                 }
             }
+            .sheet(item: $viewingMission) { mission in
+                MissionDetailView(
+                    mission: mission,
+                    onEdit: {
+                        viewingMission = nil
+                        DispatchQueue.main.async {
+                            editingMission = mission
+                        }
+                    }
+                )
+                #if os(iOS)
+                .presentationDetents([.large])
+                #endif
+                #if os(macOS)
+                .frame(minWidth: 560, minHeight: 560)
+                #endif
+            }
             .task {
-                await setupStoreIfNeeded()
+                await setupStoreIfNeeded(performRemoteRefresh: !autoPresentAdd)
+                if autoPresentAdd && !didAutoPresentAdd && missionStore != nil {
+                    didAutoPresentAdd = true
+                    try? await Task.sleep(for: .milliseconds(300))
+                    isAddingMission = true
+                }
             }
             .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
                 guard let missionStore else { return }
@@ -82,7 +105,6 @@ struct MissionsListView: View {
     }
 
     @ViewBuilder
-    /// Handles content.
     private func content(store: MissionStore) -> some View {
         List {
             if let error = store.lastErrorMessage {
@@ -92,77 +114,46 @@ struct MissionsListView: View {
             }
 
             ForEach(store.missions) { mission in
-                HStack {
-                    if let iconName = mission.iconName, !iconName.isEmpty {
-                        Image(systemName: iconName)
-                            .foregroundStyle(Color(hex: mission.iconColorHex ?? "#F59E0B"))
-                    }
-                    Image(systemName: mission.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(mission.isCompleted ? .green : .gray)
-                        .onTapGesture {
-                            Task {
-                                await store.toggleCompleted(mission, userId: authRepo.currentUser?.id)
-                            }
+                MissionListRowView(
+                    mission: mission,
+                    onToggleCompleted: {
+                        Task {
+                            await store.toggleCompleted(mission, userId: authRepo.currentUser?.id)
                         }
-
-                    VStack(alignment: .leading) {
-                        Text(mission.title).font(.headline)
-                        if !mission.missionDescription.isEmpty {
-                            Text(mission.missionDescription)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        if mission.imageData != nil {
-                            Text("Image attached")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                    },
+                    onOpen: {
+                        viewingMission = mission
+                    },
+                    onEdit: {
+                        editingMission = mission
+                    },
+                    onDelete: {
+                        Task {
+                            await store.deleteMission(mission, userId: authRepo.currentUser?.id)
                         }
                     }
-
-                    Spacer()
-
-                    HStack(spacing: 2) {
-                        ForEach(0..<mission.difficulty, id: \.self) { _ in
-                            Image(systemName: "star.fill")
-                                .font(.caption2)
-                                .foregroundStyle(.yellow)
-                        }
-                    }
-
-                    Menu {
-                        Button {
-                            editingMission = mission
-                        } label: {
-                            Label("Edit", systemImage: "pencil")
-                        }
-
-                        Button(role: .destructive) {
-                            Task {
-                                await store.deleteMission(mission, userId: authRepo.currentUser?.id)
-                            }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                )
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        Task {
+                            await store.deleteMission(mission, userId: authRepo.currentUser?.id)
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.title3)
+                        Label("common.delete", systemImage: "trash")
                     }
-                    .buttonStyle(.plain)
-                }
-            }
-            .onDelete { offsets in
-                guard let store = missionStore else { return }
-                let values = offsets.map { store.missions[$0] }
-                Task {
-                    for mission in values {
-                        await store.deleteMission(mission, userId: authRepo.currentUser?.id)
+
+                    Button {
+                        editingMission = mission
+                    } label: {
+                        Label("common.edit", systemImage: "pencil")
                     }
+                    .tint(.blue)
                 }
             }
         }
         .overlay {
             if store.isSyncing {
-                ProgressView("Synchronizing...")
+                ProgressView("common.synchronizing")
                     .padding()
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
             }
@@ -170,8 +161,7 @@ struct MissionsListView: View {
     }
 
     @MainActor
-    /// Sets up store if needed.
-    private func setupStoreIfNeeded() async {
+    private func setupStoreIfNeeded(performRemoteRefresh: Bool = true) async {
         guard missionStore == nil else { return }
 
         let repo = MissionRepository(
@@ -185,175 +175,9 @@ struct MissionsListView: View {
         missionStore = store
 
         store.setSpace(spaceRepo.selectedSpace?.id)
-        if !isPreview {
+        if performRemoteRefresh && !isPreview {
             await store.refreshRemote()
         }
-    }
-}
-
-private struct EditMissionView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let store: MissionStore
-    let mission: Mission
-    let userId: UUID?
-
-    @State private var title: String
-    @State private var description: String
-    @State private var difficulty: Int
-    @State private var iconName: String
-    @State private var iconColorHex: String
-    @State private var selectedPhotoItem: PhotosPickerItem?
-    @State private var imageData: Data?
-    @State private var isSaving = false
-
-    init(store: MissionStore, mission: Mission, userId: UUID?) {
-        self.store = store
-        self.mission = mission
-        self.userId = userId
-        _title = State(initialValue: mission.title)
-        _description = State(initialValue: mission.missionDescription)
-        _difficulty = State(initialValue: mission.difficulty)
-        _iconName = State(initialValue: mission.iconName ?? "target")
-        _iconColorHex = State(initialValue: mission.iconColorHex ?? "#F59E0B")
-        _imageData = State(initialValue: mission.imageData)
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                TextField("Mission Title", text: $title)
-                TextField("Briefing (Desc)", text: $description)
-                Stepper("Difficulty: \(difficulty)", value: $difficulty, in: 1...5)
-                OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    Label("Select image", systemImage: "photo")
-                }
-                if imageData != nil {
-                    Text("Image selected")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Button {
-                    Task { await save() }
-                } label: {
-                    if isSaving {
-                        ProgressView()
-                    } else {
-                        Text("Save Changes")
-                    }
-                }
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
-            }
-            .navigationTitle("Edit Mission")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-            .onChange(of: selectedPhotoItem) { _, newValue in
-                guard let newValue else { return }
-                Task {
-                    imageData = try? await newValue.loadTransferable(type: Data.self)
-                }
-            }
-        }
-    }
-
-    @MainActor
-    /// Saves .
-    private func save() async {
-        isSaving = true
-        defer { isSaving = false }
-
-        await store.updateMission(
-            mission,
-            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-            description: description,
-            difficulty: difficulty,
-            iconName: iconName.isEmpty ? nil : iconName,
-            iconColorHex: iconColorHex,
-            imageData: imageData,
-            userId: userId
-        )
-        dismiss()
-    }
-}
-
-private struct AddMissionView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let store: MissionStore
-    let userId: UUID?
-
-    @State private var title = ""
-    @State private var description = ""
-    @State private var difficulty = 1
-    @State private var iconName = "target"
-    @State private var iconColorHex = "#F59E0B"
-    @State private var selectedPhotoItem: PhotosPickerItem?
-    @State private var imageData: Data?
-    @State private var isSaving = false
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                TextField("Mission Title", text: $title)
-                TextField("Briefing (Desc)", text: $description)
-                Stepper("Difficulty: \(difficulty)", value: $difficulty, in: 1...5)
-                OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    Label("Select image", systemImage: "photo")
-                }
-                if imageData != nil {
-                    Text("Image selected")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Button {
-                    Task { await save() }
-                } label: {
-                    if isSaving {
-                        ProgressView()
-                    } else {
-                        Text("Deploy Mission")
-                    }
-                }
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
-            }
-            .navigationTitle("New Mission")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-            .onChange(of: selectedPhotoItem) { _, newValue in
-                guard let newValue else { return }
-                Task {
-                    imageData = try? await newValue.loadTransferable(type: Data.self)
-                }
-            }
-        }
-    }
-
-    @MainActor
-    /// Saves .
-    private func save() async {
-        isSaving = true
-        defer { isSaving = false }
-
-        await store.addMission(
-            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-            description: description,
-            difficulty: difficulty,
-            iconName: iconName.isEmpty ? nil : iconName,
-            iconColorHex: iconColorHex,
-            imageData: imageData,
-            userId: userId
-        )
-        dismiss()
     }
 }
 
@@ -413,7 +237,11 @@ private struct AddMissionView: View {
     m2.isCompleted = true
     context.insert(m2)
 
-    try? context.save()
+    do {
+        try context.save()
+    } catch {
+        Log.dbError("Missions preview context.save", error)
+    }
 
     let authRepo = AuthRepository(
         client: SupabaseConfig.client,

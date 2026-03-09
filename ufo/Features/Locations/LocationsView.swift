@@ -17,7 +17,11 @@ struct LocationsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea(edges: .all)
+#if os(iOS)
+                Color(uiColor: .systemGroupedBackground).ignoresSafeArea(edges: .all)
+#else
+                Color(nsColor: .windowBackgroundColor).ignoresSafeArea(edges: .all)
+#endif
                 
                 VStack(spacing: 12) {
                     MapSectionView(
@@ -39,24 +43,24 @@ struct LocationsView: View {
                                 .font(.caption)
                                 .foregroundStyle(.red)
                         }
-                        Section("Add a new location") {
+                        Section("locations.view.section.add") {
                             Button {
                                 locationViewModel.useCurrentLocationForInput()
                             } label: {
-                                Label("Use current location", systemImage: "location.fill")
+                                Label("locations.view.action.useCurrent", systemImage: "location.fill")
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
 
-                            TextField("Latitude", text: $locationViewModel.latitudeText)
+                            TextField("locations.view.field.latitude", text: $locationViewModel.latitudeText)
 #if os(iOS)
                                 .keyboardType(.decimalPad)
 #endif
-                            TextField("Longitude", text: $locationViewModel.longitudeText)
+                            TextField("locations.view.field.longitude", text: $locationViewModel.longitudeText)
 #if os(iOS)
                                 .keyboardType(.decimalPad)
 #endif
                             
-                            Button("Save my location") {
+                            Button("locations.view.action.saveMine") {
                                 Task { await addLocationPing() }
                             }
                             .frame(maxWidth: .infinity)
@@ -66,13 +70,13 @@ struct LocationsView: View {
                     }
                 }
                 .padding()
-                .navigationTitle("Family Map")
+                .navigationTitle("locations.view.title")
                 .toolbar {
                     ToolbarItem(placement: .automatic) {
                         Button {
                             Task { await locationViewModel.locationStore?.syncPending() }
                         } label: {
-                            Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                            Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
                         }
                     }
                 }
@@ -118,7 +122,7 @@ struct LocationsView: View {
             let coordinate = locationViewModel.parsedInputCoordinate(),
             let user = authRepo.currentUser
         else {
-            locationViewModel.locationStore?.lastErrorMessage = "Niepoprawne współrzędne lub użytkownik."
+            locationViewModel.locationStore?.lastErrorMessage = String(localized: "locations.error.invalidInput")
             return
         }
 
@@ -139,12 +143,23 @@ private struct MapSectionView: View {
     let onAppear: () -> Void
 
     var body: some View {
-        Map(coordinateRegion: $region, annotationItems: annotationItems) { item in
-            MapMarker(coordinate: item.coordinate, tint: item.tint)
+        Group {
+            if #available(iOS 17.0, macOS 14.0, *) {
+                Map {
+                    ForEach(annotationItems) { item in
+                        Marker("", coordinate: item.coordinate)
+                            .tint(item.tint)
+                    }
+                }
+            } else {
+                Map(coordinateRegion: $region, annotationItems: annotationItems) { item in
+                    MapMarker(coordinate: item.coordinate, tint: item.tint)
+                }
+            }
         }
         .overlay(alignment: .topLeading) {
-            if let currentLocation {
-                Label("Current position", systemImage: "location.fill")
+            if currentLocation != nil {
+                Label("locations.view.currentPosition", systemImage: "location.fill")
                     .font(.caption)
                     .padding(8)
                     .background(.ultraThinMaterial, in: Capsule())
@@ -216,7 +231,11 @@ private struct MapPoint: Identifiable {
     context.insert(LocationPing(spaceId: space.id, userId: child.id, userDisplayName: "Child", latitude: 52.23, longitude: 21.01))
     context.insert(LocationPing(spaceId: space.id, userId: user.id, userDisplayName: "Parent", latitude: 52.24, longitude: 21.02))
 
-    try? context.save()
+    do {
+        try context.save()
+    } catch {
+        Log.dbError("Locations preview context.save", error)
+    }
 
     let authRepo = AuthRepository(client: SupabaseConfig.client, isLoggedIn: true, currentUser: user)
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)

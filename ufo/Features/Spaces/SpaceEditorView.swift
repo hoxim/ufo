@@ -32,21 +32,21 @@ struct SpaceEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Space Details") {
-                    TextField("Space Name (e.g. Alpha Crew)", text: $name)
+                Section("spaces.editor.section.details") {
+                    TextField("spaces.editor.field.name", text: $name)
                     
-                    Picker("Space Type", selection: $selectedType) {
-                        Text("Private").tag(SpaceType.personal)
-                        Text("Shared").tag(SpaceType.shared)
+                    Picker("spaces.editor.field.type", selection: $selectedType) {
+                        Text("spaces.editor.type.private").tag(SpaceType.personal)
+                        Text("spaces.editor.type.shared").tag(SpaceType.shared)
                     }
                     .pickerStyle(.menu)
 
                     if selectedType == .personal || selectedType == .private {
-                        Text("Private Space jest tylko dla Ciebie. Nie można do niego zapraszać innych osób.")
+                        Text("spaces.editor.note.private")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("Shared Space pozwala zapraszać innych użytkowników.")
+                        Text("spaces.editor.note.shared")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -57,7 +57,7 @@ struct SpaceEditorView: View {
                         if isProcessing {
                             ProgressView()
                         } else {
-                            Text(spaceToEdit == nil ? "Create Crew" : "Save Changes")
+                            Text(spaceToEdit == nil ? "spaces.editor.button.create" : "spaces.editor.button.save")
                                 .frame(maxWidth: .infinity)
                         }
                     }
@@ -65,11 +65,11 @@ struct SpaceEditorView: View {
                     .buttonStyle(.borderedProminent)
                 }
             }
-            .navigationTitle(spaceToEdit == nil ? "New Space" : "Edit Space")
+            .navigationTitle(spaceToEdit == nil ? "spaces.editor.title.new" : "spaces.editor.title.edit")
             .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("common.cancel") { dismiss() }
                 }
             }
         }

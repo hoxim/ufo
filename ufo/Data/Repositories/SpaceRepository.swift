@@ -104,7 +104,7 @@ final class SpaceRepository {
     /// Handles select first space.
     func selectFirstSpace(from userSpaces: [Space]) {
         if selectedSpace == nil {
-            self.selectedSpace = userSpaces.first
+            setSelectedSpace(userSpaces.first)
         }
     }
     
@@ -114,11 +114,18 @@ final class SpaceRepository {
            let savedId = UUID(uuidString: savedIdString),
            let matchedSpace = userSpaces.first(where: { $0.id == savedId }) {
             
-            self.selectedSpace = matchedSpace
+            setSelectedSpace(matchedSpace)
             Log.msg("Restored last session space: \(matchedSpace.name)")
-        } else {
-            self.selectedSpace = nil
+        } else if selectedSpace == nil {
+            setSelectedSpace(nil)
         }
+    }
+
+    private func setSelectedSpace(_ newValue: Space?) {
+        if selectedSpace?.id == newValue?.id {
+            return
+        }
+        selectedSpace = newValue
     }
 
     /// Handles get spaces.

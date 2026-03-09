@@ -7,24 +7,24 @@ struct PeopleHubView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Quick Actions") {
+                Section("people.hub.section.quickActions") {
                     NavigationLink {
                         MessagesView()
                     } label: {
-                        Label("Messages", systemImage: "message")
+                        Label("people.hub.action.messages", systemImage: "message")
                     }
 
                     NavigationLink {
                         LocationsView()
                     } label: {
-                        Label("Locations", systemImage: "map")
+                        Label("people.hub.action.locations", systemImage: "map")
                     }
                 }
 
-                Section("People in current space") {
+                Section("people.hub.section.members") {
                     if let selectedSpace = spaceRepository.selectedSpace, !selectedSpace.members.isEmpty {
                         ForEach(selectedSpace.members) { membership in
-                            let displayName = membership.user?.fullName ?? membership.user?.email ?? "Unknown user"
+                            let displayName = membership.user?.fullName ?? membership.user?.email ?? String(localized: "people.hub.member.unknown")
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(displayName)
@@ -38,13 +38,13 @@ struct PeopleHubView: View {
                                 NavigationLink {
                                     MessagesView()
                                 } label: {
-                                    Label("Send message", systemImage: "message")
+                                    Label("people.hub.context.sendMessage", systemImage: "message")
                                 }
 
                                 NavigationLink {
                                     LocationsView()
                                 } label: {
-                                    Label("Find on map", systemImage: "location")
+                                    Label("people.hub.context.findOnMap", systemImage: "location")
                                 }
                             }
                         }
@@ -60,13 +60,13 @@ struct PeopleHubView: View {
                                 }
                             }
                         } else {
-                            Text("No people data in this space yet.")
+                            Text("people.hub.empty")
                                 .foregroundStyle(.secondary)
                         }
                     }
                 }
             }
-            .navigationTitle("People")
+            .navigationTitle("people.hub.title")
         }
     }
 }

@@ -14,31 +14,25 @@ struct TabMenuView: View {
         #if os(iOS)
         TabView(selection: $selectedTab) {
             HomeHubView()
-                .tabItem { Label("Home", systemImage: "house") }
+                .tabItem { Label("main.tabs.home", systemImage: "house") }
                 .tag(TabItem.home)
-            BudgetView()
-                .tabItem { Label("Budget", systemImage: "chart.bar") }
-                .tag(TabItem.budget)
             PeopleHubView()
-                .tabItem { Label("People", systemImage: "person.2") }
+                .tabItem { Label("main.tabs.people", systemImage: "person.2") }
                 .tag(TabItem.people)
             SpaceListView()
-                .tabItem { Label("Spaces", systemImage: "person.3") }
+                .tabItem { Label("main.tabs.spaces", systemImage: "person.3") }
                 .tag(TabItem.spaces)
         }
         #else
         TabView(selection: $selectedTab) {
             HomeHubView()
-                .tabItem { Label("Home", systemImage: "house") }
+                .tabItem { Label("main.tabs.home", systemImage: "house") }
                 .tag(TabItem.home)
-            BudgetView()
-                .tabItem { Label("Budget", systemImage: "chart.bar") }
-                .tag(TabItem.budget)
             PeopleHubView()
-                .tabItem { Label("People", systemImage: "person.2") }
+                .tabItem { Label("main.tabs.people", systemImage: "person.2") }
                 .tag(TabItem.people)
             SpaceListView()
-                .tabItem { Label("Spaces", systemImage: "person.3") }
+                .tabItem { Label("main.tabs.spaces", systemImage: "person.3") }
                 .tag(TabItem.spaces)
         }
         #endif

@@ -37,22 +37,22 @@ extension View {
 
 #Preview("All Buttons - Light") {
     VStack(spacing: 20) {
-        Button("Primary") {}.ufoPrimaryButton()
-        Button("Secondary") {}.ufoSecondaryButton()
-        Button("Tertiary") {}.ufoTertiaryButton()
-        Button("Destructive") {}.ufoDestructiveButton()
-        Button("Disabled") {}.ufoPrimaryButton().disabled(true)
+        Button("common.preview.button.primary") {}.ufoPrimaryButton()
+        Button("common.preview.button.secondary") {}.ufoSecondaryButton()
+        Button("common.preview.button.tertiary") {}.ufoTertiaryButton()
+        Button("common.preview.button.destructive") {}.ufoDestructiveButton()
+        Button("common.preview.button.disabled") {}.ufoPrimaryButton().disabled(true)
     }
     .padding()
 }
 
 #Preview("All Buttons - Dark") {
     Card{
-        Button("Primary") {}.ufoPrimaryButton()
-        Button("Secondary") {}.ufoSecondaryButton()
-        Button("Tertiary") {}.ufoTertiaryButton()
-        Button("Destructive") {}.ufoDestructiveButton()
-        Button("Disabled") {}.ufoPrimaryButton().disabled(true)
+        Button("common.preview.button.primary") {}.ufoPrimaryButton()
+        Button("common.preview.button.secondary") {}.ufoSecondaryButton()
+        Button("common.preview.button.tertiary") {}.ufoTertiaryButton()
+        Button("common.preview.button.destructive") {}.ufoDestructiveButton()
+        Button("common.preview.button.disabled") {}.ufoPrimaryButton().disabled(true)
     }
 
     .preferredColorScheme(.dark)

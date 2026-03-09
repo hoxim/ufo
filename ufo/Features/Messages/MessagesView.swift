@@ -41,7 +41,7 @@ struct MessagesView: View {
                                         .padding(10)
                                         .background(message.senderId == authRepo.currentUser?.id ? Color.blue.opacity(0.2) : Color.gray.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
                                     if !message.recipientIds.isEmpty {
-                                        Text("To: \(recipientNames(for: message.recipientIds).joined(separator: ", "))")
+                                        Text("\(String(localized: "messages.view.toPrefix")) \(recipientNames(for: message.recipientIds).joined(separator: ", "))")
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
                                     }
@@ -67,7 +67,7 @@ struct MessagesView: View {
                 }
 
                 HStack {
-                    TextField("Write message...", text: $messageText)
+                    TextField("messages.view.field.body", text: $messageText)
                         .textFieldStyle(.roundedBorder)
 
                     Button {
@@ -87,13 +87,13 @@ struct MessagesView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Messenger")
+            .navigationTitle("messages.view.title")
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button {
                         Task { await messageStore?.syncPending() }
                     } label: {
-                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
                     }
                 }
             }
@@ -127,10 +127,10 @@ struct MessagesView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    .navigationTitle("Recipients")
+                    .navigationTitle("messages.recipients.title")
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
-                            Button("Close") { showRecipientsSheet = false }
+                            Button("common.close") { showRecipientsSheet = false }
                         }
                     }
                 }
@@ -146,7 +146,7 @@ struct MessagesView: View {
         guard
             let currentUser = authRepo.currentUser
         else {
-            messageStore?.lastErrorMessage = "Brak zalogowanego użytkownika."
+            messageStore?.lastErrorMessage = String(localized: "messages.error.noUser")
             return
         }
 
@@ -209,7 +209,7 @@ struct MessagesView: View {
         } catch {
             recipients = []
             selectedRecipientIds = []
-            messageStore?.lastErrorMessage = "Nie udało się pobrać listy użytkowników Space: \(error)"
+            messageStore?.lastErrorMessage = "\(String(localized: "messages.error.loadRecipientsPrefix")) \(error)"
         }
     }
 
@@ -268,7 +268,11 @@ struct MessagesView: View {
     context.insert(SpaceMessage(spaceId: space.id, senderId: parent.id, senderName: "Parent", body: "When will you be home?", recipientIds: [child.id]))
     context.insert(SpaceMessage(spaceId: space.id, senderId: child.id, senderName: "Child", body: "In 15 minutes", recipientIds: [parent.id]))
 
-    try? context.save()
+    do {
+        try context.save()
+    } catch {
+        Log.dbError("Messages preview context.save", error)
+    }
 
     let authRepo = AuthRepository(client: SupabaseConfig.client, isLoggedIn: true, currentUser: parent)
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)

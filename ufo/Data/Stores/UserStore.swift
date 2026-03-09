@@ -31,7 +31,7 @@ final class UserStore {
         } catch {
             // fallback to local data
             self.currentUser = authRepository.currentUser
-            print("Failed to refresh user: \(error)")
+            Log.dbError("profiles.refresh (UserStore)", error)
         }
     }
 }

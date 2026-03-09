@@ -9,6 +9,7 @@ struct LinksListView: View {
     @State private var linkStore: LinkStore?
     @State private var parentIdText = ""
     @State private var childIdText = ""
+    @State private var viewingLink: LinkedThing?
 
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
@@ -21,31 +22,36 @@ struct LinksListView: View {
                         .foregroundStyle(.red)
                 }
 
-                Section("Create Link") {
-                    TextField("Parent UUID", text: $parentIdText)
+                Section("links.view.section.create") {
+                    TextField("links.view.field.parentUuid", text: $parentIdText)
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         #endif
-                    TextField("Child UUID", text: $childIdText)
+                    TextField("links.view.field.childUuid", text: $childIdText)
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         #endif
 
-                    Button("Add Link") {
+                    Button("links.view.action.add") {
                         Task { await addLink() }
                     }
                 }
 
-                Section("Links") {
+                Section("links.view.section.items") {
                     ForEach(linkStore?.links ?? []) { link in
                         HStack {
-                            VStack(alignment: .leading) {
-                                Text("Parent: \(link.parentId.uuidString)")
-                                    .font(.caption)
-                                Text("Child: \(link.childId.uuidString)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                            Button {
+                                viewingLink = link
+                            } label: {
+                                VStack(alignment: .leading) {
+                                    Text("Parent: \(link.parentId.uuidString)")
+                                        .font(.caption)
+                                    Text("Child: \(link.childId.uuidString)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
+                            .buttonStyle(.plain)
                             Spacer()
                             Button(role: .destructive) {
                                 Task { await linkStore?.deleteLink(link, actor: authRepo.currentUser?.id) }
@@ -57,13 +63,13 @@ struct LinksListView: View {
                     }
                 }
             }
-            .navigationTitle("Links")
+            .navigationTitle("links.view.title")
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button {
                         Task { await linkStore?.syncPending() }
                     } label: {
-                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
                     }
                 }
             }
@@ -71,6 +77,9 @@ struct LinksListView: View {
             .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
                 linkStore?.setScope(newValue)
                 Task { await linkStore?.refreshRemote() }
+            }
+            .sheet(item: $viewingLink) { link in
+                LinkDetailView(link: link)
             }
         }
     }
@@ -81,7 +90,7 @@ struct LinksListView: View {
             let parentId = UUID(uuidString: parentIdText.trimmingCharacters(in: .whitespacesAndNewlines)),
             let childId = UUID(uuidString: childIdText.trimmingCharacters(in: .whitespacesAndNewlines))
         else {
-            linkStore?.lastErrorMessage = "Parent i Child muszą być poprawnymi UUID."
+            linkStore?.lastErrorMessage = String(localized: "links.view.error.invalidUuid")
             return
         }
 
@@ -105,7 +114,29 @@ struct LinksListView: View {
     }
 }
 
-#Preview("Links") {
+private struct LinkDetailView: View {
+    @Environment(\.dismiss) private var dismiss
+    let link: LinkedThing
+
+    var body: some View {
+        NavigationStack {
+            List {
+                LabeledContent("ID", value: link.id.uuidString)
+                LabeledContent("Parent", value: link.parentId.uuidString)
+                LabeledContent("Child", value: link.childId.uuidString)
+                LabeledContent("Updated", value: link.updatedAt.formatted(date: .abbreviated, time: .shortened))
+            }
+            .navigationTitle("Link")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.close") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+#Preview("links.view.section.items") {
     let schema = Schema([
         UserProfile.self,
         Space.self,
@@ -125,7 +156,11 @@ struct LinksListView: View {
     context.insert(space)
     context.insert(SpaceMembership(user: user, space: space, role: "admin"))
     context.insert(LinkedThing(thingId: space.id, parentId: UUID(), childId: UUID()))
-    try? context.save()
+    do {
+        try context.save()
+    } catch {
+        Log.dbError("Links preview context.save", error)
+    }
 
     let authRepo = AuthRepository(client: SupabaseConfig.client, isLoggedIn: true, currentUser: user)
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)

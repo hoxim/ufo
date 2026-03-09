@@ -10,7 +10,14 @@ struct IncidentsListView: View {
     @State private var incidentStore: IncidentStore?
     @State private var isAddingIncident = false
     @State private var editingIncident: Incident?
+    @State private var viewingIncident: Incident?
+    @State private var didAutoPresentAdd = false
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    let autoPresentAdd: Bool
+
+    init(autoPresentAdd: Bool = false) {
+        self.autoPresentAdd = autoPresentAdd
+    }
 
     var body: some View {
         NavigationStack {
@@ -18,16 +25,16 @@ struct IncidentsListView: View {
                 if let incidentStore {
                     content(store: incidentStore)
                 } else {
-                    ProgressView("Loading Incidents...")
+                    ProgressView("incidents.list.loading")
                 }
             }
-            .navigationTitle("Incidents")
+            .navigationTitle("incidents.list.title")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         isAddingIncident = true
                     } label: {
-                        Label("Add Incident", systemImage: "plus")
+                        Label("incidents.list.action.add", systemImage: "plus")
                     }
                     .disabled(spaceRepo.selectedSpace == nil || incidentStore == nil)
                 }
@@ -36,7 +43,7 @@ struct IncidentsListView: View {
                     Button {
                         Task { await incidentStore?.syncPending() }
                     } label: {
-                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
                     }
                     .disabled(incidentStore?.isSyncing == true || spaceRepo.selectedSpace == nil)
                 }
@@ -45,7 +52,7 @@ struct IncidentsListView: View {
                 if let incidentStore {
                     AddIncidentView(store: incidentStore, userId: authRepo.currentUser?.id)
                         #if os(iOS)
-                        .presentationDetents([.medium])
+                        .presentationDetents([.medium, .large])
                         #endif
                         #if os(macOS)
                         .frame(minWidth: 520, minHeight: 420)
@@ -56,15 +63,31 @@ struct IncidentsListView: View {
                 if let incidentStore {
                     EditIncidentView(store: incidentStore, incident: incident, userId: authRepo.currentUser?.id)
                         #if os(iOS)
-                        .presentationDetents([.medium])
+                        .presentationDetents([.medium, .large])
                         #endif
                         #if os(macOS)
                         .frame(minWidth: 520, minHeight: 420)
                         #endif
                 }
             }
+            .sheet(item: $viewingIncident) { incident in
+                IncidentDetailView(
+                    incident: incident,
+                    onEdit: {
+                        viewingIncident = nil
+                        DispatchQueue.main.async {
+                            editingIncident = incident
+                        }
+                    }
+                )
+            }
             .task {
-                await setupStoreIfNeeded()
+                await setupStoreIfNeeded(performRemoteRefresh: !autoPresentAdd)
+                if autoPresentAdd && !didAutoPresentAdd && incidentStore != nil {
+                    didAutoPresentAdd = true
+                    try? await Task.sleep(for: .milliseconds(300))
+                    isAddingIncident = true
+                }
             }
             .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
                 guard let incidentStore else { return }
@@ -86,29 +109,36 @@ struct IncidentsListView: View {
 
             ForEach(store.incidents) { incident in
                 HStack {
-                    if let iconName = incident.iconName, !iconName.isEmpty {
-                        Image(systemName: iconName)
-                            .foregroundStyle(Color(hex: incident.iconColorHex ?? "#F59E0B"))
-                    }
-                    VStack(alignment: .leading) {
-                        Text(incident.title)
-                            .font(.headline)
+                    Button {
+                        viewingIncident = incident
+                    } label: {
+                        HStack {
+                            if let iconName = incident.iconName, !iconName.isEmpty {
+                                Image(systemName: iconName)
+                                    .foregroundStyle(Color(hex: incident.iconColorHex ?? "#F59E0B"))
+                            }
+                            VStack(alignment: .leading) {
+                                Text(incident.title)
+                                    .font(.headline)
 
-                        if let description = incident.incidentDescription, !description.isEmpty {
-                            Text(description)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                                if let description = incident.incidentDescription, !description.isEmpty {
+                                    Text(description)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
 
-                        Text(incident.occurrenceDate.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        if incident.imageData != nil {
-                            Text("Image attached")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                Text(incident.occurrenceDate.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                if incident.imageData != nil {
+                                    Text("common.imageAttached")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
                     }
+                    .buttonStyle(.plain)
 
                     Spacer()
 
@@ -116,7 +146,7 @@ struct IncidentsListView: View {
                         Button {
                             editingIncident = incident
                         } label: {
-                            Label("Edit", systemImage: "pencil")
+                            Label("common.edit", systemImage: "pencil")
                         }
 
                         Button(role: .destructive) {
@@ -124,7 +154,7 @@ struct IncidentsListView: View {
                                 await store.deleteIncident(incident, userId: authRepo.currentUser?.id)
                             }
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label("common.delete", systemImage: "trash")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -136,7 +166,7 @@ struct IncidentsListView: View {
         }
         .overlay {
             if store.isSyncing {
-                ProgressView("Synchronizing...")
+                ProgressView("common.synchronizing")
                     .padding()
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
             }
@@ -145,7 +175,7 @@ struct IncidentsListView: View {
 
     @MainActor
     /// Sets up store if needed.
-    private func setupStoreIfNeeded() async {
+    private func setupStoreIfNeeded(performRemoteRefresh: Bool = true) async {
         guard incidentStore == nil else { return }
 
         let repo = IncidentRepository(client: SupabaseConfig.client, context: modelContext)
@@ -153,8 +183,56 @@ struct IncidentsListView: View {
         incidentStore = store
 
         store.setSpace(spaceRepo.selectedSpace?.id)
-        if !isPreview {
+        if performRemoteRefresh && !isPreview {
             await store.refreshRemote()
+        }
+    }
+}
+
+private struct IncidentDetailView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let incident: Incident
+    let onEdit: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        if let iconName = incident.iconName, !iconName.isEmpty {
+                            Image(systemName: iconName)
+                                .foregroundStyle(Color(hex: incident.iconColorHex ?? "#F59E0B"))
+                        }
+                        Text(incident.title)
+                            .font(.title2.bold())
+                    }
+
+                    if let description = incident.incidentDescription, !description.isEmpty {
+                        Text(description)
+                            .font(.body)
+                    }
+
+                    Text(incident.occurrenceDate.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+            }
+            .navigationTitle("incidents.list.title")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.close") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        onEdit()
+                    } label: {
+                        Label("common.edit", systemImage: "pencil")
+                    }
+                }
+            }
         }
     }
 }
@@ -172,43 +250,46 @@ private struct AddIncidentView: View {
     @State private var iconColorHex = "#F59E0B"
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var imageData: Data?
+    @State private var isSaving = false
+    @State private var showStylePicker = false
 
     var body: some View {
         NavigationStack {
             Form {
-                TextField("Incident title", text: $title)
-                TextField("Description", text: $details)
-                DatePicker("Date", selection: $date)
-                OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
+                TextField("incidents.editor.field.title", text: $title)
+                TextField("incidents.editor.field.description", text: $details)
+                DatePicker("incidents.editor.field.date", selection: $date)
+                DisclosureGroup("Style", isExpanded: $showStylePicker) {
+                    OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
+                }
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    Label("Select image", systemImage: "photo")
+                    Label("common.selectImage", systemImage: "photo")
                 }
                 if imageData != nil {
-                    Text("Image selected")
+                    Text("common.imageSelected")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                Button("Save") {
-                    Task {
-                        await store.addIncident(
-                            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                            description: details.isEmpty ? nil : details,
-                            occurrenceDate: date,
-                            iconName: iconName.isEmpty ? nil : iconName,
-                            iconColorHex: iconColorHex,
-                            imageData: imageData,
-                            userId: userId
-                        )
-                        dismiss()
-                    }
-                }
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .navigationTitle("New Incident")
+            .navigationTitle("incidents.editor.title.new")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("common.cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        Task {
+                            await save()
+                        }
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
                 }
             }
             .onChange(of: selectedPhotoItem) { _, newValue in
@@ -218,6 +299,23 @@ private struct AddIncidentView: View {
                 }
             }
         }
+    }
+
+    @MainActor
+    private func save() async {
+        isSaving = true
+        defer { isSaving = false }
+
+        await store.addIncident(
+            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            description: details.isEmpty ? nil : details,
+            occurrenceDate: date,
+            iconName: iconName.isEmpty ? nil : iconName,
+            iconColorHex: iconColorHex,
+            imageData: imageData,
+            userId: userId
+        )
+        dismiss()
     }
 }
 
@@ -235,6 +333,8 @@ private struct EditIncidentView: View {
     @State private var iconColorHex: String
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var imageData: Data?
+    @State private var isSaving = false
+    @State private var showStylePicker = false
 
     init(store: IncidentStore, incident: Incident, userId: UUID?) {
         self.store = store
@@ -251,40 +351,38 @@ private struct EditIncidentView: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("Incident title", text: $title)
-                TextField("Description", text: $details)
-                DatePicker("Date", selection: $date)
-                OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
+                TextField("incidents.editor.field.title", text: $title)
+                TextField("incidents.editor.field.description", text: $details)
+                DatePicker("incidents.editor.field.date", selection: $date)
+                DisclosureGroup("Style", isExpanded: $showStylePicker) {
+                    OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
+                }
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    Label("Select image", systemImage: "photo")
+                    Label("common.selectImage", systemImage: "photo")
                 }
                 if imageData != nil {
-                    Text("Image selected")
+                    Text("common.imageSelected")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                Button("Save changes") {
-                    Task {
-                        await store.updateIncident(
-                            incident,
-                            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                            description: details.isEmpty ? nil : details,
-                            occurrenceDate: date,
-                            iconName: iconName.isEmpty ? nil : iconName,
-                            iconColorHex: iconColorHex,
-                            imageData: imageData,
-                            userId: userId
-                        )
-                        dismiss()
-                    }
-                }
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .navigationTitle("Edit Incident")
+            .navigationTitle("incidents.editor.title.edit")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("common.cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        Task { await save() }
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
                 }
             }
             .onChange(of: selectedPhotoItem) { _, newValue in
@@ -295,9 +393,27 @@ private struct EditIncidentView: View {
             }
         }
     }
+
+    @MainActor
+    private func save() async {
+        isSaving = true
+        defer { isSaving = false }
+
+        await store.updateIncident(
+            incident,
+            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            description: details.isEmpty ? nil : details,
+            occurrenceDate: date,
+            iconName: iconName.isEmpty ? nil : iconName,
+            iconColorHex: iconColorHex,
+            imageData: imageData,
+            userId: userId
+        )
+        dismiss()
+    }
 }
 
-#Preview("Incidents") {
+#Preview("incidents.list.title") {
     let schema = Schema([
         UserProfile.self,
         Space.self,
@@ -319,7 +435,11 @@ private struct EditIncidentView: View {
     context.insert(SpaceMembership(user: user, space: space, role: "admin"))
 
     context.insert(Incident(spaceId: space.id, title: "Late return", incidentDescription: "School trip", occurrenceDate: .now, createdBy: user.id))
-    try? context.save()
+    do {
+        try context.save()
+    } catch {
+        Log.dbError("Incidents preview context.save", error)
+    }
 
     let authRepo = AuthRepository(client: SupabaseConfig.client, isLoggedIn: true, currentUser: user)
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)

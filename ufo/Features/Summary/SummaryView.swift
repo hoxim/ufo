@@ -19,21 +19,21 @@ struct SummaryView: View {
     var body: some View {
         NavigationStack(path: $navPath) {
             List {
-                Section("Your Missions") {
-                    Button("Go to Mars Mission") {
+                Section("summary.view.section.missions") {
+                    Button("summary.view.action.goToMission") {
 
                     }
                 }
             }
-            .navigationTitle("UFO Summary")
+            .navigationTitle("summary.view.title")
             .navigationDestination(for: UFOPath.self) { path in
                 switch path {
                 case .missionDetail(let mission):
-                    Text("Mission Details for: \(mission.title)")
+                    Text("\(String(localized: "summary.view.missionDetails.prefix")) \(mission.title)")
                 case .spaceSettings:
-                    Text("Space Settings View")
+                    Text("summary.view.spaceSettings")
                 case .userProfile:
-                    Text("User Profile View")
+                    Text("summary.view.userProfile")
                 }
             }
         }

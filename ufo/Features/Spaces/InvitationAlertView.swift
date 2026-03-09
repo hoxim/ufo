@@ -29,12 +29,12 @@ struct InvitationAlertView: View {
                     .frame(maxWidth: .infinity)
                 
                 VStack() {
-                    Text("Incoming Transmission")
+                    Text("spaces.invitation.title")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .foregroundStyle(.secondary)
                     
-                    Text("Join \(invite.spaceName)?")
+                    Text(String(format: String(localized: "spaces.invitation.joinQuestion"), invite.spaceName))
                         .font(.title2)
                         .frame(maxWidth: .infinity)
                         .bold()
@@ -50,7 +50,7 @@ struct InvitationAlertView: View {
                         Button {
                             accept()
                         } label: {
-                            Text("Accept & Join")
+                            Text("spaces.invitation.accept")
                                 .bold()
         
                         }.ufoPrimaryButton()
@@ -59,7 +59,7 @@ struct InvitationAlertView: View {
                         Button {
                             reject()
                         } label: {
-                            Text("Decline")
+                            Text("spaces.invitation.decline")
                         }.ufoDestructiveButton()
 
                     }

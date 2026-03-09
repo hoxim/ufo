@@ -15,16 +15,15 @@ struct SidebarMenuView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selectedTab) {
-                Section("Main") {
-                    Label("Home", systemImage: "house").tag(TabItem.home)
-                    Label("Budget", systemImage: "chart.bar").tag(TabItem.budget)
-                    Label("People", systemImage: "person.2").tag(TabItem.people)
+                Section("main.sidebar.main") {
+                    Label("main.tabs.home", systemImage: "house").tag(TabItem.home)
+                    Label("main.tabs.people", systemImage: "person.2").tag(TabItem.people)
                 }
-                Section("Workspace") {
-                    Label("Spaces", systemImage: "person.3").tag(TabItem.spaces)
+                Section("main.sidebar.workspace") {
+                    Label("main.tabs.spaces", systemImage: "person.3").tag(TabItem.spaces)
                 }
             }
-            .navigationTitle("UFO Control")
+            .navigationTitle("main.sidebar.title")
         } detail: {
             NavigationStack {
                 detailView(for: selectedTab)
@@ -37,7 +36,6 @@ struct SidebarMenuView: View {
     private func detailView(for tab: TabItem) -> some View {
         switch tab {
             case .home: HomeHubView()
-            case .budget: BudgetView()
             case .people: PeopleHubView()
             case .spaces: SpaceListView()
         }

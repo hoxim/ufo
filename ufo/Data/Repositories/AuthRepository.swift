@@ -230,10 +230,16 @@ final class AuthRepository: AuthRepositoryProtocol {
         func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
             #if os(iOS)
             let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            guard let windowScene = scenes.first else {
+                fatalError("No UIWindowScene available for OAuth presentation anchor.")
+            }
             if let keyWindow = scenes.flatMap(\.windows).first(where: \.isKeyWindow) {
                 return keyWindow
             }
-            return ASPresentationAnchor()
+            if let firstWindow = windowScene.windows.first {
+                return firstWindow
+            }
+            return UIWindow(windowScene: windowScene)
             #elseif os(macOS)
             return NSApplication.shared.keyWindow ?? ASPresentationAnchor()
             #else

@@ -13,9 +13,9 @@ struct InviteMemberView: View {
             Group {
                 if !space.allowsInvitations {
                     ContentUnavailableView(
-                        "To jest Private Space",
+                        "spaces.invite.unavailable.title",
                         systemImage: "lock.fill",
-                        description: Text("Aby zaprosić osoby, utwórz Space typu Shared.")
+                        description: Text("spaces.invite.unavailable.description")
                     )
                 } else if let vm = viewModel {
                     InviteForm(vm: vm)
@@ -23,13 +23,13 @@ struct InviteMemberView: View {
                     ProgressView()
                 }
             }
-            .navigationTitle("Invite to Crew")
+            .navigationTitle("spaces.invite.title")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
+                    Button("common.close") {
                         dismiss()
                     }
                 }
@@ -52,12 +52,12 @@ struct InviteForm: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Enter the email address of the new crew member.")
+            Text("spaces.invite.description")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             
-            TextField("Ally's Email", text: $vm.email)
+            TextField("spaces.invite.field.email", text: $vm.email)
                 #if os(iOS)
                 .textFieldStyle(.roundedBorder)
                 .keyboardType(.emailAddress)
@@ -76,7 +76,7 @@ struct InviteForm: View {
                     ProgressView()
                         .controlSize(.small)
                 } else {
-                    Text("Send Transmission")
+                    Text("spaces.invite.button.send")
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -86,8 +86,8 @@ struct InviteForm: View {
             Spacer()
         }
         .padding()
-        .alert("Status", isPresented: $vm.showMessage) {
-            Button("OK", role: .cancel) {
+        .alert("common.status", isPresented: $vm.showMessage) {
+            Button("common.ok", role: .cancel) {
                 if vm.isSuccess {
                     dismiss()
                 }

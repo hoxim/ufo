@@ -71,7 +71,7 @@ final class LocationViewModel {
     func useCurrentLocationForInput() {
         guard let location = locationManager.lastLocation else {
             requestFreshLocation()
-            locationErrorMessage = "Czekam na aktualną lokalizację urządzenia..."
+            locationErrorMessage = String(localized: "locations.error.waitingForCurrent")
             return
         }
         applyCurrentLocation(location)

@@ -23,11 +23,11 @@ struct LoginView: View {
             Form {
                 Section {
                     TextField("auth.login.email", text: $email)
-                        #if os(iOS)
+#if os(iOS)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        #endif
+#endif
                     SecureField("auth.login.password", text: $password)
                 }
 
@@ -50,16 +50,29 @@ struct LoginView: View {
                     Button {
                         Task { await signInWithOAuth(.google) }
                     } label: {
-                        Text("auth.social.google")
-                            .frame(maxWidth: .infinity)
+                        HStack(spacing: 8) {
+                                Image("google")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 24, height: 24)
+
+                                Text("auth.social.google")
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                     .disabled(authStore.state == .checkingSession)
 
                     Button {
                         Task { await signInWithOAuth(.apple) }
                     } label: {
-                        Text("auth.social.apple")
-                            .frame(maxWidth: .infinity)
+                        HStack(spacing: 24) {
+                                Image("apple")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 24, height: 24)
+
+                                Text("auth.social.apple")
+                        }.frame(maxWidth: .infinity)
                     }
                     .disabled(authStore.state == .checkingSession)
                 } header: {
@@ -74,6 +87,8 @@ struct LoginView: View {
             }
         }.ignoresSafeArea()
     }
+    
+    
     
     /// Returns whether valid email.
     private func isValidEmail(_ email: String) -> Bool {

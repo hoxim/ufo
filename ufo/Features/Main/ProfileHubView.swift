@@ -7,32 +7,32 @@ struct ProfileHubView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Account") {
+                Section("profile.hub.section.account") {
                     NavigationLink {
                         UserProfileView()
                     } label: {
-                        Label("Profile", systemImage: "person.crop.circle")
+                        Label("profile.hub.action.profile", systemImage: "person.crop.circle")
                     }
 
                     NavigationLink {
                         AppSettingsView()
                     } label: {
-                        Label("Settings", systemImage: "gearshape")
+                        Label("profile.hub.action.settings", systemImage: "gearshape")
                     }
                 }
 
-                Section("Session") {
+                Section("profile.hub.section.session") {
                     Button(role: .destructive) {
                         Task { await authStore.signOut() }
                     } label: {
-                        Label("Log out", systemImage: "rectangle.portrait.and.arrow.right")
+                        Label("profile.hub.action.logout", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
             }
-            .navigationTitle("Profile")
+            .navigationTitle("profile.hub.title")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
+                    Button("common.close") {
                         dismiss()
                     }
                 }

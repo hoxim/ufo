@@ -19,6 +19,20 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
     /// Starts tracking user location with proper authorization handling.
     func startTracking() {
+#if os(macOS)
+        switch manager.authorizationStatus {
+        case .authorizedAlways:
+            manager.startUpdatingLocation()
+            manager.requestLocation()
+            lastErrorMessage = nil
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+        case .restricted, .denied:
+            lastErrorMessage = String(localized: "locations.error.permissionDenied")
+        @unknown default:
+            break
+        }
+#else
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
             manager.startUpdatingLocation()
@@ -27,15 +41,16 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
         case .restricted, .denied:
-            lastErrorMessage = "Brak zgody na lokalizację. Włącz uprawnienie w ustawieniach."
+            lastErrorMessage = String(localized: "locations.error.permissionDenied")
         @unknown default:
             break
         }
+#endif
     }
 
     /// Requests one fresh location update.
     func requestCurrentLocation() {
-        if manager.authorizationStatus == .authorizedAlways || manager.authorizationStatus == .authorizedWhenInUse {
+        if isAuthorized(manager.authorizationStatus) {
             manager.requestLocation()
         } else {
             startTracking()
@@ -60,6 +75,14 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        lastErrorMessage = "Błąd lokalizacji: \(error.localizedDescription)"
+        lastErrorMessage = "\(String(localized: "locations.error.prefix")) \(error.localizedDescription)"
+    }
+
+    private func isAuthorized(_ status: CLAuthorizationStatus) -> Bool {
+#if os(macOS)
+        return status == .authorizedAlways
+#else
+        return status == .authorizedAlways || status == .authorizedWhenInUse
+#endif
     }
 }

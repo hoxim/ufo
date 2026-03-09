@@ -9,26 +9,26 @@ struct AppSettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("General") {
-                    Stepper("Space limit: \(spaceLimit)", value: $spaceLimit, in: 1...30)
-                    Toggle("Auto sync", isOn: $autoSyncEnabled)
+                Section("settings.section.general") {
+                    Stepper("\(String(localized: "settings.general.spaceLimit")): \(spaceLimit)", value: $spaceLimit, in: 1...30)
+                    Toggle("settings.general.autoSync", isOn: $autoSyncEnabled)
                 }
 
-                Section("Default Space") {
-                    Picker("Default type", selection: $defaultSpaceType) {
-                        Text("Private").tag(SpaceType.personal.rawValue)
-                        Text("Shared").tag(SpaceType.shared.rawValue)
+                Section("settings.section.defaultSpace") {
+                    Picker("settings.defaultSpace.type", selection: $defaultSpaceType) {
+                        Text("settings.defaultSpace.private").tag(SpaceType.personal.rawValue)
+                        Text("settings.defaultSpace.shared").tag(SpaceType.shared.rawValue)
                     }
                 }
 
-                Section("Privacy") {
-                    Toggle("Location sharing", isOn: $locationSharingEnabled)
-                    Text("To ustawienie określa domyślne zachowanie modułu mapy.")
+                Section("settings.section.privacy") {
+                    Toggle("settings.privacy.locationSharing", isOn: $locationSharingEnabled)
+                    Text("settings.privacy.locationSharing.note")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("settings.title")
         }
     }
 }

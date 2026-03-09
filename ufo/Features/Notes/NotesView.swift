@@ -9,6 +9,7 @@ struct NotesView: View {
     @State private var noteStore: NoteStore?
     @State private var isAddingNote = false
     @State private var editingNote: Note?
+    @State private var viewingNote: Note?
     @State private var incidents: [Incident] = []
     @State private var recentLocations: [LocationPing] = []
     @State private var selectedFolderId: UUID?
@@ -27,40 +28,45 @@ struct NotesView: View {
                 }
 
                 ForEach(filteredNotes) { note in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(note.title)
-                            .font(.headline)
-                        if !note.content.isEmpty {
-                            Text(note.content)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                    Button {
+                        viewingNote = note
+                    } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(note.title)
+                                .font(.headline)
+                            if !note.content.isEmpty {
+                                Text(note.content)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            HStack(spacing: 10) {
+                                if let url = note.attachedLinkURL, !url.isEmpty {
+                                    Label("notes.view.badge.link", systemImage: "link")
+                                        .font(.caption)
+                                }
+                                if note.relatedIncidentId != nil {
+                                    Label("notes.view.badge.incident", systemImage: "bolt.horizontal")
+                                        .font(.caption)
+                                }
+                                if note.relatedLocationLatitude != nil && note.relatedLocationLongitude != nil {
+                                    Label(note.relatedLocationLabel ?? String(localized: "notes.view.badge.location"), systemImage: "location")
+                                        .font(.caption)
+                                }
+                            }
+                            .foregroundStyle(.secondary)
                         }
-                        HStack(spacing: 10) {
-                            if let url = note.attachedLinkURL, !url.isEmpty {
-                                Label("Link", systemImage: "link")
-                                    .font(.caption)
-                            }
-                            if note.relatedIncidentId != nil {
-                                Label("Incident", systemImage: "bolt.horizontal")
-                                    .font(.caption)
-                            }
-                            if note.relatedLocationLatitude != nil && note.relatedLocationLongitude != nil {
-                                Label(note.relatedLocationLabel ?? "Location", systemImage: "location")
-                                    .font(.caption)
-                            }
-                        }
-                        .foregroundStyle(.secondary)
                     }
+                    .buttonStyle(.plain)
                     .contextMenu {
                         Button {
                             editingNote = note
                         } label: {
-                            Label("Edit", systemImage: "pencil")
+                            Label("common.edit", systemImage: "pencil")
                         }
                         Button(role: .destructive) {
                             Task { await noteStore?.deleteNote(note, actor: authRepo.currentUser?.id) }
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label("common.delete", systemImage: "trash")
                         }
                     }
                 }
@@ -73,13 +79,13 @@ struct NotesView: View {
                     }
                 }
             }
-            .navigationTitle("Notes")
+            .navigationTitle("notes.view.title")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         showFolderCreator = true
                     } label: {
-                        Label("Add Folder", systemImage: "folder.badge.plus")
+                        Label("notes.view.action.addFolder", systemImage: "folder.badge.plus")
                     }
                     .disabled(noteStore == nil || spaceRepo.selectedSpace == nil)
                 }
@@ -88,7 +94,7 @@ struct NotesView: View {
                     Button {
                         isAddingNote = true
                     } label: {
-                        Label("Add Note", systemImage: "plus")
+                        Label("notes.view.action.addNote", systemImage: "plus")
                     }
                     .disabled(noteStore == nil || spaceRepo.selectedSpace == nil)
                 }
@@ -97,7 +103,7 @@ struct NotesView: View {
                     Button {
                         Task { await noteStore?.syncPending() }
                     } label: {
-                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
                     }
                 }
             }
@@ -127,11 +133,22 @@ struct NotesView: View {
                     )
                 }
             }
+            .sheet(item: $viewingNote) { note in
+                NoteDetailView(
+                    note: note,
+                    onEdit: {
+                        viewingNote = nil
+                        DispatchQueue.main.async {
+                            editingNote = note
+                        }
+                    }
+                )
+            }
             .sheet(isPresented: $showFolderCreator) {
                 NavigationStack {
                     Form {
-                        TextField("Folder name", text: $newFolderName)
-                        Button("Create folder") {
+                        TextField("notes.folder.field.name", text: $newFolderName)
+                        Button("notes.folder.action.create") {
                             Task {
                                 let value = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
                                 guard !value.isEmpty else { return }
@@ -142,10 +159,10 @@ struct NotesView: View {
                         }
                         .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    .navigationTitle("New folder")
+                    .navigationTitle("notes.folder.title.new")
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { showFolderCreator = false }
+                            Button("common.cancel") { showFolderCreator = false }
                         }
                     }
                 }
@@ -169,7 +186,7 @@ struct NotesView: View {
                 Button {
                     selectedFolderId = nil
                 } label: {
-                    Text("All")
+                    Text("notes.filter.all")
                         .font(.caption)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
@@ -223,18 +240,83 @@ struct NotesView: View {
             recentLocations = []
             return
         }
-        incidents = (try? modelContext.fetch(
-            FetchDescriptor<Incident>(
-                predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
-                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+        do {
+            incidents = try modelContext.fetch(
+                FetchDescriptor<Incident>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+                )
             )
-        )) ?? []
-        recentLocations = (try? modelContext.fetch(
-            FetchDescriptor<LocationPing>(
-                predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
-                sortBy: [SortDescriptor(\.recordedAt, order: .reverse)]
+            recentLocations = try modelContext.fetch(
+                FetchDescriptor<LocationPing>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.recordedAt, order: .reverse)]
+                )
             )
-        )) ?? []
+        } catch {
+            Log.dbError("Notes.loadReferences (SwiftData fetch)", error)
+            incidents = []
+            recentLocations = []
+        }
+    }
+}
+
+private struct NoteDetailView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let note: Note
+    let onEdit: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(note.title)
+                        .font(.title2.bold())
+
+                    if !note.content.isEmpty {
+                        Text(note.content)
+                            .font(.body)
+                    }
+
+                    if let url = note.attachedLinkURL, !url.isEmpty, let validURL = URL(string: url) {
+                        Link(destination: validURL) {
+                            Label(url, systemImage: "link")
+                                .lineLimit(1)
+                        }
+                    }
+
+                    if note.relatedIncidentId != nil {
+                        Label("notes.view.badge.incident", systemImage: "bolt.horizontal")
+                            .font(.caption)
+                    }
+
+                    if note.relatedLocationLatitude != nil && note.relatedLocationLongitude != nil {
+                        Label(note.relatedLocationLabel ?? String(localized: "notes.view.badge.location"), systemImage: "location")
+                            .font(.caption)
+                    }
+
+                    Text(note.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+            }
+            .navigationTitle("notes.view.title")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.close") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        onEdit()
+                    } label: {
+                        Label("common.edit", systemImage: "pencil")
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -280,29 +362,29 @@ private struct NoteEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("Title", text: $title)
-                TextField("Content", text: $content, axis: .vertical)
-                Picker("Folder", selection: $selectedFolderId) {
-                    Text("No folder").tag(UUID?.none)
+                TextField("notes.editor.field.title", text: $title)
+                TextField("notes.editor.field.content", text: $content, axis: .vertical)
+                Picker("notes.editor.field.folder", selection: $selectedFolderId) {
+                    Text("notes.folder.none").tag(UUID?.none)
                     ForEach(folders) { folder in
                         Text(folder.name).tag(UUID?.some(folder.id))
                     }
                 }
-                TextField("Attached link URL", text: $attachedLinkURL)
+                TextField("notes.editor.field.linkUrl", text: $attachedLinkURL)
 #if os(iOS)
                     .textInputAutocapitalization(.never)
 #endif
                     .autocorrectionDisabled()
 
-                Picker("Attach incident", selection: $selectedIncidentId) {
-                    Text("None").tag(UUID?.none)
+                Picker("notes.editor.field.incident", selection: $selectedIncidentId) {
+                    Text("common.none").tag(UUID?.none)
                     ForEach(incidents) { incident in
                         Text(incident.title).tag(UUID?.some(incident.id))
                     }
                 }
 
-                Picker("Attach location", selection: $selectedLocationId) {
-                    Text("None").tag(UUID?.none)
+                Picker("notes.editor.field.location", selection: $selectedLocationId) {
+                    Text("common.none").tag(UUID?.none)
                     ForEach(locations) { location in
                         Text("\(location.userDisplayName) · \(location.recordedAt.formatted(date: .abbreviated, time: .shortened))")
                             .tag(UUID?.some(location.id))
@@ -315,15 +397,15 @@ private struct NoteEditorView: View {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Text(note == nil ? "Create note" : "Save changes")
+                        Text(note == nil ? "notes.editor.action.create" : "common.saveChanges")
                     }
                 }
                 .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
             }
-            .navigationTitle(note == nil ? "New Note" : "Edit Note")
+            .navigationTitle(note == nil ? "notes.editor.title.new" : "notes.editor.title.edit")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("common.cancel") { dismiss() }
                 }
             }
         }
@@ -367,7 +449,7 @@ private struct NoteEditorView: View {
     }
 }
 
-#Preview("Notes") {
+#Preview("notes.view.title") {
     let schema = Schema([
         UserProfile.self,
         Space.self,
@@ -389,7 +471,11 @@ private struct NoteEditorView: View {
     context.insert(NoteFolder(spaceId: space.id, name: "Work", createdBy: user.id))
     context.insert(Incident(spaceId: space.id, title: "Storm", incidentDescription: "Strong wind", occurrenceDate: .now, createdBy: user.id))
     context.insert(LocationPing(spaceId: space.id, userId: user.id, userDisplayName: "Preview User", latitude: 52.22, longitude: 21.01))
-    try? context.save()
+    do {
+        try context.save()
+    } catch {
+        Log.dbError("Notes preview context.save", error)
+    }
 
     let authRepo = AuthRepository(client: SupabaseConfig.client, isLoggedIn: true, currentUser: user)
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)

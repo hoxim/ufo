@@ -17,7 +17,7 @@ struct RootView: View {
     var body: some View {
         ZStack {
             if authStore.state == .checkingSession || authStore.state == .bootstrapping {
-                ProgressView("Przygotowuję dane konta...")
+                StartupLoadingView()
             } else if authStore.state == .signedOut {
                 AuthView()
             } else if let user = authStore.currentUser, !user.memberships.isEmpty {
@@ -82,9 +82,35 @@ struct RootView: View {
     }
 }
 
+private struct StartupLoadingView: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color.black, Color.blue.opacity(0.35)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 44, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+                Text("ufo")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(.white)
+                ProgressView("root.loading.account")
+                    .tint(.white)
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            .padding()
+        }
+    }
+}
+
 // MARK: - Shared Models
 enum TabItem: Hashable {
-    case home, budget, people, spaces
+    case home, people, spaces
 }
 
 #Preview {

@@ -28,13 +28,13 @@ class InviteViewModel {
         
         do {
             try await spaceRepository.inviteMember(email: email, spaceId: spaceId)
-            message = String(localized: "Invitation sent to \(email)!")
+            message = String(format: String(localized: "spaces.invite.message.sent"), email)
             isSuccess = true
             showMessage = true
             email = ""
         } catch {
             isSuccess = false
-            message = String(localized: "Failed to send: \(error.localizedDescription)")
+            message = String(format: String(localized: "spaces.invite.message.failed"), error.localizedDescription)
             showMessage = true
         }
     }
