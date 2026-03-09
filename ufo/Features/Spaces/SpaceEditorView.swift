@@ -51,25 +51,22 @@ struct SpaceEditorView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                
-                Section {
-                    Button(action: saveSpace) {
-                        if isProcessing {
-                            ProgressView()
-                        } else {
-                            Text(spaceToEdit == nil ? "spaces.editor.button.create" : "spaces.editor.button.save")
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    .disabled(name.isEmpty || isProcessing)
-                    .buttonStyle(.borderedProminent)
-                }
             }
             .navigationTitle(spaceToEdit == nil ? "spaces.editor.title.new" : "spaces.editor.title.edit")
             .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(action: saveSpace) {
+                        if isProcessing {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isProcessing)
                 }
             }
         }

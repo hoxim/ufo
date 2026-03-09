@@ -22,6 +22,7 @@ final class SharedListStore {
     /// Sets space.
     func setSpace(_ spaceId: UUID?) {
         currentSpaceId = spaceId
+        Log.msg("SharedListStore.setSpace spaceId=\(spaceId?.uuidString ?? "nil")")
         guard let spaceId else {
             lists = []
             itemsByList = [:]
@@ -40,16 +41,20 @@ final class SharedListStore {
             }
             itemsByList = map
             lastErrorMessage = nil
+            let summary = lists.map { "\($0.id.uuidString)=\($0.name)" }.joined(separator: ", ")
+            Log.msg("SharedListStore.loadLocal spaceId=\(spaceId.uuidString) lists=\(lists.count) summary=[\(summary)]")
         } catch {
             lists = []
             itemsByList = [:]
             lastErrorMessage = "Nie udało się wczytać list: \(error)"
+            Log.error("SharedListStore.loadLocal failed for spaceId=\(spaceId.uuidString): \(error.localizedDescription)")
         }
     }
 
     /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
+        Log.msg("SharedListStore.refreshRemote start spaceId=\(spaceId.uuidString)")
         isSyncing = true
         defer { isSyncing = false }
 
@@ -57,9 +62,11 @@ final class SharedListStore {
             try await repository.pullRemoteToLocal(spaceId: spaceId)
             loadLocal(spaceId: spaceId)
             lastErrorMessage = nil
+            Log.msg("SharedListStore.refreshRemote success spaceId=\(spaceId.uuidString)")
         } catch {
             loadLocal(spaceId: spaceId)
             lastErrorMessage = "Nie udało się odświeżyć list: \(error)"
+            Log.error("SharedListStore.refreshRemote failed for spaceId=\(spaceId.uuidString): \(error.localizedDescription)")
         }
     }
 
@@ -125,6 +132,7 @@ final class SharedListStore {
     /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
+        Log.msg("SharedListStore.syncPending start spaceId=\(spaceId.uuidString)")
         isSyncing = true
         defer { isSyncing = false }
 
@@ -134,8 +142,10 @@ final class SharedListStore {
             loadLocal(spaceId: spaceId)
             try modelContext.save()
             lastErrorMessage = nil
+            Log.msg("SharedListStore.syncPending success spaceId=\(spaceId.uuidString)")
         } catch {
             lastErrorMessage = "Nie udało się zsynchronizować list: \(error)"
+            Log.error("SharedListStore.syncPending failed for spaceId=\(spaceId.uuidString): \(error.localizedDescription)")
         }
     }
 }

@@ -8,7 +8,7 @@ struct SharedListsView: View {
 
     @State private var listStore: SharedListStore?
     @State private var isAddingList = false
-    @State private var navPath: [UUID] = []
+    @State private var selectedListId: UUID?
     @State private var didAutoPresentAdd = false
 
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
@@ -19,73 +19,65 @@ struct SharedListsView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $navPath) {
-            Group {
-                if let store = listStore {
-                    content(store: store)
-                } else {
-                    ProgressView("lists.view.loading")
-                }
+        Group {
+            if let store = listStore {
+                content(store: store)
+            } else {
+                ProgressView("lists.view.loading")
             }
-            .navigationTitle("lists.view.title")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        isAddingList = true
-                    } label: {
-                        Label("lists.view.action.add", systemImage: "plus")
-                    }
-                    .disabled(spaceRepo.selectedSpace == nil || listStore == nil)
-                }
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        Task { await listStore?.syncPending() }
-                    } label: {
-                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .disabled(listStore?.isSyncing == true || spaceRepo.selectedSpace == nil)
-                }
-            }
-            .sheet(isPresented: $isAddingList) {
-                if let listStore {
-                    AddSharedListView(
-                        store: listStore,
-                        actorId: authRepo.currentUser?.id
-                    ) { createdListId in
-                        navPath.append(createdListId)
-                    }
-                    #if os(iOS)
-                    .presentationDetents([.medium, .large])
-                    #endif
-                    #if os(macOS)
-                    .frame(minWidth: 560, minHeight: 520)
-                    #endif
-                }
-            }
-            .navigationDestination(for: UUID.self) { listId in
-                if let listStore {
-                    SharedListDetailView(
-                        store: listStore,
-                        listId: listId,
-                        actorId: authRepo.currentUser?.id
-                    )
-                } else {
-                    ProgressView("lists.detail.loading")
-                }
-            }
-            .task {
-                await setupStoreIfNeeded(performRemoteRefresh: !autoPresentAdd)
-                if autoPresentAdd && !didAutoPresentAdd && listStore != nil {
-                    didAutoPresentAdd = true
-                    try? await Task.sleep(for: .milliseconds(300))
+        }
+        .navigationTitle("lists.view.title")
+        .navigationDestination(item: $selectedListId) { listId in
+            detailDestination(for: listId)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     isAddingList = true
+                } label: {
+                    Label("lists.view.action.add", systemImage: "plus")
                 }
+                .disabled(spaceRepo.selectedSpace == nil || listStore == nil)
             }
-            .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
-                listStore?.setSpace(newValue)
-                navPath = []
-                Task { await listStore?.refreshRemote() }
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    Task { await listStore?.syncPending() }
+                } label: {
+                    Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(listStore?.isSyncing == true || spaceRepo.selectedSpace == nil)
             }
+        }
+        .sheet(isPresented: $isAddingList) {
+            if let listStore {
+                AddSharedListView(
+                    store: listStore,
+                    actorId: authRepo.currentUser?.id
+                ) { createdListId in
+                    selectedListId = createdListId
+                }
+                #if os(iOS)
+                .presentationDetents([.medium, .large])
+                #endif
+                #if os(macOS)
+                .frame(minWidth: 560, minHeight: 520)
+                #endif
+            }
+        }
+        .task {
+            Log.msg("SharedListsView.task start. autoPresentAdd=\(autoPresentAdd) selectedSpace=\(spaceRepo.selectedSpace?.id.uuidString ?? "nil")")
+            await setupStoreIfNeeded(performRemoteRefresh: !autoPresentAdd)
+            if autoPresentAdd && !didAutoPresentAdd && listStore != nil {
+                didAutoPresentAdd = true
+                try? await Task.sleep(for: .milliseconds(300))
+                isAddingList = true
+            }
+        }
+        .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
+            Log.msg("SharedListsView selected space changed to \(newValue?.uuidString ?? "nil")")
+            listStore?.setSpace(newValue)
+            selectedListId = nil
+            Task { await listStore?.refreshRemote() }
         }
     }
 
@@ -113,7 +105,9 @@ struct SharedListsView: View {
                 }
 
                 ForEach(store.lists) { list in
-                    NavigationLink(value: list.id) {
+                    Button {
+                        selectedListId = list.id
+                    } label: {
                         HStack(spacing: 12) {
                             Image(systemName: list.iconName ?? "checklist")
                                 .foregroundStyle(Color(hex: list.iconColorHex ?? "#6366F1"))
@@ -131,8 +125,36 @@ struct SharedListsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    .buttonStyle(.plain)
+                    .simultaneousGesture(TapGesture().onEnded {
+                        Log.msg("Opening shared list detail. listId=\(list.id.uuidString) name=\(list.name) items=\(store.itemsByList[list.id]?.count ?? 0)")
+                    })
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    /// Renders detail destination with a concrete store instance.
+    private func detailDestination(for listId: UUID) -> some View {
+        if let store = listStore {
+            SharedListDetailView(
+                store: store,
+                listId: listId,
+                actorId: authRepo.currentUser?.id
+            )
+            .onAppear {
+                Log.msg("Resolving shared list destination for listId=\(listId.uuidString). storeReady=true")
+            }
+        } else {
+            ProgressView("lists.detail.loading")
+                .onAppear {
+                    Log.msg("Resolving shared list destination for listId=\(listId.uuidString). storeReady=false")
+                }
+                .task {
+                    Log.msg("Shared list destination missing store. Recreating store for listId=\(listId.uuidString)")
+                    await setupStoreIfNeeded(performRemoteRefresh: false)
+                }
         }
     }
 
@@ -140,6 +162,7 @@ struct SharedListsView: View {
     /// Sets up store if needed.
     private func setupStoreIfNeeded(performRemoteRefresh: Bool = true) async {
         guard listStore == nil else { return }
+        Log.msg("Creating SharedListStore. performRemoteRefresh=\(performRemoteRefresh) selectedSpace=\(spaceRepo.selectedSpace?.id.uuidString ?? "nil")")
         let repo = SharedListRepository(client: SupabaseConfig.client, context: modelContext)
         let store = SharedListStore(modelContext: modelContext, repository: repo)
         listStore = store
@@ -305,6 +328,14 @@ private struct SharedListDetailView: View {
             }
         }
         .navigationTitle(list?.name ?? String(localized: "lists.detail.fallbackTitle"))
+        .onAppear {
+            let listName = list?.name ?? "nil"
+            let knownIds = store.lists.map(\.id.uuidString).joined(separator: ",")
+            Log.msg("SharedListDetailView appear. requestedListId=\(listId.uuidString) resolvedName=\(listName) itemCount=\(items.count) knownListIds=[\(knownIds)]")
+            if list == nil {
+                Log.error("SharedListDetailView could not resolve list for listId=\(listId.uuidString)")
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {

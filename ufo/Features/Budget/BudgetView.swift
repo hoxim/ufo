@@ -137,13 +137,13 @@ struct BudgetView: View {
             .sheet(isPresented: $showAddEntry) {
                 if let budgetStore {
                     AddBudgetEntryView(store: budgetStore, actor: authRepo.currentUser?.id)
-                        .presentationDetents([.medium])
+                        .presentationDetents([.medium, .large])
                 }
             }
             .sheet(isPresented: $showAddGoal) {
                 if let budgetStore {
                     AddBudgetGoalView(store: budgetStore, actor: authRepo.currentUser?.id)
-                        .presentationDetents([.medium])
+                        .presentationDetents([.medium, .large])
                 }
             }
             .task {

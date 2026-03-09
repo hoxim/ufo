@@ -119,6 +119,9 @@ struct NotesView: View {
                         locations: recentLocations,
                         actorId: authRepo.currentUser?.id
                     )
+                    #if os(iOS)
+                    .presentationDetents([.medium, .large])
+                    #endif
                 }
             }
             .sheet(item: $editingNote) { note in
@@ -131,6 +134,9 @@ struct NotesView: View {
                         locations: recentLocations,
                         actorId: authRepo.currentUser?.id
                     )
+                    #if os(iOS)
+                    .presentationDetents([.medium, .large])
+                    #endif
                 }
             }
             .sheet(item: $viewingNote) { note in
@@ -148,24 +154,31 @@ struct NotesView: View {
                 NavigationStack {
                     Form {
                         TextField("notes.folder.field.name", text: $newFolderName)
-                        Button("notes.folder.action.create") {
-                            Task {
-                                let value = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
-                                guard !value.isEmpty else { return }
-                                await noteStore?.addFolder(name: value, actor: authRepo.currentUser?.id)
-                                newFolderName = ""
-                                showFolderCreator = false
-                            }
-                        }
-                        .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .navigationTitle("notes.folder.title.new")
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("common.cancel") { showFolderCreator = false }
                         }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button {
+                                Task {
+                                    let value = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+                                    guard !value.isEmpty else { return }
+                                    await noteStore?.addFolder(name: value, actor: authRepo.currentUser?.id)
+                                    newFolderName = ""
+                                    showFolderCreator = false
+                                }
+                            } label: {
+                                Image(systemName: "checkmark")
+                            }
+                            .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
                     }
                 }
+                #if os(iOS)
+                .presentationDetents([.medium, .large])
+                #endif
             }
             .task {
                 await setupStoreIfNeeded()
@@ -390,22 +403,23 @@ private struct NoteEditorView: View {
                             .tag(UUID?.some(location.id))
                     }
                 }
-
-                Button {
-                    Task { await save() }
-                } label: {
-                    if isSaving {
-                        ProgressView()
-                    } else {
-                        Text(note == nil ? "notes.editor.action.create" : "common.saveChanges")
-                    }
-                }
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
             }
             .navigationTitle(note == nil ? "notes.editor.title.new" : "notes.editor.title.edit")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        Task { await save() }
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
                 }
             }
         }

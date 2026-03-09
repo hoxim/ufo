@@ -145,40 +145,36 @@ private struct MissionEditorForm: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+            Form {
+                Section {
                     TextField("missions.editor.field.title", text: $title)
-                        .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
-                        .foregroundStyle(.primary)
-
                     TextField("missions.editor.field.description", text: $description, axis: .vertical)
                         .lineLimit(2...5)
-                        .textFieldStyle(.roundedBorder)
-
+                }
+                Section {
                     Stepper(
                         "\(String(localized: "missions.editor.field.difficulty")): \(difficulty)",
                         value: $difficulty,
                         in: 1...5
                     )
-
+                }
+                Section {
                     DisclosureGroup("Style", isExpanded: $showStylePicker) {
                         OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                     }
-
+                }
+                Section {
                     PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                         Label("common.selectImage", systemImage: "photo")
                     }
                     .buttonStyle(.bordered)
-
                     if imageData != nil {
                         Text("common.imageSelected")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-
                 }
-                .padding()
             }
             .navigationTitle(navigationTitle)
             .toolbar {

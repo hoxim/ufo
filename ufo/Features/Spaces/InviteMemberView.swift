@@ -33,6 +33,20 @@ struct InviteMemberView: View {
                         dismiss()
                     }
                 }
+                ToolbarItem(placement: .confirmationAction) {
+                    if let vm = viewModel, space.allowsInvitations {
+                        Button {
+                            Task { await vm.sendInvite() }
+                        } label: {
+                            if vm.isProcessing {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                        .disabled(vm.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || vm.isProcessing)
+                    }
+                }
             }
         }
         .onAppear {
@@ -66,26 +80,11 @@ struct InviteForm: View {
                 #else
                 .textFieldStyle(.roundedBorder)
                 #endif
-            
-            Button {
-                Task {
-                    await vm.sendInvite()
-                }
-            } label: {
-                if vm.isProcessing {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Text("spaces.invite.button.send")
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(vm.email.isEmpty || vm.isProcessing)
-            
+
             Spacer()
         }
         .padding()
+        
         .alert("common.status", isPresented: $vm.showMessage) {
             Button("common.ok", role: .cancel) {
                 if vm.isSuccess {
