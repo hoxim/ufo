@@ -15,6 +15,9 @@ final class UserProfile {
     var email: String
     var fullName: String?
     var avatarURL: String?
+    var providerAvatarURL: String?
+    var providerFullName: String?
+    var authProvider: String?
     var avatarVersion: Int
     var role: String
     
@@ -40,5 +43,25 @@ final class UserProfile {
             avatarVersion: 1,
             role: role
         )
+    }
+
+    var effectiveAvatarURL: String? {
+        if let avatarURL, !avatarURL.isEmpty {
+            return avatarURL
+        }
+        if let providerAvatarURL, !providerAvatarURL.isEmpty {
+            return providerAvatarURL
+        }
+        return nil
+    }
+
+    var effectiveDisplayName: String? {
+        if let fullName, !fullName.isEmpty {
+            return fullName
+        }
+        if let providerFullName, !providerFullName.isEmpty {
+            return providerFullName
+        }
+        return nil
     }
 }

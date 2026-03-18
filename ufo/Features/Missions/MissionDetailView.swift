@@ -33,6 +33,24 @@ struct MissionDetailView: View {
                             .foregroundStyle(.secondary)
                     }
 
+                    HStack(spacing: 10) {
+                        Label(MissionPriority(rawValue: mission.resolvedPriority)?.localizedLabel ?? mission.resolvedPriority.capitalized, systemImage: "flag")
+                            .font(.caption)
+                        if mission.isRecurringValue {
+                            Label("Recurring", systemImage: "repeat")
+                                .font(.caption)
+                        }
+                        if let dueDate = mission.dueDate {
+                            Label(dueDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+                                .font(.caption)
+                        }
+                        if let savedPlaceName = mission.savedPlaceName, !savedPlaceName.isEmpty {
+                            Label(savedPlaceName, systemImage: "mappin.and.ellipse")
+                                .font(.caption)
+                        }
+                    }
+                    .foregroundStyle(.secondary)
+
                     if !mission.missionDescription.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("missions.editor.field.description")
@@ -104,4 +122,20 @@ struct MissionDetailView: View {
             #endif
         }
     }
+}
+
+#Preview("Mission Detail") {
+    let mission = Mission(
+        spaceId: UUID(),
+        title: "Prepare emergency bag",
+        missionDescription: "Check batteries, flashlight and first aid kit.",
+        difficulty: 3
+    )
+    mission.iconName = "backpack"
+    mission.iconColorHex = "#F59E0B"
+
+    return MissionDetailView(
+        mission: mission,
+        onEdit: {}
+    )
 }

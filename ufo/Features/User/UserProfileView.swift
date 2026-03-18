@@ -138,7 +138,7 @@ struct UserProfileView: View {
                         placeholderAvatar
                     }
                 }
-            } else if let avatarURL = authRepo.currentUser?.avatarURL,
+            } else if let avatarURL = authRepo.currentUser?.effectiveAvatarURL,
                       let url = URL(string: avatarURL),
                       !avatarURL.isEmpty {
                 AsyncImage(url: url) { phase in
@@ -179,7 +179,7 @@ struct UserProfileView: View {
                         placeholderAvatar
                     }
                 }
-            } else if let avatarURL = authRepo.currentUser?.avatarURL,
+            } else if let avatarURL = authRepo.currentUser?.effectiveAvatarURL,
                       let url = URL(string: avatarURL),
                       !avatarURL.isEmpty {
                 AsyncImage(url: url) { phase in

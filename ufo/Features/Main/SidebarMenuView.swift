@@ -43,3 +43,18 @@ struct SidebarMenuView: View {
 }
 
 #endif 
+
+#if os(macOS)
+#Preview("Sidebar Menu") {
+    @Previewable @State var selectedTab: TabItem = .home
+    let preview = MainNavigationPreviewFactory.make()
+
+    return SidebarMenuView(selectedTab: $selectedTab)
+        .environment(preview.authRepository)
+        .environment(preview.spaceRepository)
+        .environment(preview.authStore)
+        .environment(preview.notificationStore)
+        .modelContainer(preview.container)
+        .frame(width: 1100, height: 720)
+}
+#endif

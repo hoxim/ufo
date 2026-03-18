@@ -9,6 +9,8 @@ final class SharedList {
     var type: String
     var iconName: String?
     var iconColorHex: String?
+    var savedPlaceId: UUID?
+    var savedPlaceName: String?
     var createdBy: UUID?
     var createdAt: Date
     var updatedAt: Date
@@ -27,6 +29,8 @@ final class SharedList {
         type: String = "shopping",
         iconName: String? = "checklist",
         iconColorHex: String? = "#6366F1",
+        savedPlaceId: UUID? = nil,
+        savedPlaceName: String? = nil,
         createdBy: UUID? = nil
     ) {
         self.id = id
@@ -35,6 +39,8 @@ final class SharedList {
         self.type = type
         self.iconName = iconName
         self.iconColorHex = iconColorHex
+        self.savedPlaceId = savedPlaceId
+        self.savedPlaceName = savedPlaceName
         self.createdBy = createdBy
         self.createdAt = .now
         self.updatedAt = .now

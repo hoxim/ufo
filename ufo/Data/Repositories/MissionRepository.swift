@@ -22,6 +22,12 @@ final class MissionRepository {
         let description: String
         let difficulty: Int
         let isCompleted: Bool
+        let ownerId: UUID?
+        let dueDate: Date?
+        let savedPlaceId: UUID?
+        let savedPlaceName: String?
+        let priority: String
+        let isRecurring: Bool
         let createdBy: UUID?
         let createdAt: Date?
         let updatedAt: Date?
@@ -36,6 +42,12 @@ final class MissionRepository {
             case id, title, description, difficulty, version
             case spaceId = "space_id"
             case isCompleted = "is_completed"
+            case ownerId = "owner_id"
+            case dueDate = "due_date"
+            case savedPlaceId = "saved_place_id"
+            case savedPlaceName = "saved_place_name"
+            case priority
+            case isRecurring = "is_recurring"
             case createdBy = "created_by"
             case createdAt = "created_at"
             case updatedAt = "updated_at"
@@ -54,6 +66,12 @@ final class MissionRepository {
         let description: String
         let difficulty: Int
         let is_completed: Bool
+        let owner_id: UUID?
+        let due_date: Date?
+        let saved_place_id: UUID?
+        let saved_place_name: String?
+        let priority: String
+        let is_recurring: Bool
         let version: Int
         let created_by: UUID?
         let last_updated_at: Date
@@ -87,6 +105,12 @@ final class MissionRepository {
             description: mission.missionDescription,
             difficulty: mission.difficulty,
             is_completed: mission.isCompleted,
+            owner_id: mission.ownerId,
+            due_date: mission.dueDate,
+            saved_place_id: mission.savedPlaceId,
+            saved_place_name: mission.savedPlaceName,
+            priority: mission.resolvedPriority,
+            is_recurring: mission.isRecurringValue,
             version: mission.version,
             created_by: mission.createdBy,
             last_updated_at: mission.lastUpdatedAt,
@@ -148,13 +172,31 @@ final class MissionRepository {
     }
 
     /// Creates local.
-    func createLocal(spaceId: UUID, title: String, description: String, difficulty: Int, createdBy: UUID?) throws -> Mission {
+    func createLocal(
+        spaceId: UUID,
+        title: String,
+        description: String,
+        difficulty: Int,
+        ownerId: UUID?,
+        dueDate: Date?,
+        savedPlaceId: UUID?,
+        savedPlaceName: String?,
+        priority: String,
+        isRecurring: Bool,
+        createdBy: UUID?
+    ) throws -> Mission {
         guard let context else { throw RepositoryError.missingLocalContext }
         let mission = Mission(
             spaceId: spaceId,
             title: title,
             missionDescription: description,
             difficulty: difficulty,
+            ownerId: ownerId,
+            dueDate: dueDate,
+            savedPlaceId: savedPlaceId,
+            savedPlaceName: savedPlaceName,
+            priority: priority,
+            isRecurring: isRecurring,
             createdBy: createdBy
         )
         mission.pendingSync = true
@@ -164,11 +206,30 @@ final class MissionRepository {
     }
 
     /// Handles mark updated local.
-    func markUpdatedLocal(_ mission: Mission, title: String? = nil, description: String? = nil, difficulty: Int? = nil, isCompleted: Bool? = nil, updatedBy: UUID?) throws {
+    func markUpdatedLocal(
+        _ mission: Mission,
+        title: String? = nil,
+        description: String? = nil,
+        difficulty: Int? = nil,
+        ownerId: UUID?? = nil,
+        dueDate: Date?? = nil,
+        savedPlaceId: UUID?? = nil,
+        savedPlaceName: String?? = nil,
+        priority: String? = nil,
+        isRecurring: Bool? = nil,
+        isCompleted: Bool? = nil,
+        updatedBy: UUID?
+    ) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         if let title { mission.title = title }
         if let description { mission.missionDescription = description }
         if let difficulty { mission.difficulty = difficulty }
+        if let ownerId { mission.ownerId = ownerId }
+        if let dueDate { mission.dueDate = dueDate }
+        if let savedPlaceId { mission.savedPlaceId = savedPlaceId }
+        if let savedPlaceName { mission.savedPlaceName = savedPlaceName }
+        if let priority { mission.priority = priority }
+        if let isRecurring { mission.isRecurring = isRecurring }
         if let isCompleted { mission.isCompleted = isCompleted }
         mission.updatedBy = updatedBy
         mission.version += 1
@@ -208,6 +269,12 @@ final class MissionRepository {
                     local.missionDescription = record.description
                     local.difficulty = record.difficulty
                     local.isCompleted = record.isCompleted
+                    local.ownerId = record.ownerId
+                    local.dueDate = record.dueDate
+                    local.savedPlaceId = record.savedPlaceId
+                    local.savedPlaceName = record.savedPlaceName
+                    local.priority = record.priority
+                    local.isRecurring = record.isRecurring
                     local.createdBy = record.createdBy
                     local.createdAt = record.createdAt ?? local.createdAt
                     local.updatedAt = record.updatedAt ?? local.updatedAt
@@ -226,6 +293,12 @@ final class MissionRepository {
                     title: record.title,
                     missionDescription: record.description,
                     difficulty: record.difficulty,
+                    ownerId: record.ownerId,
+                    dueDate: record.dueDate,
+                    savedPlaceId: record.savedPlaceId,
+                    savedPlaceName: record.savedPlaceName,
+                    priority: record.priority,
+                    isRecurring: record.isRecurring,
                     iconName: record.iconName,
                     iconColorHex: record.iconColorHex,
                     createdBy: record.createdBy

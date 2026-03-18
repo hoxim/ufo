@@ -50,11 +50,13 @@ final class SpaceRepository {
         let email: String?
         let fullName: String?
         let avatarUrl: String?
+        let providerAvatarUrl: String?
 
         enum CodingKeys: String, CodingKey {
             case id, email
             case fullName = "full_name"
             case avatarUrl = "avatar_url"
+            case providerAvatarUrl = "provider_avatar_url"
         }
     }
 
@@ -200,6 +202,7 @@ final class SpaceRepository {
                 email: member.profile?.email ?? "",
                 fullName: member.profile?.fullName,
                 avatarURL: member.profile?.avatarUrl,
+                providerAvatarURL: member.profile?.providerAvatarUrl,
                 role: member.role
             )
         }

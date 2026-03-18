@@ -19,6 +19,12 @@ final class Mission: Thing {
     var missionDescription: String = ""
     var isCompleted: Bool = false
     var difficulty: Int = 1
+    var ownerId: UUID?
+    var dueDate: Date?
+    var savedPlaceId: UUID?
+    var savedPlaceName: String?
+    var priority: String?
+    var isRecurring: Bool?
     var space: Space?
     var version: Int = 1
     var lastUpdatedAt: Date
@@ -43,6 +49,12 @@ final class Mission: Thing {
         title: String,
         missionDescription: String = "",
         difficulty: Int = 1,
+        ownerId: UUID? = nil,
+        dueDate: Date? = nil,
+        savedPlaceId: UUID? = nil,
+        savedPlaceName: String? = nil,
+        priority: String = MissionPriority.medium.rawValue,
+        isRecurring: Bool = false,
         iconName: String? = nil,
         iconColorHex: String? = "#F59E0B",
         imageData: Data? = nil,
@@ -55,6 +67,12 @@ final class Mission: Thing {
         self.createdBy = createdBy
         self.missionDescription = missionDescription
         self.difficulty = difficulty
+        self.ownerId = ownerId
+        self.dueDate = dueDate
+        self.savedPlaceId = savedPlaceId
+        self.savedPlaceName = savedPlaceName
+        self.priority = priority
+        self.isRecurring = isRecurring
         self.iconName = iconName
         self.iconColorHex = iconColorHex
         self.imageData = imageData
@@ -68,5 +86,32 @@ extension Mission {
     @Transient
     var subThings: [any Thing] {
         return []
+    }
+
+    var resolvedPriority: String {
+        priority ?? MissionPriority.medium.rawValue
+    }
+
+    var isRecurringValue: Bool {
+        isRecurring ?? false
+    }
+}
+
+enum MissionPriority: String, CaseIterable, Identifiable {
+    case low
+    case medium
+    case high
+
+    var id: String { rawValue }
+
+    var localizedLabel: String {
+        switch self {
+        case .low:
+            return "Low"
+        case .medium:
+            return "Medium"
+        case .high:
+            return "High"
+        }
     }
 }

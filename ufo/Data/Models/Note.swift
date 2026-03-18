@@ -9,6 +9,12 @@ final class Note {
     var content: String
     var folderId: UUID?
     var attachedLinkURL: String?
+    var tags: [String]?
+    var isPinned: Bool?
+    var linkedEntityType: String?
+    var linkedEntityId: UUID?
+    var savedPlaceId: UUID?
+    var savedPlaceName: String?
     var relatedIncidentId: UUID?
     var relatedLocationLatitude: Double?
     var relatedLocationLongitude: Double?
@@ -29,6 +35,12 @@ final class Note {
         content: String,
         folderId: UUID? = nil,
         attachedLinkURL: String? = nil,
+        tags: [String] = [],
+        isPinned: Bool = false,
+        linkedEntityType: String? = nil,
+        linkedEntityId: UUID? = nil,
+        savedPlaceId: UUID? = nil,
+        savedPlaceName: String? = nil,
         relatedIncidentId: UUID? = nil,
         relatedLocationLatitude: Double? = nil,
         relatedLocationLongitude: Double? = nil,
@@ -41,6 +53,12 @@ final class Note {
         self.content = content
         self.folderId = folderId
         self.attachedLinkURL = attachedLinkURL
+        self.tags = tags
+        self.isPinned = isPinned
+        self.linkedEntityType = linkedEntityType
+        self.linkedEntityId = linkedEntityId
+        self.savedPlaceId = savedPlaceId
+        self.savedPlaceName = savedPlaceName
         self.relatedIncidentId = relatedIncidentId
         self.relatedLocationLatitude = relatedLocationLatitude
         self.relatedLocationLongitude = relatedLocationLongitude
@@ -52,5 +70,37 @@ final class Note {
         self.updatedBy = nil
         self.deletedAt = nil
         self.pendingSync = false
+    }
+}
+
+extension Note {
+    var resolvedTags: [String] {
+        tags ?? []
+    }
+
+    var isPinnedValue: Bool {
+        isPinned ?? false
+    }
+}
+
+enum NoteLinkedEntityType: String, CaseIterable, Identifiable {
+    case mission
+    case incident
+    case place
+    case person
+
+    var id: String { rawValue }
+
+    var localizedLabel: String {
+        switch self {
+        case .mission:
+            return "Mission"
+        case .incident:
+            return "Incident"
+        case .place:
+            return "Place"
+        case .person:
+            return "Person"
+        }
     }
 }

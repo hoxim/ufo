@@ -130,6 +130,14 @@ struct IncidentsListView: View {
                                 Text(incident.occurrenceDate.formatted(date: .abbreviated, time: .shortened))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
+                                Text("\(IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized) · \(IncidentStatus(rawValue: incident.resolvedStatus)?.localizedLabel ?? incident.resolvedStatus.capitalized)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                if let cost = incident.cost {
+                                    Text(cost.formatted(.currency(code: "PLN")))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
                                 if incident.imageData != nil {
                                     Text("common.imageAttached")
                                         .font(.caption2)
@@ -213,6 +221,18 @@ private struct IncidentDetailView: View {
                             .font(.body)
                     }
 
+                    HStack(spacing: 10) {
+                        Label(IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized, systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                        Label(IncidentStatus(rawValue: incident.resolvedStatus)?.localizedLabel ?? incident.resolvedStatus.capitalized, systemImage: "clock")
+                            .font(.caption)
+                        if let cost = incident.cost {
+                            Label(cost.formatted(.currency(code: "PLN")), systemImage: "dollarsign.circle")
+                                .font(.caption)
+                        }
+                    }
+                    .foregroundStyle(.secondary)
+
                     Text(incident.occurrenceDate.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -246,6 +266,10 @@ private struct AddIncidentView: View {
     @State private var title = ""
     @State private var details = ""
     @State private var date = Date()
+    @State private var severity: IncidentSeverity = .medium
+    @State private var status: IncidentStatus = .open
+    @State private var assigneeId: UUID?
+    @State private var costText = ""
     @State private var iconName = "bolt.horizontal"
     @State private var iconColorHex = "#F59E0B"
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -259,6 +283,26 @@ private struct AddIncidentView: View {
                 TextField("incidents.editor.field.title", text: $title)
                 TextField("incidents.editor.field.description", text: $details)
                 DatePicker("incidents.editor.field.date", selection: $date)
+                Picker("Severity", selection: $severity) {
+                    ForEach(IncidentSeverity.allCases) { value in
+                        Text(value.localizedLabel).tag(value)
+                    }
+                }
+                Picker("Status", selection: $status) {
+                    ForEach(IncidentStatus.allCases) { value in
+                        Text(value.localizedLabel).tag(value)
+                    }
+                }
+                Picker("Assignee", selection: $assigneeId) {
+                    Text("Unassigned").tag(UUID?.none)
+                    if let currentUser = userId {
+                        Text(currentUser.uuidString.prefix(8)).tag(UUID?.some(currentUser))
+                    }
+                }
+                TextField("Cost", text: $costText)
+#if os(iOS)
+                    .keyboardType(.decimalPad)
+#endif
                 DisclosureGroup("Style", isExpanded: $showStylePicker) {
                     OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 }
@@ -309,6 +353,10 @@ private struct AddIncidentView: View {
         await store.addIncident(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: details.isEmpty ? nil : details,
+            severity: severity.rawValue,
+            status: status.rawValue,
+            assigneeId: assigneeId,
+            cost: Double(costText.replacingOccurrences(of: ",", with: ".")),
             occurrenceDate: date,
             iconName: iconName.isEmpty ? nil : iconName,
             iconColorHex: iconColorHex,
@@ -329,6 +377,10 @@ private struct EditIncidentView: View {
     @State private var title: String
     @State private var details: String
     @State private var date: Date
+    @State private var severity: IncidentSeverity
+    @State private var status: IncidentStatus
+    @State private var assigneeId: UUID?
+    @State private var costText: String
     @State private var iconName: String
     @State private var iconColorHex: String
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -343,6 +395,10 @@ private struct EditIncidentView: View {
         _title = State(initialValue: incident.title)
         _details = State(initialValue: incident.incidentDescription ?? "")
         _date = State(initialValue: incident.occurrenceDate)
+        _severity = State(initialValue: IncidentSeverity(rawValue: incident.resolvedSeverity) ?? .medium)
+        _status = State(initialValue: IncidentStatus(rawValue: incident.resolvedStatus) ?? .open)
+        _assigneeId = State(initialValue: incident.assigneeId)
+        _costText = State(initialValue: incident.cost.map { String($0) } ?? "")
         _iconName = State(initialValue: incident.iconName ?? "bolt.horizontal")
         _iconColorHex = State(initialValue: incident.iconColorHex ?? "#F59E0B")
         _imageData = State(initialValue: incident.imageData)
@@ -354,6 +410,26 @@ private struct EditIncidentView: View {
                 TextField("incidents.editor.field.title", text: $title)
                 TextField("incidents.editor.field.description", text: $details)
                 DatePicker("incidents.editor.field.date", selection: $date)
+                Picker("Severity", selection: $severity) {
+                    ForEach(IncidentSeverity.allCases) { value in
+                        Text(value.localizedLabel).tag(value)
+                    }
+                }
+                Picker("Status", selection: $status) {
+                    ForEach(IncidentStatus.allCases) { value in
+                        Text(value.localizedLabel).tag(value)
+                    }
+                }
+                Picker("Assignee", selection: $assigneeId) {
+                    Text("Unassigned").tag(UUID?.none)
+                    if let currentUser = userId {
+                        Text(currentUser.uuidString.prefix(8)).tag(UUID?.some(currentUser))
+                    }
+                }
+                TextField("Cost", text: $costText)
+#if os(iOS)
+                    .keyboardType(.decimalPad)
+#endif
                 DisclosureGroup("Style", isExpanded: $showStylePicker) {
                     OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 }
@@ -403,6 +479,10 @@ private struct EditIncidentView: View {
             incident,
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: details.isEmpty ? nil : details,
+            severity: severity.rawValue,
+            status: status.rawValue,
+            assigneeId: assigneeId,
+            cost: Double(costText.replacingOccurrences(of: ",", with: ".")),
             occurrenceDate: date,
             iconName: iconName.isEmpty ? nil : iconName,
             iconColorHex: iconColorHex,

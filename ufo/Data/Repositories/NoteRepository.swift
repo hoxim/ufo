@@ -19,6 +19,12 @@ final class NoteRepository {
         let content: String
         let folderId: UUID?
         let attachedLinkURL: String?
+        let tags: [String]
+        let isPinned: Bool
+        let linkedEntityType: String?
+        let linkedEntityId: UUID?
+        let savedPlaceId: UUID?
+        let savedPlaceName: String?
         let relatedIncidentId: UUID?
         let relatedLocationLatitude: Double?
         let relatedLocationLongitude: Double?
@@ -35,6 +41,12 @@ final class NoteRepository {
             case spaceId = "space_id"
             case folderId = "folder_id"
             case attachedLinkURL = "attached_link_url"
+            case tags
+            case isPinned = "is_pinned"
+            case linkedEntityType = "linked_entity_type"
+            case linkedEntityId = "linked_entity_id"
+            case savedPlaceId = "saved_place_id"
+            case savedPlaceName = "saved_place_name"
             case relatedIncidentId = "related_incident_id"
             case relatedLocationLatitude = "related_location_latitude"
             case relatedLocationLongitude = "related_location_longitude"
@@ -54,6 +66,12 @@ final class NoteRepository {
         let content: String
         let folder_id: UUID?
         let attached_link_url: String?
+        let tags: [String]
+        let is_pinned: Bool
+        let linked_entity_type: String?
+        let linked_entity_id: UUID?
+        let saved_place_id: UUID?
+        let saved_place_name: String?
         let related_incident_id: UUID?
         let related_location_latitude: Double?
         let related_location_longitude: Double?
@@ -127,6 +145,12 @@ final class NoteRepository {
         content: String,
         folderId: UUID?,
         attachedLinkURL: String?,
+        tags: [String],
+        isPinned: Bool,
+        linkedEntityType: String?,
+        linkedEntityId: UUID?,
+        savedPlaceId: UUID?,
+        savedPlaceName: String?,
         relatedIncidentId: UUID?,
         relatedLocationLatitude: Double?,
         relatedLocationLongitude: Double?,
@@ -140,6 +164,12 @@ final class NoteRepository {
             content: content,
             folderId: folderId,
             attachedLinkURL: attachedLinkURL,
+            tags: tags,
+            isPinned: isPinned,
+            linkedEntityType: linkedEntityType,
+            linkedEntityId: linkedEntityId,
+            savedPlaceId: savedPlaceId,
+            savedPlaceName: savedPlaceName,
             relatedIncidentId: relatedIncidentId,
             relatedLocationLatitude: relatedLocationLatitude,
             relatedLocationLongitude: relatedLocationLongitude,
@@ -169,6 +199,12 @@ final class NoteRepository {
         content: String,
         folderId: UUID?,
         attachedLinkURL: String?,
+        tags: [String],
+        isPinned: Bool,
+        linkedEntityType: String?,
+        linkedEntityId: UUID?,
+        savedPlaceId: UUID?,
+        savedPlaceName: String?,
         relatedIncidentId: UUID?,
         relatedLocationLatitude: Double?,
         relatedLocationLongitude: Double?,
@@ -180,6 +216,12 @@ final class NoteRepository {
         note.content = content
         note.folderId = folderId
         note.attachedLinkURL = attachedLinkURL
+        note.tags = tags
+        note.isPinned = isPinned
+        note.linkedEntityType = linkedEntityType
+        note.linkedEntityId = linkedEntityId
+        note.savedPlaceId = savedPlaceId
+        note.savedPlaceName = savedPlaceName
         note.relatedIncidentId = relatedIncidentId
         note.relatedLocationLatitude = relatedLocationLatitude
         note.relatedLocationLongitude = relatedLocationLongitude
@@ -211,6 +253,12 @@ final class NoteRepository {
             content: note.content,
             folder_id: note.folderId,
             attached_link_url: note.attachedLinkURL,
+            tags: note.resolvedTags,
+            is_pinned: note.isPinnedValue,
+            linked_entity_type: note.linkedEntityType,
+            linked_entity_id: note.linkedEntityId,
+            saved_place_id: note.savedPlaceId,
+            saved_place_name: note.savedPlaceName,
             related_incident_id: note.relatedIncidentId,
             related_location_latitude: note.relatedLocationLatitude,
             related_location_longitude: note.relatedLocationLongitude,
@@ -261,6 +309,12 @@ final class NoteRepository {
                     local.content = record.content
                     local.folderId = record.folderId
                     local.attachedLinkURL = record.attachedLinkURL
+                    local.tags = record.tags
+                    local.isPinned = record.isPinned
+                    local.linkedEntityType = record.linkedEntityType
+                    local.linkedEntityId = record.linkedEntityId
+                    local.savedPlaceId = record.savedPlaceId
+                    local.savedPlaceName = record.savedPlaceName
                     local.relatedIncidentId = record.relatedIncidentId
                     local.relatedLocationLatitude = record.relatedLocationLatitude
                     local.relatedLocationLongitude = record.relatedLocationLongitude
@@ -281,6 +335,12 @@ final class NoteRepository {
                     content: record.content,
                     folderId: record.folderId,
                     attachedLinkURL: record.attachedLinkURL,
+                    tags: record.tags,
+                    isPinned: record.isPinned,
+                    linkedEntityType: record.linkedEntityType,
+                    linkedEntityId: record.linkedEntityId,
+                    savedPlaceId: record.savedPlaceId,
+                    savedPlaceName: record.savedPlaceName,
                     relatedIncidentId: record.relatedIncidentId,
                     relatedLocationLatitude: record.relatedLocationLatitude,
                     relatedLocationLongitude: record.relatedLocationLongitude,

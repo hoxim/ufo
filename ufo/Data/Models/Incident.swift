@@ -16,6 +16,10 @@ final class Incident: Thing {
     var createdBy: UUID?
     var title: String
     var incidentDescription: String?
+    var severity: String?
+    var status: String?
+    var assigneeId: UUID?
+    var cost: Double?
     var createdAt: Date
     var occurrenceDate: Date
     var version: Int = 1
@@ -37,6 +41,10 @@ final class Incident: Thing {
         spaceId: UUID,
         title: String,
         incidentDescription: String? = nil,
+        severity: String = IncidentSeverity.medium.rawValue,
+        status: String = IncidentStatus.open.rawValue,
+        assigneeId: UUID? = nil,
+        cost: Double? = nil,
         occurrenceDate: Date,
         iconName: String? = nil,
         iconColorHex: String? = "#F59E0B",
@@ -48,6 +56,10 @@ final class Incident: Thing {
         self.createdBy = createdBy
         self.title = title
         self.incidentDescription = incidentDescription
+        self.severity = severity
+        self.status = status
+        self.assigneeId = assigneeId
+        self.cost = cost
         self.iconName = iconName
         self.iconColorHex = iconColorHex
         self.imageData = imageData
@@ -62,5 +74,54 @@ extension Incident {
     @Transient
     var subThings: [any Thing] {
         return []
+    }
+
+    var resolvedSeverity: String {
+        severity ?? IncidentSeverity.medium.rawValue
+    }
+
+    var resolvedStatus: String {
+        status ?? IncidentStatus.open.rawValue
+    }
+}
+
+enum IncidentSeverity: String, CaseIterable, Identifiable {
+    case low
+    case medium
+    case high
+    case critical
+
+    var id: String { rawValue }
+
+    var localizedLabel: String {
+        switch self {
+        case .low:
+            return "Low"
+        case .medium:
+            return "Medium"
+        case .high:
+            return "High"
+        case .critical:
+            return "Critical"
+        }
+    }
+}
+
+enum IncidentStatus: String, CaseIterable, Identifiable {
+    case open
+    case inProgress = "in_progress"
+    case resolved
+
+    var id: String { rawValue }
+
+    var localizedLabel: String {
+        switch self {
+        case .open:
+            return "Open"
+        case .inProgress:
+            return "In Progress"
+        case .resolved:
+            return "Resolved"
+        }
     }
 }

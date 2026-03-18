@@ -56,14 +56,34 @@ final class MissionStore {
     }
 
     /// Handles add mission.
-    func addMission(title: String, description: String, difficulty: Int, iconName: String?, iconColorHex: String?, imageData: Data?, userId: UUID?) async {
-        guard let spaceId = currentSpaceId else { return }
+    func addMission(
+        title: String,
+        description: String,
+        difficulty: Int,
+        ownerId: UUID?,
+        dueDate: Date?,
+        savedPlaceId: UUID?,
+        savedPlaceName: String?,
+        priority: String,
+        isRecurring: Bool,
+        iconName: String?,
+        iconColorHex: String?,
+        imageData: Data?,
+        userId: UUID?
+    ) async -> Mission? {
+        guard let spaceId = currentSpaceId else { return nil }
         do {
             let mission = try repository.createLocal(
                 spaceId: spaceId,
                 title: title,
                 description: description,
                 difficulty: difficulty,
+                ownerId: ownerId,
+                dueDate: dueDate,
+                savedPlaceId: savedPlaceId,
+                savedPlaceName: savedPlaceName,
+                priority: priority,
+                isRecurring: isRecurring,
                 createdBy: userId
             )
             mission.iconName = iconName
@@ -72,8 +92,10 @@ final class MissionStore {
             mission.pendingSync = true
             missions = try repository.fetchAllLocal(spaceId: spaceId)
             await syncPending()
+            return mission
         } catch {
             lastErrorMessage = "Nie udało się dodać Mission: \(error)"
+            return nil
         }
     }
 
@@ -83,18 +105,30 @@ final class MissionStore {
         title: String? = nil,
         description: String? = nil,
         difficulty: Int? = nil,
+        ownerId: UUID?? = nil,
+        dueDate: Date?? = nil,
+        savedPlaceId: UUID?? = nil,
+        savedPlaceName: String?? = nil,
+        priority: String? = nil,
+        isRecurring: Bool? = nil,
         iconName: String? = nil,
         iconColorHex: String? = nil,
         imageData: Data? = nil,
         isCompleted: Bool? = nil,
         userId: UUID?
-    ) async {
+    ) async -> Bool {
         do {
             try repository.markUpdatedLocal(
                 mission,
                 title: title,
                 description: description,
                 difficulty: difficulty,
+                ownerId: ownerId,
+                dueDate: dueDate,
+                savedPlaceId: savedPlaceId,
+                savedPlaceName: savedPlaceName,
+                priority: priority,
+                isRecurring: isRecurring,
                 isCompleted: isCompleted,
                 updatedBy: userId
             )
@@ -112,14 +146,16 @@ final class MissionStore {
                 missions = try repository.fetchAllLocal(spaceId: spaceId)
             }
             await syncPending()
+            return true
         } catch {
             lastErrorMessage = "Nie udało się zaktualizować Mission: \(error)"
+            return false
         }
     }
 
     /// Toggles completed.
     func toggleCompleted(_ mission: Mission, userId: UUID?) async {
-        await updateMission(mission, isCompleted: !mission.isCompleted, userId: userId)
+        _ = await updateMission(mission, isCompleted: !mission.isCompleted, userId: userId)
     }
 
     /// Deletes mission.

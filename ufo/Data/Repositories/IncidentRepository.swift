@@ -19,6 +19,10 @@ final class IncidentRepository {
         let createdBy: UUID?
         let title: String
         let description: String?
+        let severity: String
+        let status: String
+        let assigneeId: UUID?
+        let cost: Double?
         let occurrenceDate: Date
         let createdAt: Date?
         let lastUpdatedAt: Date?
@@ -33,6 +37,10 @@ final class IncidentRepository {
             case id, title, description, version
             case spaceId = "space_id"
             case createdBy = "created_by"
+            case severity
+            case status
+            case assigneeId = "assignee_id"
+            case cost
             case occurrenceDate = "occurrence_date"
             case createdAt = "created_at"
             case lastUpdatedAt = "last_updated_at"
@@ -50,6 +58,10 @@ final class IncidentRepository {
         let created_by: UUID?
         let title: String
         let description: String?
+        let severity: String
+        let status: String
+        let assignee_id: UUID?
+        let cost: Double?
         let occurrence_date: Date
         let version: Int
         let last_updated_at: Date
@@ -95,12 +107,26 @@ final class IncidentRepository {
     }
 
     /// Creates local.
-    func createLocal(spaceId: UUID, title: String, description: String?, occurrenceDate: Date, createdBy: UUID?) throws -> Incident {
+    func createLocal(
+        spaceId: UUID,
+        title: String,
+        description: String?,
+        severity: String,
+        status: String,
+        assigneeId: UUID?,
+        cost: Double?,
+        occurrenceDate: Date,
+        createdBy: UUID?
+    ) throws -> Incident {
         guard let context else { throw RepositoryError.missingLocalContext }
         let incident = Incident(
             spaceId: spaceId,
             title: title,
             incidentDescription: description,
+            severity: severity,
+            status: status,
+            assigneeId: assigneeId,
+            cost: cost,
             occurrenceDate: occurrenceDate,
             createdBy: createdBy
         )
@@ -111,10 +137,24 @@ final class IncidentRepository {
     }
 
     /// Handles mark updated local.
-    func markUpdatedLocal(_ incident: Incident, title: String? = nil, description: String? = nil, occurrenceDate: Date? = nil, updatedBy: UUID?) throws {
+    func markUpdatedLocal(
+        _ incident: Incident,
+        title: String? = nil,
+        description: String? = nil,
+        severity: String? = nil,
+        status: String? = nil,
+        assigneeId: UUID?? = nil,
+        cost: Double?? = nil,
+        occurrenceDate: Date? = nil,
+        updatedBy: UUID?
+    ) throws {
         guard context != nil else { throw RepositoryError.missingLocalContext }
         if let title { incident.title = title }
         if let description { incident.incidentDescription = description }
+        if let severity { incident.severity = severity }
+        if let status { incident.status = status }
+        if let assigneeId { incident.assigneeId = assigneeId }
+        if let cost { incident.cost = cost }
         if let occurrenceDate { incident.occurrenceDate = occurrenceDate }
         incident.updatedBy = updatedBy
         incident.version += 1
@@ -144,6 +184,10 @@ final class IncidentRepository {
             created_by: incident.createdBy,
             title: incident.title,
             description: incident.incidentDescription,
+            severity: incident.resolvedSeverity,
+            status: incident.resolvedStatus,
+            assignee_id: incident.assigneeId,
+            cost: incident.cost,
             occurrence_date: incident.occurrenceDate,
             version: incident.version,
             last_updated_at: incident.lastUpdatedAt,
@@ -176,6 +220,10 @@ final class IncidentRepository {
                 if local.version <= record.version {
                     local.title = record.title
                     local.incidentDescription = record.description
+                    local.severity = record.severity
+                    local.status = record.status
+                    local.assigneeId = record.assigneeId
+                    local.cost = record.cost
                     local.occurrenceDate = record.occurrenceDate
                     local.createdBy = record.createdBy
                     local.createdAt = record.createdAt ?? local.createdAt
@@ -194,6 +242,10 @@ final class IncidentRepository {
                     spaceId: record.spaceId,
                     title: record.title,
                     incidentDescription: record.description,
+                    severity: record.severity,
+                    status: record.status,
+                    assigneeId: record.assigneeId,
+                    cost: record.cost,
                     occurrenceDate: record.occurrenceDate,
                     iconName: record.iconName,
                     iconColorHex: record.iconColorHex,

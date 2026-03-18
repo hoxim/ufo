@@ -33,6 +33,22 @@ struct MissionListRowView: View {
                             .lineLimit(2)
                     }
 
+                    HStack(spacing: 8) {
+                        Text(MissionPriority(rawValue: mission.resolvedPriority)?.localizedLabel ?? mission.resolvedPriority.capitalized)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        if mission.isRecurringValue {
+                            Text("Recurring")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        if let dueDate = mission.dueDate {
+                            Text(dueDate.formatted(date: .abbreviated, time: .omitted))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
                     if mission.imageData != nil {
                         Text("common.imageAttached")
                             .font(.caption2)

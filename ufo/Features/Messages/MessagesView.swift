@@ -185,6 +185,7 @@ struct MessagesView: View {
                     email: currentUser.email,
                     fullName: currentUser.fullName,
                     avatarURL: currentUser.avatarURL,
+                    providerAvatarURL: currentUser.providerAvatarURL,
                     role: currentUser.role
                 )
             ]

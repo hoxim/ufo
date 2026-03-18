@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct TabMenuView: View {
     @Binding var selectedTab: TabItem
@@ -37,4 +38,16 @@ struct TabMenuView: View {
         }
         #endif
     }
+}
+
+#Preview("Tab Menu") {
+    @Previewable @State var selectedTab: TabItem = .home
+    let preview = MainNavigationPreviewFactory.make()
+
+    return TabMenuView(selectedTab: $selectedTab)
+        .environment(preview.authRepository)
+        .environment(preview.spaceRepository)
+        .environment(preview.authStore)
+        .environment(preview.notificationStore)
+        .modelContainer(preview.container)
 }

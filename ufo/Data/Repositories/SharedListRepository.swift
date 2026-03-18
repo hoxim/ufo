@@ -19,6 +19,8 @@ final class SharedListRepository {
         let type: String
         let iconName: String?
         let iconColorHex: String?
+        let savedPlaceId: UUID?
+        let savedPlaceName: String?
         let createdBy: UUID?
         let createdAt: Date?
         let updatedAt: Date?
@@ -31,6 +33,8 @@ final class SharedListRepository {
             case spaceId = "space_id"
             case iconName = "icon_name"
             case iconColorHex = "icon_color_hex"
+            case savedPlaceId = "saved_place_id"
+            case savedPlaceName = "saved_place_name"
             case createdBy = "created_by"
             case createdAt = "created_at"
             case updatedAt = "updated_at"
@@ -69,6 +73,8 @@ final class SharedListRepository {
         let type: String
         let icon_name: String?
         let icon_color_hex: String?
+        let saved_place_id: UUID?
+        let saved_place_name: String?
         let created_by: UUID?
         let updated_at: Date
         let version: Int
@@ -82,6 +88,8 @@ final class SharedListRepository {
         let name: String
         let type: String
         let icon_name: String?
+        let saved_place_id: UUID?
+        let saved_place_name: String?
         let created_by: UUID?
         let updated_at: Date
         let version: Int
@@ -94,6 +102,8 @@ final class SharedListRepository {
         let space_id: UUID
         let name: String
         let type: String
+        let saved_place_id: UUID?
+        let saved_place_name: String?
         let created_by: UUID?
         let updated_at: Date
         let version: Int
@@ -136,7 +146,16 @@ final class SharedListRepository {
     }
 
     /// Creates list local.
-    func createListLocal(spaceId: UUID, name: String, type: SharedListType, iconName: String?, iconColorHex: String?, actor: UUID?) throws -> SharedList {
+    func createListLocal(
+        spaceId: UUID,
+        name: String,
+        type: SharedListType,
+        iconName: String?,
+        iconColorHex: String?,
+        savedPlaceId: UUID?,
+        savedPlaceName: String?,
+        actor: UUID?
+    ) throws -> SharedList {
         guard let context else { throw RepositoryError.missingLocalContext }
         let list = SharedList(
             spaceId: spaceId,
@@ -144,6 +163,8 @@ final class SharedListRepository {
             type: type.rawValue,
             iconName: iconName,
             iconColorHex: iconColorHex,
+            savedPlaceId: savedPlaceId,
+            savedPlaceName: savedPlaceName,
             createdBy: actor
         )
         list.pendingSync = true
@@ -193,6 +214,8 @@ final class SharedListRepository {
             type: list.type,
             icon_name: list.iconName,
             icon_color_hex: list.iconColorHex,
+            saved_place_id: list.savedPlaceId,
+            saved_place_name: list.savedPlaceName,
             created_by: list.createdBy,
             updated_at: list.updatedAt,
             version: list.version,
@@ -209,6 +232,8 @@ final class SharedListRepository {
                 name: list.name,
                 type: list.type,
                 icon_name: list.iconName,
+                saved_place_id: list.savedPlaceId,
+                saved_place_name: list.savedPlaceName,
                 created_by: list.createdBy,
                 updated_at: list.updatedAt,
                 version: list.version,
@@ -224,6 +249,8 @@ final class SharedListRepository {
                     space_id: list.spaceId,
                     name: list.name,
                     type: list.type,
+                    saved_place_id: list.savedPlaceId,
+                    saved_place_name: list.savedPlaceName,
                     created_by: list.createdBy,
                     updated_at: list.updatedAt,
                     version: list.version,
@@ -272,6 +299,8 @@ final class SharedListRepository {
                     local.type = record.type
                     local.iconName = record.iconName
                     local.iconColorHex = record.iconColorHex
+                    local.savedPlaceId = record.savedPlaceId
+                    local.savedPlaceName = record.savedPlaceName
                     local.createdBy = record.createdBy
                     local.createdAt = record.createdAt ?? local.createdAt
                     local.updatedAt = record.updatedAt ?? local.updatedAt
@@ -288,6 +317,8 @@ final class SharedListRepository {
                     type: record.type,
                     iconName: record.iconName,
                     iconColorHex: record.iconColorHex,
+                    savedPlaceId: record.savedPlaceId,
+                    savedPlaceName: record.savedPlaceName,
                     createdBy: record.createdBy
                 )
                 list.createdAt = record.createdAt ?? .now

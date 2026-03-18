@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct RootView: View {
     @Environment(AuthStore.self) private var authStore
     @Environment(SpaceRepository.self) private var spaceRepository
+    @Environment(AppNotificationStore.self) private var notificationStore
     
     @State private var selectedTab: TabItem = .home
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
@@ -39,16 +41,29 @@ struct RootView: View {
                     .zIndex(100)
                     .transition(.opacity.combined(with: .scale))
             }
+
+            if let toast = notificationStore.activeToast {
+                ToastOverlay(toast: toast) {
+                    notificationStore.dismissToast()
+                }
+                .zIndex(200)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .animation(.default, value: authStore.state)
         .animation(.easeInOut, value: spaceRepository.selectedSpace)
         .animation(.spring(), value: spaceRepository.pendingInvitation)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: notificationStore.activeToast)
         .task {
             guard !isPreview else { return }
             if authStore.state == .checkingSession {
                 await authStore.bootstrap()
             }
+            await notificationStore.bootstrap(spaceId: spaceRepository.selectedSpace?.id)
             await startBackgroundSync()
+        }
+        .onChange(of: spaceRepository.selectedSpace?.id) { _, newValue in
+            notificationStore.setSpace(newValue)
         }
     }
 
@@ -114,33 +129,21 @@ enum TabItem: Hashable {
 }
 
 #Preview {
+    RootViewPreview()
+}
 
-    let mockUser = UserProfile(
-        id: UUID(),
-        email: "maciek@ufo.pl",
-        fullName: "Maciek Hoxim",
-        role: "admin"
-    )
+private struct RootViewPreview: View {
+    private let preview = MainNavigationPreviewFactory.make()
 
-    let mockSpace = Space(id: UUID(), name: "Hoxim Squad", inviteCode: "UFO-123")
-    let membership = SpaceMembership(user: mockUser, space: mockSpace, role: "admin")
-    mockUser.memberships = [membership]
-    
-    let authRepo = AuthRepository(
-        client: SupabaseConfig.client,
-        isLoggedIn: true,
-        currentUser: mockUser
-    )
-    let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
-    spaceRepo.selectedSpace = mockSpace
-    let authStore = AuthStore(authRepository: authRepo, spaceRepository: spaceRepo)
-    authStore.state = .ready
-    
-    return RootView()
-        .environment(authRepo)
-        .environment(spaceRepo)
-        .environment(authStore)
-        #if os(macOS)
-        .frame(width: 1000, height: 700)
-        #endif
+    var body: some View {
+        RootView()
+            .environment(preview.authRepository)
+            .environment(preview.spaceRepository)
+            .environment(preview.authStore)
+            .environment(preview.notificationStore)
+            .modelContainer(preview.container)
+            #if os(macOS)
+            .frame(width: 1000, height: 700)
+            #endif
+    }
 }

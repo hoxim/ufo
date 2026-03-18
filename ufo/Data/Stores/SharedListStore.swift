@@ -72,7 +72,15 @@ final class SharedListStore {
 
     @discardableResult
     /// Adds list and returns new list id when success.
-    func addList(name: String, type: SharedListType, iconName: String?, iconColorHex: String?, actor: UUID?) async -> UUID? {
+    func addList(
+        name: String,
+        type: SharedListType,
+        iconName: String?,
+        iconColorHex: String?,
+        savedPlaceId: UUID?,
+        savedPlaceName: String?,
+        actor: UUID?
+    ) async -> UUID? {
         guard let spaceId = currentSpaceId else { return nil }
         do {
             let list = try repository.createListLocal(
@@ -81,6 +89,8 @@ final class SharedListStore {
                 type: type,
                 iconName: iconName,
                 iconColorHex: iconColorHex,
+                savedPlaceId: savedPlaceId,
+                savedPlaceName: savedPlaceName,
                 actor: actor
             )
             loadLocal(spaceId: spaceId)

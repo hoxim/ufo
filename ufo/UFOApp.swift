@@ -14,6 +14,7 @@ import Auth
 struct UFOApp: App {
     let container: ModelContainer = {
         let schema = Schema([
+            AppNotification.self,
             UserProfile.self,
             Space.self,
             SpaceMembership.self,
@@ -27,6 +28,8 @@ struct UFOApp: App {
             SharedList.self,
             SharedListItem.self,
             LocationPing.self,
+            SavedPlace.self,
+            LocationCheckIn.self,
             SpaceMessage.self,
             Note.self,
             NoteFolder.self
@@ -46,6 +49,7 @@ struct UFOApp: App {
     @State private var authRepository: AuthRepository
     @State private var spaceRepository: SpaceRepository
     @State private var authStore: AuthStore
+    @State private var notificationStore: AppNotificationStore
 
     init() {
         let client = SupabaseConfig.client
@@ -53,10 +57,12 @@ struct UFOApp: App {
         let authRepo = AuthRepository(client: client)
         let spaceRepo = SpaceRepository(client: client)
         let store = AuthStore(authRepository: authRepo, spaceRepository: spaceRepo)
+        let notificationStore = AppNotificationStore(modelContext: container.mainContext)
         
         _authRepository = State(initialValue: authRepo)
         _spaceRepository = State(initialValue: spaceRepo)
         _authStore = State(initialValue: store)
+        _notificationStore = State(initialValue: notificationStore)
     }
 
     var body: some Scene {
@@ -65,6 +71,7 @@ struct UFOApp: App {
                 .environment(authRepository)
                 .environment(spaceRepository)
                 .environment(authStore)
+                .environment(notificationStore)
                 .background(Color.backgroundSolid)
                 .onOpenURL { url in
                     SupabaseConfig.client.auth.handle(url)

@@ -39,3 +39,7 @@ struct SummaryView: View {
         }
     }
 }
+
+#Preview("Summary") {
+    SummaryView()
+}

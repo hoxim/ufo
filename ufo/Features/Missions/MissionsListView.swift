@@ -47,7 +47,12 @@ struct MissionsListView: View {
             }
             .sheet(isPresented: $isAddingMission) {
                 if let missionStore {
-                    AddMissionView(store: missionStore, userId: authRepo.currentUser?.id)
+                    AddMissionView(
+                        store: missionStore,
+                        userId: authRepo.currentUser?.id,
+                        availableOwners: availableOwners,
+                        availablePlaces: availablePlaces
+                    )
                         #if os(iOS)
                         .presentationDetents([.medium, .large])
                         #endif
@@ -61,7 +66,9 @@ struct MissionsListView: View {
                     EditMissionView(
                         store: missionStore,
                         mission: mission,
-                        userId: authRepo.currentUser?.id
+                        userId: authRepo.currentUser?.id,
+                        availableOwners: availableOwners,
+                        availablePlaces: availablePlaces
                     )
                     #if os(iOS)
                     .presentationDetents([.medium, .large])
@@ -177,6 +184,28 @@ struct MissionsListView: View {
         store.setSpace(spaceRepo.selectedSpace?.id)
         if performRemoteRefresh && !isPreview {
             await store.refreshRemote()
+        }
+    }
+
+    private var availableOwners: [UserProfile] {
+        guard let currentUser = authRepo.currentUser else { return [] }
+        let selectedSpaceId = spaceRepo.selectedSpace?.id
+        return currentUser.memberships
+            .filter { $0.spaceId == selectedSpaceId }
+            .compactMap(\.user)
+    }
+
+    private var availablePlaces: [SavedPlace] {
+        guard let selectedSpaceId = spaceRepo.selectedSpace?.id else { return [] }
+        do {
+            return try modelContext.fetch(
+                FetchDescriptor<SavedPlace>(
+                    predicate: #Predicate { $0.spaceId == selectedSpaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.name, order: .forward)]
+                )
+            )
+        } catch {
+            return []
         }
     }
 }

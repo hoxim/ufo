@@ -7,6 +7,7 @@
 
 import Foundation
 import Supabase
+import Helpers
 import SwiftData
 import UniformTypeIdentifiers
 #if canImport(AuthenticationServices)
@@ -61,6 +62,9 @@ final class AuthRepository: AuthRepositoryProtocol {
         let email: String?
         let fullName: String?
         let avatarUrl: String?
+        let providerAvatarUrl: String?
+        let providerFullName: String?
+        let authProvider: String?
         let avatarVersion: Int?
         let spaceMembers: [SpaceMembershipRecord]?
 
@@ -68,8 +72,21 @@ final class AuthRepository: AuthRepositoryProtocol {
             case id, email
             case fullName = "full_name"
             case avatarUrl = "avatar_url"
+            case providerAvatarUrl = "provider_avatar_url"
+            case providerFullName = "provider_full_name"
+            case authProvider = "auth_provider"
             case avatarVersion = "avatar_version"
             case spaceMembers = "space_members"
+        }
+    }
+
+    private struct ProfileIdentityRecord: Decodable {
+        let fullName: String?
+        let avatarUrl: String?
+
+        enum CodingKeys: String, CodingKey {
+            case fullName = "full_name"
+            case avatarUrl = "avatar_url"
         }
     }
     
@@ -175,6 +192,7 @@ final class AuthRepository: AuthRepositoryProtocol {
             #endif
             let userId = session.user.id
 
+            try await syncOAuthProfile(user: session.user, provider: provider)
             Log.msg("OAuth auth successful. Fetching profile and spaces data...")
             try await fetchUserProfile(id: userId)
         } catch {
@@ -359,6 +377,9 @@ final class AuthRepository: AuthRepositoryProtocol {
             role: "user"
         )
         userProfile.avatarURL = dto.avatarUrl
+        userProfile.providerAvatarURL = dto.providerAvatarUrl
+        userProfile.providerFullName = dto.providerFullName
+        userProfile.authProvider = dto.authProvider
         
         // 2. Map Memberships and Spaces
         if let membersDTO = dto.spaceMembers {
@@ -455,26 +476,29 @@ final class AuthRepository: AuthRepositoryProtocol {
             throw AuthError.avatarTooLarge
         }
 
-        let compressed = image.jpegData(compressionQuality: data.count > maxBytes ? 0.68 : 0.82)
-        guard let compressed,
-              compressed.count <= maxBytes else {
-            throw AuthError.avatarTooLarge
+        if let prepared = prepareJPEGUnderLimit(
+            image: image,
+            maxBytes: maxBytes,
+            startingMaxDimension: 1024
+        ) {
+            return prepared
         }
-        return compressed
+        throw AuthError.avatarTooLarge
         #elseif os(macOS)
         guard
-            let image = NSImage(data: data),
-            let tiffData = image.tiffRepresentation,
-            let rep = NSBitmapImageRep(data: tiffData),
-            let jpegData = rep.representation(
-                using: .jpeg,
-                properties: [.compressionFactor: data.count > maxBytes ? 0.68 : 0.82]
-            ),
-            jpegData.count <= maxBytes
+            let image = NSImage(data: data)
         else {
             throw AuthError.avatarTooLarge
         }
-        return jpegData
+
+        if let prepared = prepareJPEGUnderLimit(
+            image: image,
+            maxBytes: maxBytes,
+            startingMaxDimension: 1024
+        ) {
+            return prepared
+        }
+        throw AuthError.avatarTooLarge
         #else
         throw AuthError.avatarTooLarge
         #endif
@@ -498,9 +522,191 @@ final class AuthRepository: AuthRepositoryProtocol {
             Log.error("Avatar cache fetch failed: \(error.localizedDescription)")
         }
     }
+
+    private func syncOAuthProfile(user: Auth.User, provider: SocialAuthProvider) async throws {
+        let identity = mergedIdentityMetadata(from: user)
+        let fullName = preferredOAuthFullName(from: user, identity: identity)
+        let avatarURL = preferredOAuthAvatarURL(from: user, identity: identity)
+
+        let existingProfile: ProfileIdentityRecord = try await client
+            .from("profiles")
+            .select("full_name, avatar_url")
+            .eq("id", value: user.id)
+            .single()
+            .execute()
+            .value
+
+        struct OAuthProfilePayload: Encodable {
+            let auth_provider: String
+            let provider_avatar_url: String?
+            let provider_full_name: String?
+            let full_name: String?
+        }
+
+        let shouldSeedFullName = existingProfile.fullName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
+
+        try await client
+            .from("profiles")
+            .update(
+                OAuthProfilePayload(
+                    auth_provider: provider.rawValue,
+                    provider_avatar_url: avatarURL,
+                    provider_full_name: fullName,
+                    full_name: shouldSeedFullName ? fullName : nil
+                )
+            )
+            .eq("id", value: user.id)
+            .execute()
+    }
+
+    private func mergedIdentityMetadata(from user: Auth.User) -> [String: AnyJSON] {
+        var merged = user.userMetadata
+
+        for identity in user.identities ?? [] {
+            for (key, value) in identity.identityData ?? [:] {
+                if merged[key] == nil {
+                    merged[key] = value
+                }
+            }
+        }
+
+        return merged
+    }
+
+    private func preferredOAuthFullName(from user: Auth.User, identity: [String: AnyJSON]) -> String? {
+        firstNonEmptyValue(
+            user.userMetadata["full_name"]?.stringValue,
+            user.userMetadata["name"]?.stringValue,
+            identity["full_name"]?.stringValue,
+            identity["name"]?.stringValue
+        )
+    }
+
+    private func preferredOAuthAvatarURL(from user: Auth.User, identity: [String: AnyJSON]) -> String? {
+        firstNonEmptyValue(
+            user.userMetadata["avatar_url"]?.stringValue,
+            user.userMetadata["picture"]?.stringValue,
+            identity["avatar_url"]?.stringValue,
+            identity["picture"]?.stringValue
+        )
+    }
+
+    private func firstNonEmptyValue(_ values: String?...) -> String? {
+        values.first { value in
+            guard let value else { return false }
+            return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        } ?? nil
+    }
+
+    #if os(iOS)
+    private func prepareJPEGUnderLimit(image: UIImage, maxBytes: Int, startingMaxDimension: CGFloat) -> Data? {
+        var maxDimension = startingMaxDimension
+
+        while maxDimension >= 320 {
+            let resizedImage = resizedImage(image, maxDimension: maxDimension)
+            if let jpegData = jpegDataUnderLimit(from: resizedImage, maxBytes: maxBytes) {
+                return jpegData
+            }
+            maxDimension -= 128
+        }
+
+        return nil
+    }
+
+    private func resizedImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let largestSide = max(image.size.width, image.size.height)
+        guard largestSide > maxDimension else { return image }
+
+        let scale = maxDimension / largestSide
+        let targetSize = CGSize(
+            width: floor(image.size.width * scale),
+            height: floor(image.size.height * scale)
+        )
+
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
+    }
+
+    private func jpegDataUnderLimit(from image: UIImage, maxBytes: Int) -> Data? {
+        var quality: CGFloat = 0.9
+
+        while quality >= 0.25 {
+            if let data = image.jpegData(compressionQuality: quality), data.count <= maxBytes {
+                return data
+            }
+            quality -= 0.08
+        }
+
+        return nil
+    }
+    #elseif os(macOS)
+    private func prepareJPEGUnderLimit(image: NSImage, maxBytes: Int, startingMaxDimension: CGFloat) -> Data? {
+        var maxDimension = startingMaxDimension
+
+        while maxDimension >= 320 {
+            let resizedImage = resizedImage(image, maxDimension: maxDimension)
+            if let jpegData = jpegDataUnderLimit(from: resizedImage, maxBytes: maxBytes) {
+                return jpegData
+            }
+            maxDimension -= 128
+        }
+
+        return nil
+    }
+
+    private func resizedImage(_ image: NSImage, maxDimension: CGFloat) -> NSImage {
+        let imageSize = image.size
+        let largestSide = max(imageSize.width, imageSize.height)
+        guard largestSide > maxDimension else { return image }
+
+        let scale = maxDimension / largestSide
+        let targetSize = NSSize(
+            width: floor(imageSize.width * scale),
+            height: floor(imageSize.height * scale)
+        )
+
+        let resized = NSImage(size: targetSize)
+        resized.lockFocus()
+        image.draw(in: NSRect(origin: .zero, size: targetSize))
+        resized.unlockFocus()
+        return resized
+    }
+
+    private func jpegDataUnderLimit(from image: NSImage, maxBytes: Int) -> Data? {
+        guard
+            let tiffData = image.tiffRepresentation,
+            let rep = NSBitmapImageRep(data: tiffData)
+        else {
+            return nil
+        }
+
+        var quality: CGFloat = 0.9
+
+        while quality >= 0.25 {
+            if let data = rep.representation(using: .jpeg, properties: [.compressionFactor: quality]),
+               data.count <= maxBytes {
+                return data
+            }
+            quality -= 0.08
+        }
+
+        return nil
+    }
+    #endif
 }
 
 private extension SocialAuthProvider {
+    var rawValue: String {
+        switch self {
+        case .google:
+            return "google"
+        case .apple:
+            return "apple"
+        }
+    }
+
     var supabaseProvider: Provider {
         switch self {
         case .google:

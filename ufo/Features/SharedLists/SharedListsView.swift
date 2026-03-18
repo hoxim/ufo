@@ -52,7 +52,8 @@ struct SharedListsView: View {
             if let listStore {
                 AddSharedListView(
                     store: listStore,
-                    actorId: authRepo.currentUser?.id
+                    actorId: authRepo.currentUser?.id,
+                    availablePlaces: availablePlaces()
                 ) { createdListId in
                     selectedListId = createdListId
                 }
@@ -117,6 +118,11 @@ struct SharedListsView: View {
                                 Text(list.type.capitalized)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                if let savedPlaceName = list.savedPlaceName, !savedPlaceName.isEmpty {
+                                    Text(savedPlaceName)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             Spacer()
                             let count = store.itemsByList[list.id]?.count ?? 0
@@ -172,6 +178,20 @@ struct SharedListsView: View {
             await store.refreshRemote()
         }
     }
+
+    private func availablePlaces() -> [SavedPlace] {
+        guard let spaceId = spaceRepo.selectedSpace?.id else { return [] }
+        do {
+            return try modelContext.fetch(
+                FetchDescriptor<SavedPlace>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.name, order: .forward)]
+                )
+            )
+        } catch {
+            return []
+        }
+    }
 }
 
 private struct AddSharedListView: View {
@@ -179,12 +199,14 @@ private struct AddSharedListView: View {
 
     let store: SharedListStore
     let actorId: UUID?
+    let availablePlaces: [SavedPlace]
     let onCreated: (UUID) -> Void
 
     @State private var name = ""
     @State private var selectedType: SharedListType = .shopping
     @State private var selectedIconName = "checklist"
     @State private var selectedIconColorHex = "#6366F1"
+    @State private var savedPlaceId: UUID?
     @State private var isSaving = false
     @State private var showStylePicker = false
 
@@ -195,6 +217,12 @@ private struct AddSharedListView: View {
                 Picker("lists.editor.field.type", selection: $selectedType) {
                     ForEach(SharedListType.allCases) { type in
                         Text(type.rawValue.capitalized).tag(type)
+                    }
+                }
+                Picker("Place", selection: $savedPlaceId) {
+                    Text("No place").tag(UUID?.none)
+                    ForEach(availablePlaces) { place in
+                        Text(place.name).tag(UUID?.some(place.id))
                     }
                 }
                 DisclosureGroup("Style", isExpanded: $showStylePicker) {
@@ -237,6 +265,8 @@ private struct AddSharedListView: View {
             type: selectedType,
             iconName: selectedIconName,
             iconColorHex: selectedIconColorHex,
+            savedPlaceId: savedPlaceId,
+            savedPlaceName: availablePlaces.first(where: { $0.id == savedPlaceId })?.name,
             actor: actorId
         )
         guard let listId else { return }
@@ -284,6 +314,11 @@ private struct SharedListDetailView: View {
             }
 
             Section("lists.items.section.items") {
+                if let savedPlaceName = list?.savedPlaceName, !savedPlaceName.isEmpty {
+                    Label(savedPlaceName, systemImage: "mappin.and.ellipse")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if items.isEmpty {
                     Text("lists.items.empty")
                         .foregroundStyle(.secondary)

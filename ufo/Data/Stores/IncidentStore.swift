@@ -56,13 +56,29 @@ final class IncidentStore {
     }
 
     /// Handles add incident.
-    func addIncident(title: String, description: String?, occurrenceDate: Date, iconName: String?, iconColorHex: String?, imageData: Data?, userId: UUID?) async {
+    func addIncident(
+        title: String,
+        description: String?,
+        severity: String,
+        status: String,
+        assigneeId: UUID?,
+        cost: Double?,
+        occurrenceDate: Date,
+        iconName: String?,
+        iconColorHex: String?,
+        imageData: Data?,
+        userId: UUID?
+    ) async {
         guard let spaceId = currentSpaceId else { return }
         do {
             let incident = try repository.createLocal(
                 spaceId: spaceId,
                 title: title,
                 description: description,
+                severity: severity,
+                status: status,
+                assigneeId: assigneeId,
+                cost: cost,
                 occurrenceDate: occurrenceDate,
                 createdBy: userId
             )
@@ -82,6 +98,10 @@ final class IncidentStore {
         _ incident: Incident,
         title: String? = nil,
         description: String? = nil,
+        severity: String? = nil,
+        status: String? = nil,
+        assigneeId: UUID?? = nil,
+        cost: Double?? = nil,
         occurrenceDate: Date? = nil,
         iconName: String? = nil,
         iconColorHex: String? = nil,
@@ -93,6 +113,10 @@ final class IncidentStore {
                 incident,
                 title: title,
                 description: description,
+                severity: severity,
+                status: status,
+                assigneeId: assigneeId,
+                cost: cost,
                 occurrenceDate: occurrenceDate,
                 updatedBy: userId
             )

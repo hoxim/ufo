@@ -6,8 +6,10 @@ struct HomeHubView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AuthStore.self) private var authStore
     @Environment(SpaceRepository.self) private var spaceRepository
+    @Environment(AppNotificationStore.self) private var notificationStore
 
     @State private var showProfileSheet = false
+    @State private var showNotificationSheet = false
     @State private var widget = HomeWidgetState()
     @State private var budgetRange: BudgetWidgetRange = .month
     @State private var activeRoute: HomeRoute?
@@ -87,6 +89,8 @@ struct HomeHubView: View {
                         .buttonStyle(.plain)
                     }
 
+                    TodaySummaryCard(widget: widget)
+
                     HomeBudgetCard(
                         entries: widget.budgetEntries,
                         range: $budgetRange,
@@ -95,11 +99,15 @@ struct HomeHubView: View {
                 }
                 .padding()
             }
-            .navigationTitle("home.hub.title")
+            .navigationTitle(spaceRepository.selectedSpace?.name ?? "Summary")
             .navigationDestination(item: $activeRoute) { route in
                 destination(for: route)
             }
             .toolbar {
+                ToolbarItem(placement: homeSpaceToolbarPlacement) {
+                    spaceSwitcher
+                }
+
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button {
@@ -133,6 +141,16 @@ struct HomeHubView: View {
 
                 ToolbarItem(placement: profileToolbarPlacement) {
                     Button {
+                        showNotificationSheet = true
+                    } label: {
+                        NotificationBellButton(unreadCount: notificationStore.unreadCount)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Open notifications")
+                }
+
+                ToolbarItem(placement: profileToolbarPlacement) {
+                    Button {
                         showProfileSheet = true
                     } label: {
                         AvatarCircle(user: authStore.currentUser)
@@ -149,6 +167,10 @@ struct HomeHubView: View {
             }
             .sheet(isPresented: $showProfileSheet) {
                 ProfileHubView()
+                    .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showNotificationSheet) {
+                NotificationCenterView()
                     .presentationDetents([.medium, .large])
             }
         }
@@ -169,6 +191,8 @@ struct HomeHubView: View {
             NotesView()
         case .incidents:
             IncidentsListView()
+        case .locations:
+            LocationsView()
         case .links:
             LinksListView()
         case .budget:
@@ -194,7 +218,7 @@ struct HomeHubView: View {
             let missions = try modelContext.fetch(
                 FetchDescriptor<Mission>(
                     predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil && $0.isCompleted == false },
-                    sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+                    sortBy: [SortDescriptor(\.dueDate, order: .forward), SortDescriptor(\.createdAt, order: .forward)]
                 )
             )
 
@@ -217,6 +241,19 @@ struct HomeHubView: View {
                 )
             )
             let nearestIncident = allIncidents.first(where: { $0.occurrenceDate >= Date.now })
+
+            let savedPlaces = try modelContext.fetch(
+                FetchDescriptor<SavedPlace>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil }
+                )
+            )
+
+            let checkIns = try modelContext.fetch(
+                FetchDescriptor<LocationCheckIn>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.checkedInAt, order: .reverse)]
+                )
+            )
 
             let latestLink = try modelContext.fetch(
                 FetchDescriptor<LinkedThing>(
@@ -244,6 +281,16 @@ struct HomeHubView: View {
                 notesCount: notes.count,
                 nearestIncidentTitle: nearestIncident?.title,
                 nearestIncidentDateText: nearestIncident?.occurrenceDate.formatted(date: .abbreviated, time: .shortened),
+                dueTodayCount: missions.filter {
+                    guard let dueDate = $0.dueDate else { return false }
+                    return Calendar.current.isDateInToday(dueDate)
+                }.count,
+                recurringMissionCount: missions.filter(\.isRecurringValue).count,
+                pinnedNotesCount: notes.filter(\.isPinnedValue).count,
+                openIncidentsCount: allIncidents.filter { $0.resolvedStatus != IncidentStatus.resolved.rawValue }.count,
+                criticalIncidentsCount: allIncidents.filter { $0.resolvedSeverity == IncidentSeverity.critical.rawValue }.count,
+                savedPlacesCount: savedPlaces.count,
+                recentCheckInText: checkIns.first.map { "\($0.userDisplayName) · \($0.placeName ?? "Current")" },
                 linksCount: linksCount,
                 latestLinkDateText: latestLink?.updatedAt.formatted(date: .abbreviated, time: .shortened),
                 budgetEntries: budgetEntries
@@ -261,6 +308,105 @@ struct HomeHubView: View {
         .topBarTrailing
 #endif
     }
+
+    private var homeSpaceToolbarPlacement: ToolbarItemPlacement {
+#if os(macOS)
+        .navigation
+#else
+        .topBarLeading
+#endif
+    }
+
+    @ViewBuilder
+    private var spaceSwitcher: some View {
+        let memberships = authStore.currentUser?.memberships ?? []
+
+        if !memberships.isEmpty {
+            Menu {
+                ForEach(memberships) { membership in
+                    if let space = membership.space {
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                                spaceRepository.selectedSpace = space
+                            }
+                            refreshWidgets()
+                        } label: {
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(space.name)
+                                    Text(space.type.displayName)
+                                        .font(.caption)
+                                }
+                            } icon: {
+                                Image(systemName: spaceRepository.selectedSpace?.id == space.id ? "checkmark.circle.fill" : "circle")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                if let selectedSpace = spaceRepository.selectedSpace {
+                    ActiveSpaceMenuButton(space: selectedSpace)
+                } else {
+                    Image(systemName: "person.3.fill")
+                        .font(.headline)
+                }
+            }
+            .accessibilityLabel("Zmień aktywną grupę")
+        }
+    }
+}
+
+private struct NotificationBellButton: View {
+    let unreadCount: Int
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.secondary.opacity(0.12))
+                .frame(width: 36, height: 36)
+
+            Image(systemName: unreadCount > 0 ? "bell.badge.fill" : "bell")
+                .font(.title3)
+                .foregroundStyle(.primary)
+        }
+        .frame(width: 44, height: 44)
+        .overlay(alignment: .topTrailing) {
+            if unreadCount > 0 {
+                Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, unreadCount > 9 ? 5 : 4)
+                    .padding(.vertical, 2)
+                    .background(Color.red, in: Capsule())
+                    .overlay {
+                        Capsule()
+                            .stroke(Color.white, lineWidth: 2)
+                    }
+                    .offset(x: 1, y: 6)
+            }
+        }
+    }
+}
+
+private struct ActiveSpaceMenuButton: View {
+    let space: Space
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(space.type == .personal || space.type == .private ? Color.orange.opacity(0.2) : Color.blue.opacity(0.2))
+                .frame(width: 30, height: 30)
+                .overlay {
+                    Image(systemName: "person.3.fill")
+                        .font(.caption.bold())
+                        .foregroundStyle(space.type == .personal || space.type == .private ? .orange : .blue)
+                }
+
+            Image(systemName: "chevron.down")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
 }
 
 private enum HomeRoute: Hashable, Identifiable {
@@ -268,6 +414,7 @@ private enum HomeRoute: Hashable, Identifiable {
     case lists
     case notes
     case incidents
+    case locations
     case links
     case budget
     case quickAddMission
@@ -281,6 +428,7 @@ private enum HomeRoute: Hashable, Identifiable {
         case .lists: "lists"
         case .notes: "notes"
         case .incidents: "incidents"
+        case .locations: "locations"
         case .links: "links"
         case .budget: "budget"
         case .quickAddMission: "quickAddMission"
@@ -319,9 +467,66 @@ private struct HomeWidgetState {
     var notesCount: Int = 0
     var nearestIncidentTitle: String?
     var nearestIncidentDateText: String?
+    var dueTodayCount: Int = 0
+    var recurringMissionCount: Int = 0
+    var pinnedNotesCount: Int = 0
+    var openIncidentsCount: Int = 0
+    var criticalIncidentsCount: Int = 0
+    var savedPlacesCount: Int = 0
+    var recentCheckInText: String?
     var linksCount: Int = 0
     var latestLinkDateText: String?
     var budgetEntries: [BudgetEntry] = []
+}
+
+private struct TodaySummaryCard: View {
+    let widget: HomeWidgetState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Today / Family Hub")
+                .font(.headline)
+
+            HStack(spacing: 12) {
+                summaryPill(title: "Due today", value: "\(widget.dueTodayCount)", tint: .orange)
+                summaryPill(title: "Recurring", value: "\(widget.recurringMissionCount)", tint: .blue)
+                summaryPill(title: "Pinned", value: "\(widget.pinnedNotesCount)", tint: .pink)
+            }
+
+            HStack(spacing: 12) {
+                summaryPill(title: "Open", value: "\(widget.openIncidentsCount)", tint: .red)
+                summaryPill(title: "Critical", value: "\(widget.criticalIncidentsCount)", tint: .red.opacity(0.8))
+                summaryPill(title: "Places", value: "\(widget.savedPlacesCount)", tint: .green)
+            }
+
+            if let recentCheckInText = widget.recentCheckInText {
+                Label(recentCheckInText, systemImage: "location.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("No recent check-ins")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func summaryPill(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.headline)
+                .foregroundStyle(tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+    }
 }
 
 private struct HomeBudgetCard: View {
@@ -487,7 +692,7 @@ private struct AvatarCircle: View {
                         fallbackAvatar
                     }
                 }
-            } else if let urlString = user?.avatarURL, let url = URL(string: urlString) {
+            } else if let urlString = user?.effectiveAvatarURL, let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
                     if case .success(let image) = phase {
                         image.resizable().scaledToFill()
@@ -509,7 +714,7 @@ private struct AvatarCircle: View {
         Circle()
             .fill(Color.accentColor.gradient)
             .overlay {
-                Text(user?.fullName?.prefix(1) ?? "U")
+                Text(user?.effectiveDisplayName?.prefix(1) ?? "U")
                     .foregroundStyle(.white)
                     .fontWeight(.bold)
             }
@@ -518,13 +723,17 @@ private struct AvatarCircle: View {
 
 #Preview("Home Hub") {
     let schema = Schema([
+        AppNotification.self,
         UserProfile.self,
         Space.self,
         SpaceMembership.self,
         Mission.self,
         SharedList.self,
         Note.self,
-        BudgetEntry.self
+        BudgetEntry.self,
+        Incident.self,
+        SavedPlace.self,
+        LocationCheckIn.self
     ])
     let container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     let context = container.mainContext
@@ -534,9 +743,19 @@ private struct AvatarCircle: View {
     context.insert(user)
     context.insert(space)
     context.insert(SpaceMembership(user: user, space: space, role: "admin"))
-    context.insert(Mission(spaceId: space.id, title: "Buy food", missionDescription: "Weekly shopping", difficulty: 2))
+    let mission = Mission(spaceId: space.id, title: "Buy food", missionDescription: "Weekly shopping", difficulty: 2)
+    mission.dueDate = .now
+    mission.isRecurring = true
+    context.insert(mission)
+    let note = Note(spaceId: space.id, title: "Reminder", content: "Take umbrella", createdBy: user.id)
+    note.isPinned = true
     context.insert(SharedList(spaceId: space.id, name: "Shopping list", type: "shopping"))
-    context.insert(Note(spaceId: space.id, title: "Reminder", content: "Take umbrella", createdBy: user.id))
+    context.insert(note)
+    let incident = Incident(spaceId: space.id, title: "Storm alert", severity: IncidentSeverity.critical.rawValue, status: IncidentStatus.open.rawValue, occurrenceDate: .now, createdBy: user.id)
+    context.insert(incident)
+    let savedPlace = SavedPlace(spaceId: space.id, name: "School", category: "Kids", latitude: 52.23, longitude: 21.01, createdBy: user.id)
+    context.insert(savedPlace)
+    context.insert(LocationCheckIn(spaceId: space.id, userId: user.id, userDisplayName: "Preview User", placeId: savedPlace.id, placeName: savedPlace.name, latitude: savedPlace.latitude, longitude: savedPlace.longitude))
     context.insert(BudgetEntry(spaceId: space.id, title: "Salary", kind: "income", amount: 4200, category: "Work"))
     context.insert(BudgetEntry(spaceId: space.id, title: "Groceries", kind: "expense", amount: 300, category: "Food"))
     do {
@@ -550,9 +769,11 @@ private struct AvatarCircle: View {
     spaceRepo.selectedSpace = space
     let authStore = AuthStore(authRepository: authRepo, spaceRepository: spaceRepo)
     authStore.state = .ready
+    let notificationStore = AppNotificationStore(modelContext: context)
 
     return HomeHubView()
         .environment(authStore)
         .environment(spaceRepo)
+        .environment(notificationStore)
         .modelContainer(container)
 }
