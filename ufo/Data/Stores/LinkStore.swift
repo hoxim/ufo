@@ -7,6 +7,7 @@ import SwiftData
 final class LinkStore {
     private let modelContext: ModelContext
     private let repository: LinkRepository
+    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var links: [LinkedThing] = []
     var currentScopeId: UUID?
@@ -42,6 +43,10 @@ final class LinkStore {
     /// Handles refresh remote.
     func refreshRemote() async {
         guard let scopeId = currentScopeId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(scopeId: scopeId)
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
 
@@ -84,6 +89,11 @@ final class LinkStore {
     /// Syncs pending.
     func syncPending() async {
         guard let scopeId = currentScopeId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(scopeId: scopeId)
+            lastErrorMessage = nil
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
 

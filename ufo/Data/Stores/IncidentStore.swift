@@ -7,6 +7,7 @@ import SwiftData
 final class IncidentStore {
     private let modelContext: ModelContext
     private let repository: IncidentRepository
+    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var incidents: [Incident] = []
     var isSyncing: Bool = false
@@ -42,6 +43,10 @@ final class IncidentStore {
     /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
 
@@ -87,6 +92,7 @@ final class IncidentStore {
             incident.imageData = imageData
             incident.pendingSync = true
             incidents = try repository.fetchAllLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się dodać Incident: \(error)"
@@ -133,6 +139,7 @@ final class IncidentStore {
             if let spaceId = currentSpaceId {
                 incidents = try repository.fetchAllLocal(spaceId: spaceId)
             }
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się zaktualizować Incident: \(error)"
@@ -146,6 +153,7 @@ final class IncidentStore {
             if let spaceId = currentSpaceId {
                 incidents = try repository.fetchAllLocal(spaceId: spaceId)
             }
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się usunąć Incident: \(error)"
@@ -155,6 +163,11 @@ final class IncidentStore {
     /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            lastErrorMessage = nil
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
 
@@ -163,6 +176,7 @@ final class IncidentStore {
             try await repository.pullRemoteToLocal(spaceId: spaceId)
             incidents = try repository.fetchAllLocal(spaceId: spaceId)
             try modelContext.save()
+            notifyHomeWidgetsDataDidChange()
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = "Nie udało się zsynchronizować Incidents: \(error)"

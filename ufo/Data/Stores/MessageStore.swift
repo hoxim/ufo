@@ -7,6 +7,7 @@ import SwiftData
 final class MessageStore {
     private let modelContext: ModelContext
     private let repository: MessageRepository
+    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var messages: [SpaceMessage] = []
     var currentSpaceId: UUID?
@@ -42,6 +43,10 @@ final class MessageStore {
     /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
 
@@ -76,6 +81,11 @@ final class MessageStore {
     /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            lastErrorMessage = nil
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
 

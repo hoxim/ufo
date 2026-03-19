@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import SwiftUI
 
 @Model
 final class Note {
@@ -80,6 +81,24 @@ extension Note {
 
     var isPinnedValue: Bool {
         isPinned ?? false
+    }
+
+    var renderedContent: AttributedString {
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        if let value = try? AttributedString(markdown: content, options: options) {
+            return value
+        }
+        return AttributedString(content)
+    }
+
+    var previewText: String {
+        content
+            .replacingOccurrences(of: #"(?m)^#{1,6}\s*"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"(?m)^>\s*"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"(?m)^-\s\[[ xX]\]\s*"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"(?m)^[-*]\s+"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"[*_`]"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

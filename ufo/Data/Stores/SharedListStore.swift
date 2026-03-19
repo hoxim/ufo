@@ -7,6 +7,7 @@ import SwiftData
 final class SharedListStore {
     private let modelContext: ModelContext
     private let repository: SharedListRepository
+    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var lists: [SharedList] = []
     var itemsByList: [UUID: [SharedListItem]] = [:]
@@ -54,6 +55,10 @@ final class SharedListStore {
     /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            return
+        }
         Log.msg("SharedListStore.refreshRemote start spaceId=\(spaceId.uuidString)")
         isSyncing = true
         defer { isSyncing = false }
@@ -94,6 +99,7 @@ final class SharedListStore {
                 actor: actor
             )
             loadLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
             return list.id
         } catch {
@@ -109,6 +115,7 @@ final class SharedListStore {
             let nextPosition = (itemsByList[listId]?.count ?? 0) + 1
             _ = try repository.createItemLocal(listId: listId, title: title, position: nextPosition)
             if let spaceId = currentSpaceId { loadLocal(spaceId: spaceId) }
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się dodać pozycji listy: \(error)"
@@ -121,6 +128,7 @@ final class SharedListStore {
         do {
             try repository.toggleItemLocal(item, actor: actor)
             loadLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się zaktualizować pozycji listy: \(error)"
@@ -133,6 +141,7 @@ final class SharedListStore {
         do {
             try repository.deleteItemLocal(item, actor: actor)
             loadLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się usunąć pozycji listy: \(error)"
@@ -142,6 +151,11 @@ final class SharedListStore {
     /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            lastErrorMessage = nil
+            return
+        }
         Log.msg("SharedListStore.syncPending start spaceId=\(spaceId.uuidString)")
         isSyncing = true
         defer { isSyncing = false }
@@ -151,6 +165,7 @@ final class SharedListStore {
             try await repository.pullRemoteToLocal(spaceId: spaceId)
             loadLocal(spaceId: spaceId)
             try modelContext.save()
+            notifyHomeWidgetsDataDidChange()
             lastErrorMessage = nil
             Log.msg("SharedListStore.syncPending success spaceId=\(spaceId.uuidString)")
         } catch {

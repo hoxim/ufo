@@ -7,6 +7,7 @@ import SwiftData
 final class BudgetStore {
     private let modelContext: ModelContext
     private let repository: BudgetRepository
+    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var entries: [BudgetEntry] = []
     var goals: [BudgetGoal] = []
@@ -46,6 +47,10 @@ final class BudgetStore {
     /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
 
@@ -79,6 +84,7 @@ final class BudgetStore {
                 actor: actor
             )
             entries = try repository.fetchEntriesLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się dodać wpisu budżetu: \(error)"
@@ -98,6 +104,7 @@ final class BudgetStore {
                 actor: actor
             )
             goals = try repository.fetchGoalsLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się dodać celu budżetowego: \(error)"
@@ -110,6 +117,7 @@ final class BudgetStore {
         do {
             try repository.markGoalUpdatedLocal(goal, currentAmount: currentAmount, actor: actor)
             goals = try repository.fetchGoalsLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się zaktualizować celu: \(error)"
@@ -122,6 +130,7 @@ final class BudgetStore {
         do {
             try repository.markEntryDeletedLocal(entry, actor: actor)
             entries = try repository.fetchEntriesLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się usunąć wpisu budżetu: \(error)"
@@ -131,6 +140,11 @@ final class BudgetStore {
     /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            lastErrorMessage = nil
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
 
@@ -140,6 +154,7 @@ final class BudgetStore {
             entries = try repository.fetchEntriesLocal(spaceId: spaceId)
             goals = try repository.fetchGoalsLocal(spaceId: spaceId)
             try modelContext.save()
+            notifyHomeWidgetsDataDidChange()
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = "Nie udało się zsynchronizować budżetu: \(error)"

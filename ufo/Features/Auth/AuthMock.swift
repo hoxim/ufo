@@ -21,7 +21,9 @@ struct AuthMock {
             Mission.self,
             Incident.self,
             LinkedThing.self,
-            Assignment.self
+            Assignment.self,
+            Routine.self,
+            RoutineLog.self
         ])
 
         let config = ModelConfiguration(isStoredInMemoryOnly: true)

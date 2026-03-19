@@ -7,6 +7,7 @@ import SwiftData
 final class LocationStore {
     private let modelContext: ModelContext
     private let repository: LocationRepository
+    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var pings: [LocationPing] = []
     var savedPlaces: [SavedPlace] = []
@@ -54,6 +55,10 @@ final class LocationStore {
     /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            return
+        }
         Log.msg("LocationStore.refreshRemote start spaceId=\(spaceId.uuidString)")
         isSyncing = true
         defer { isSyncing = false }
@@ -87,6 +92,7 @@ final class LocationStore {
             pings = try repository.fetchLocal(spaceId: spaceId)
             savedPlaces = try repository.fetchSavedPlacesLocal(spaceId: spaceId)
             checkIns = try repository.fetchCheckInsLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się dodać lokalizacji: \(error)"
@@ -129,6 +135,7 @@ final class LocationStore {
             savedPlaces = try repository.fetchSavedPlacesLocal(spaceId: spaceId)
             lastErrorMessage = nil
             Log.msg("LocationStore.addSavedPlace local save success placeId=\(created.id.uuidString) savedPlaces=\(savedPlaces.count)")
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
             return true
         } catch {
@@ -162,6 +169,7 @@ final class LocationStore {
                 actor: actor
             )
             checkIns = try repository.fetchCheckInsLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
             return checkIn
         } catch {
@@ -173,6 +181,11 @@ final class LocationStore {
     /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            lastErrorMessage = nil
+            return
+        }
         Log.msg("LocationStore.syncPending start spaceId=\(spaceId.uuidString)")
         isSyncing = true
         defer { isSyncing = false }
@@ -184,6 +197,7 @@ final class LocationStore {
             savedPlaces = try repository.fetchSavedPlacesLocal(spaceId: spaceId)
             checkIns = try repository.fetchCheckInsLocal(spaceId: spaceId)
             try modelContext.save()
+            notifyHomeWidgetsDataDidChange()
             lastErrorMessage = nil
             Log.msg("LocationStore.syncPending success spaceId=\(spaceId.uuidString) savedPlaces=\(savedPlaces.count)")
         } catch {

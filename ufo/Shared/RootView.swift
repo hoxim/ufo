@@ -12,6 +12,7 @@ struct RootView: View {
     @Environment(AuthStore.self) private var authStore
     @Environment(SpaceRepository.self) private var spaceRepository
     @Environment(AppNotificationStore.self) private var notificationStore
+    @Environment(AppPreferences.self) private var appPreferences
     
     @State private var selectedTab: TabItem = .home
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
@@ -79,6 +80,8 @@ struct RootView: View {
 
     /// Handles start background sync.
     private func startBackgroundSync() async {
+        guard appPreferences.supportsCloudFeatures else { return }
+
         while !authStore.isLoggedIn {
             try? await Task.sleep(nanoseconds: 1 * 1_000_000_000)
         }

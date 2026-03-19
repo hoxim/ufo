@@ -213,6 +213,20 @@ final class SpaceRepository {
         try await fetchMembers(spaceId: spaceId)
     }
 
+    /// Updates role for a space member.
+    func updateMemberRole(spaceId: UUID, userId: UUID, role: String) async throws {
+        struct RoleUpdate: Encodable {
+            let role: String
+        }
+
+        try await client
+            .from("space_members")
+            .update(RoleUpdate(role: role))
+            .eq("space_id", value: spaceId)
+            .eq("user_id", value: userId)
+            .execute()
+    }
+
     /// Fetches invitations.
     func fetchInvitations(for email: String, status: String = "pending") async throws -> [SpaceInvitation] {
         let invites: [SpaceInvitationRecord] = try await client

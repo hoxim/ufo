@@ -7,6 +7,7 @@ import SwiftData
 final class NoteStore {
     private let modelContext: ModelContext
     private let repository: NoteRepository
+    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var notes: [Note] = []
     var folders: [NoteFolder] = []
@@ -46,6 +47,10 @@ final class NoteStore {
     /// Pulls latest notes from remote and merges to local.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
         do {
@@ -100,6 +105,7 @@ final class NoteStore {
             )
             notes = try repository.fetchAllLocal(spaceId: spaceId)
             folders = try repository.fetchFoldersLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się dodać notatki: \(error)"
@@ -148,6 +154,7 @@ final class NoteStore {
                 notes = try repository.fetchAllLocal(spaceId: spaceId)
                 folders = try repository.fetchFoldersLocal(spaceId: spaceId)
             }
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się zaktualizować notatki: \(error)"
@@ -162,6 +169,7 @@ final class NoteStore {
                 notes = try repository.fetchAllLocal(spaceId: spaceId)
                 folders = try repository.fetchFoldersLocal(spaceId: spaceId)
             }
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się usunąć notatki: \(error)"
@@ -171,6 +179,11 @@ final class NoteStore {
     /// Syncs pending local mutations and reloads latest notes.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            lastErrorMessage = nil
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
         do {
@@ -181,6 +194,7 @@ final class NoteStore {
             notes = try repository.fetchAllLocal(spaceId: spaceId)
             folders = try repository.fetchFoldersLocal(spaceId: spaceId)
             try modelContext.save()
+            notifyHomeWidgetsDataDidChange()
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = "Nie udało się zsynchronizować notatek: \(error)"

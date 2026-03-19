@@ -21,7 +21,9 @@ enum MainNavigationPreviewFactory {
             Mission.self,
             SharedList.self,
             Note.self,
-            BudgetEntry.self
+            BudgetEntry.self,
+            Routine.self,
+            RoutineLog.self
         ])
         let container = try! ModelContainer(
             for: schema,
@@ -46,6 +48,9 @@ enum MainNavigationPreviewFactory {
         context.insert(SharedList(spaceId: space.id, name: "Shopping list", type: "shopping"))
         context.insert(Note(spaceId: space.id, title: "Reminder", content: "Take umbrella", createdBy: user.id))
         context.insert(BudgetEntry(spaceId: space.id, title: "Salary", kind: "income", amount: 4200, category: "Work"))
+        let routine = Routine(spaceId: space.id, title: "Breakfast", category: RoutineCategory.food.rawValue, startMinuteOfDay: 480, durationMinutes: 30, createdBy: user.id)
+        context.insert(routine)
+        context.insert(RoutineLog(routineId: routine.id, spaceId: space.id, loggedAt: .now, createdBy: user.id))
 
         try? context.save()
 

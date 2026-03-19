@@ -12,6 +12,7 @@ struct SpaceEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(SpaceRepository.self) private var spaceRepo
     @Environment(AuthRepository.self) private var authRepo
+    @Environment(AppPreferences.self) private var appPreferences
     
     var spaceToEdit: Space?
     
@@ -37,11 +38,14 @@ struct SpaceEditorView: View {
                     
                     Picker("spaces.editor.field.type", selection: $selectedType) {
                         Text("spaces.editor.type.private").tag(SpaceType.personal)
-                        Text("spaces.editor.type.shared").tag(SpaceType.shared)
+                        if appPreferences.allowsSharedSpaces {
+                            Text("spaces.editor.type.shared").tag(SpaceType.shared)
+                        }
                     }
                     .pickerStyle(.menu)
+                    .disabled(!appPreferences.allowsSharedSpaces)
 
-                    if selectedType == .personal || selectedType == .private {
+                    if !appPreferences.allowsSharedSpaces || selectedType == .personal || selectedType == .private {
                         Text("spaces.editor.note.private")
                             .font(.footnote)
                             .foregroundStyle(.secondary)

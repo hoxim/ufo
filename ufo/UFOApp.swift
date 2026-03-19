@@ -18,6 +18,7 @@ struct UFOApp: App {
             UserProfile.self,
             Space.self,
             SpaceMembership.self,
+            SpaceRoleDefinition.self,
             SpaceInvitation.self,
             Mission.self,
             Incident.self,
@@ -32,10 +33,12 @@ struct UFOApp: App {
             LocationCheckIn.self,
             SpaceMessage.self,
             Note.self,
-            NoteFolder.self
+            NoteFolder.self,
+            Routine.self,
+            RoutineLog.self
         ])
         // New local store name to avoid loading an old incompatible SwiftData file.
-        let config = ModelConfiguration("UFO_Clean_DB_v2", isStoredInMemoryOnly: false)
+        let config = ModelConfiguration("UFO_Clean_DB_v5", isStoredInMemoryOnly: false)
 
         do {
             return try ModelContainer(for: schema, configurations: [config])
@@ -50,6 +53,7 @@ struct UFOApp: App {
     @State private var spaceRepository: SpaceRepository
     @State private var authStore: AuthStore
     @State private var notificationStore: AppNotificationStore
+    @State private var appPreferences: AppPreferences
 
     init() {
         let client = SupabaseConfig.client
@@ -58,11 +62,13 @@ struct UFOApp: App {
         let spaceRepo = SpaceRepository(client: client)
         let store = AuthStore(authRepository: authRepo, spaceRepository: spaceRepo)
         let notificationStore = AppNotificationStore(modelContext: container.mainContext)
+        let appPreferences = AppPreferences.shared
         
         _authRepository = State(initialValue: authRepo)
         _spaceRepository = State(initialValue: spaceRepo)
         _authStore = State(initialValue: store)
         _notificationStore = State(initialValue: notificationStore)
+        _appPreferences = State(initialValue: appPreferences)
     }
 
     var body: some Scene {
@@ -72,6 +78,7 @@ struct UFOApp: App {
                 .environment(spaceRepository)
                 .environment(authStore)
                 .environment(notificationStore)
+                .environment(appPreferences)
                 .background(Color.backgroundSolid)
                 .onOpenURL { url in
                     SupabaseConfig.client.auth.handle(url)

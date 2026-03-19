@@ -18,12 +18,10 @@ struct NoteDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(note.title)
-                        .font(.title2.bold())
-                    
                     if !note.content.isEmpty {
-                        Text(note.content)
+                        Text(note.renderedContent)
                             .font(.body)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
                     if let url = note.attachedLinkURL, !url.isEmpty, let validURL = URL(string: url) {
@@ -55,7 +53,8 @@ struct NoteDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
             }
-            .navigationTitle("notes.view.title")
+            .navigationTitle(note.title)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.close") { dismiss() }

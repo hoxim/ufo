@@ -7,6 +7,7 @@ import SwiftData
 final class MissionStore {
     private let modelContext: ModelContext
     private let repository: MissionRepository
+    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var missions: [Mission] = []
     var currentSpaceId: UUID?
@@ -42,6 +43,10 @@ final class MissionStore {
     /// Handles refresh remote.
     func refreshRemote() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
 
@@ -91,6 +96,7 @@ final class MissionStore {
             mission.imageData = imageData
             mission.pendingSync = true
             missions = try repository.fetchAllLocal(spaceId: spaceId)
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
             return mission
         } catch {
@@ -145,6 +151,7 @@ final class MissionStore {
             if let spaceId = currentSpaceId {
                 missions = try repository.fetchAllLocal(spaceId: spaceId)
             }
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
             return true
         } catch {
@@ -165,6 +172,7 @@ final class MissionStore {
             if let spaceId = currentSpaceId {
                 missions = try repository.fetchAllLocal(spaceId: spaceId)
             }
+            notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
             lastErrorMessage = "Nie udało się usunąć Mission: \(error)"
@@ -174,6 +182,11 @@ final class MissionStore {
     /// Syncs pending.
     func syncPending() async {
         guard let spaceId = currentSpaceId else { return }
+        guard cloudSyncEnabled else {
+            loadLocal(spaceId: spaceId)
+            lastErrorMessage = nil
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
 
@@ -182,6 +195,7 @@ final class MissionStore {
             try await repository.pullRemoteToLocal(spaceId: spaceId)
             missions = try repository.fetchAllLocal(spaceId: spaceId)
             try modelContext.save()
+            notifyHomeWidgetsDataDidChange()
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = "Nie udało się zsynchronizować Missions: \(error)"

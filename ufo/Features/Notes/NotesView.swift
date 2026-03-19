@@ -7,14 +7,14 @@ struct NotesView: View {
     @Environment(AuthRepository.self) private var authRepo
 
     @State private var noteStore: NoteStore?
-    @State private var isAddingNote = false
-    @State private var editingNote: Note?
+    @State private var editorTarget: NoteEditorTarget?
     @State private var viewingNote: Note?
     @State private var incidents: [Incident] = []
     @State private var recentLocations: [LocationPing] = []
     @State private var selectedFolderId: UUID?
     @State private var newFolderName = ""
     @State private var showFolderCreator = false
+    @State private var searchText = ""
 
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
@@ -27,73 +27,26 @@ struct NotesView: View {
                         .foregroundStyle(.red)
                 }
 
-                ForEach(filteredNotes) { note in
-                    Button {
-                        viewingNote = note
-                    } label: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(note.title)
-                                .font(.headline)
-                            if !note.content.isEmpty {
-                                Text(note.content)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            HStack(spacing: 10) {
-                                if note.isPinnedValue {
-                                    Label("Pinned", systemImage: "pin.fill")
-                                        .font(.caption)
-                                }
-                                if let url = note.attachedLinkURL, !url.isEmpty {
-                                    Label("notes.view.badge.link", systemImage: "link")
-                                        .font(.caption)
-                                }
-                                if note.relatedIncidentId != nil {
-                                    Label("notes.view.badge.incident", systemImage: "bolt.horizontal")
-                                        .font(.caption)
-                                }
-                                if note.relatedLocationLatitude != nil && note.relatedLocationLongitude != nil {
-                                    Label(note.relatedLocationLabel ?? String(localized: "notes.view.badge.location"), systemImage: "location")
-                                        .font(.caption)
-                                }
-                            }
-                            .foregroundStyle(.secondary)
-                            if !note.resolvedTags.isEmpty {
-                                Text(note.resolvedTags.joined(separator: " • "))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            if let savedPlaceName = note.savedPlaceName, !savedPlaceName.isEmpty {
-                                Label(savedPlaceName, systemImage: "mappin.and.ellipse")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button {
-                            editingNote = note
-                        } label: {
-                            Label("common.edit", systemImage: "pencil")
-                        }
-                        Button(role: .destructive) {
-                            Task { await noteStore?.deleteNote(note, actor: authRepo.currentUser?.id) }
-                        } label: {
-                            Label("common.delete", systemImage: "trash")
+                if !pinnedNotes.isEmpty {
+                    Section("Pinned") {
+                        ForEach(pinnedNotes) { note in
+                            noteRow(for: note)
                         }
                     }
                 }
-                .onDelete { offsets in
-                    let values = offsets.map { filteredNotes[$0] }
-                    Task {
-                        for note in values {
-                            await noteStore?.deleteNote(note, actor: authRepo.currentUser?.id)
+
+                ForEach(datedSections) { section in
+                    Section(section.title) {
+                        ForEach(section.notes) { note in
+                            noteRow(for: note)
                         }
                     }
                 }
             }
             .navigationTitle("notes.view.title")
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .searchable(text: $searchText, prompt: "Szukaj notatek")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -106,7 +59,7 @@ struct NotesView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        isAddingNote = true
+                        editorTarget = NoteEditorTarget()
                     } label: {
                         Label("notes.view.action.addNote", systemImage: "plus")
                     }
@@ -124,47 +77,29 @@ struct NotesView: View {
             .safeAreaInset(edge: .top) {
                 folderPickerBar
             }
-            .sheet(isPresented: $isAddingNote) {
-                if let noteStore {
-                    NoteEditorView(
-                        noteStore: noteStore,
-                        folders: noteStore.folders,
-                        incidents: incidents,
-                        locations: recentLocations,
-                        savedPlaces: savedPlaces(),
-                        actorId: authRepo.currentUser?.id
-                    )
-                    #if os(iOS)
-                    .presentationDetents([.medium, .large])
-                    #endif
-                }
-            }
-            .sheet(item: $editingNote) { note in
-                if let noteStore {
-                    NoteEditorView(
-                        noteStore: noteStore,
-                        note: note,
-                        folders: noteStore.folders,
-                        incidents: incidents,
-                        locations: recentLocations,
-                        savedPlaces: savedPlaces(),
-                        actorId: authRepo.currentUser?.id
-                    )
-                    #if os(iOS)
-                    .presentationDetents([.medium, .large])
-                    #endif
-                }
-            }
             .sheet(item: $viewingNote) { note in
                 NoteDetailView(
                     note: note,
                     onEdit: {
                         viewingNote = nil
                         DispatchQueue.main.async {
-                            editingNote = note
+                            editorTarget = NoteEditorTarget(note: note)
                         }
                     }
                 )
+            }
+            .navigationDestination(item: $editorTarget) { target in
+                if let noteStore {
+                    NoteEditorView(
+                        noteStore: noteStore,
+                        note: target.note,
+                        folders: noteStore.folders,
+                        incidents: incidents,
+                        locations: recentLocations,
+                        savedPlaces: savedPlaces(),
+                        actorId: authRepo.currentUser?.id
+                    )
+                }
             }
             .sheet(isPresented: $showFolderCreator) {
                 NavigationStack {
@@ -251,8 +186,82 @@ struct NotesView: View {
             }
             return $0.updatedAt > $1.updatedAt
         } ?? []
-        guard let selectedFolderId else { return notes }
-        return notes.filter { $0.folderId == selectedFolderId }
+
+        return notes.filter { note in
+            let matchesFolder = selectedFolderId == nil || note.folderId == selectedFolderId
+            let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let matchesSearch = query.isEmpty || noteMatchesSearch(note, query: query)
+            return matchesFolder && matchesSearch
+        }
+    }
+
+    private var pinnedNotes: [Note] {
+        filteredNotes.filter(\.isPinnedValue)
+    }
+
+    private var datedSections: [NoteDaySection] {
+        let notes = filteredNotes.filter { !$0.isPinnedValue }
+        let grouped = Dictionary(grouping: notes) { Calendar.current.startOfDay(for: $0.updatedAt) }
+
+        return grouped
+            .map { date, notes in
+                NoteDaySection(
+                    date: date,
+                    notes: notes.sorted { $0.updatedAt > $1.updatedAt }
+                )
+            }
+            .sorted { $0.date > $1.date }
+    }
+
+    @ViewBuilder
+    private func noteRow(for note: Note) -> some View {
+        Button {
+            viewingNote = note
+        } label: {
+            NoteCardView(note: note)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .contextMenu {
+            Button {
+                editorTarget = NoteEditorTarget(note: note)
+            } label: {
+                Label("common.edit", systemImage: "pencil")
+            }
+            Button(role: .destructive) {
+                Task { await noteStore?.deleteNote(note, actor: authRepo.currentUser?.id) }
+            } label: {
+                Label("common.delete", systemImage: "trash")
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                Task { await noteStore?.deleteNote(note, actor: authRepo.currentUser?.id) }
+            } label: {
+                Label("common.delete", systemImage: "trash")
+            }
+        }
+    }
+
+    private func noteMatchesSearch(_ note: Note, query: String) -> Bool {
+        let normalizedQuery = query.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        let haystacks = [
+            note.title,
+            note.previewText,
+            note.savedPlaceName ?? "",
+            note.relatedLocationLabel ?? "",
+            note.attachedLinkURL ?? "",
+            note.resolvedTags.joined(separator: " ")
+        ]
+
+        return haystacks.contains {
+            $0.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+                .contains(normalizedQuery)
+        }
     }
 
     /// Initializes note store once and performs first remote refresh.
@@ -307,6 +316,121 @@ struct NotesView: View {
         } catch {
             return []
         }
+    }
+}
+
+private struct NoteCardView: View {
+    let note: Note
+
+    private var footerItems: [String] {
+        var items = note.resolvedTags
+
+        if let savedPlaceName = note.savedPlaceName, !savedPlaceName.isEmpty {
+            items.append(savedPlaceName)
+        }
+
+        if let url = note.attachedLinkURL, !url.isEmpty {
+            items.append(String(localized: "notes.view.badge.link"))
+        }
+
+        if note.relatedIncidentId != nil {
+            items.append(String(localized: "notes.view.badge.incident"))
+        }
+
+        if note.relatedLocationLatitude != nil && note.relatedLocationLongitude != nil {
+            items.append(note.relatedLocationLabel ?? String(localized: "notes.view.badge.location"))
+        }
+
+        return items
+    }
+
+    private var previewBodyText: String {
+        let value = note.previewText
+        return value.isEmpty ? String(localized: "Brak dodatkowego tekstu") : value
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Text(note.title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                Spacer(minLength: 12)
+
+                if note.isPinnedValue {
+                    Image(systemName: "pin.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Text(previewBodyText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .lineLimit(2)
+
+            if !footerItems.isEmpty {
+                HStack(alignment: .bottom, spacing: 12) {
+                    Text(footerItems.joined(separator: " • "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 18)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color.cardBackground)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
+}
+
+private struct NoteDaySection: Identifiable {
+    let date: Date
+    let notes: [Note]
+
+    var id: Date { date }
+
+    var title: String {
+        let calendar = Calendar.current
+
+        if calendar.isDateInToday(date) {
+            return "Dzisiaj"
+        }
+
+        if calendar.isDateInYesterday(date) {
+            return "Wczoraj"
+        }
+
+        return date.formatted(.dateTime.day().month(.wide).year())
+    }
+}
+
+private struct NoteEditorTarget: Identifiable, Hashable {
+    let id = UUID()
+    let note: Note?
+
+    init(note: Note? = nil) {
+        self.note = note
+    }
+
+    static func == (lhs: NoteEditorTarget, rhs: NoteEditorTarget) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
 

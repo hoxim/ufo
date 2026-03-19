@@ -4,12 +4,15 @@ import Charts
 
 struct HomeHubView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(AuthStore.self) private var authStore
     @Environment(SpaceRepository.self) private var spaceRepository
     @Environment(AppNotificationStore.self) private var notificationStore
+    @Environment(AppPreferences.self) private var appPreferences
 
     @State private var showProfileSheet = false
     @State private var showNotificationSheet = false
+    @State private var showCustomizeSheet = false
     @State private var widget = HomeWidgetState()
     @State private var budgetRange: BudgetWidgetRange = .month
     @State private var activeRoute: HomeRoute?
@@ -17,89 +20,67 @@ struct HomeHubView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 12) {
-                    Button {
-                        open(.missions)
-                    } label: {
-                        HomeMetricCard(
-                            sectionTitle: String(localized: "home.hub.shortcut.missions.title"),
-                            title: String(localized: "home.hub.widget.nextMission.title"),
-                            value: widget.nextMissionTitle ?? String(localized: "home.hub.widget.nextMission.empty"),
-                            subtitle: widget.nextMissionTitle == nil
-                                ? String(localized: "home.hub.widget.nextMission.subtitleEmpty")
-                                : String(localized: "home.hub.widget.nextMission.subtitle"),
-                            tint: .orange
-                        )
-                    }
-                    .buttonStyle(.plain)
+                VStack(spacing: 10) {
+                    HStack {
+                        Text(Date.now.formatted(date: .abbreviated, time: .omitted))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(Color.secondary.opacity(0.08), in: Capsule())
 
-                    HStack(spacing: 12) {
-                        Button {
-                            open(.lists)
-                        } label: {
-                            HomeMetricCard(
-                                sectionTitle: String(localized: "home.hub.shortcut.lists.title"),
-                                title: String(localized: "home.hub.widget.activeLists.title"),
-                                value: "\(widget.activeListsCount)",
-                                subtitle: String(localized: "home.hub.widget.activeLists.subtitle"),
-                                tint: .pink
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        Spacer()
 
                         Button {
-                            open(.notes)
+                            showCustomizeSheet = true
                         } label: {
-                            HomeMetricCard(
-                                sectionTitle: String(localized: "home.hub.shortcut.notes.title"),
-                                title: String(localized: "home.hub.widget.notes.title"),
-                                value: "\(widget.notesCount)",
-                                subtitle: String(localized: "home.hub.widget.notes.subtitle"),
-                                tint: .blue
-                            )
+                            HStack(spacing: 8) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.subheadline.weight(.semibold))
+
+                                Text("Edit Home")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(.thinMaterial, in: Capsule())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Customize Home")
                     }
 
-                    HStack(spacing: 12) {
-                        Button {
-                            open(.incidents)
-                        } label: {
-                            HomeMetricCard(
-                                sectionTitle: String(localized: "home.hub.shortcut.incidents.title"),
-                                title: String(localized: "home.hub.widget.nearestIncident.title"),
-                                value: widget.nearestIncidentTitle ?? String(localized: "home.hub.widget.nearestIncident.empty"),
-                                subtitle: widget.nearestIncidentDateText ?? String(localized: "home.hub.widget.nearestIncident.subtitle"),
-                                tint: .red
-                            )
-                        }
-                        .buttonStyle(.plain)
+                    ForEach(widgetRows) { row in
+                        switch row.style {
+                        case .single:
+                            HStack(spacing: 0) {
+                                if let widget = row.widgets.first {
+                                    homeWidgetView(widget)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                        case .pair:
+                            HStack(spacing: 12) {
+                                if let first = row.widgets.first {
+                                    homeWidgetView(first)
+                                }
 
-                        Button {
-                            open(.links)
-                        } label: {
-                            HomeMetricCard(
-                                sectionTitle: String(localized: "home.hub.shortcut.links.title"),
-                                title: String(localized: "home.hub.widget.latestLinks.title"),
-                                value: "\(widget.linksCount)",
-                                subtitle: widget.latestLinkDateText ?? String(localized: "home.hub.widget.latestLinks.empty"),
-                                tint: .green
-                            )
+                                if row.widgets.count > 1, let second = row.widgets.last {
+                                    homeWidgetView(second)
+                                } else {
+                                    HomeMetricCardPlaceholder()
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
-
-                    TodaySummaryCard(widget: widget)
-
-                    HomeBudgetCard(
-                        entries: widget.budgetEntries,
-                        range: $budgetRange,
-                        onOpen: { open(.budget) }
-                    )
                 }
                 .padding()
             }
-            .navigationTitle(spaceRepository.selectedSpace?.name ?? "Summary")
+#if os(iOS)
+            .navigationTitle("")
+#else
+            .navigationTitle("Home")
+#endif
             .navigationDestination(item: $activeRoute) { route in
                 destination(for: route)
             }
@@ -109,30 +90,8 @@ struct HomeHubView: View {
                 }
 
                 ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Button {
-                            open(.quickAddMission)
-                        } label: {
-                            Label("Add Mission", systemImage: "target")
-                        }
-
-                        Button {
-                            open(.quickAddIncident)
-                        } label: {
-                            Label("Add Incident", systemImage: "bolt.horizontal")
-                        }
-
-                        Button {
-                            open(.quickAddList)
-                        } label: {
-                            Label("Add List", systemImage: "checklist")
-                        }
-
-                        Button {
-                            open(.quickAddBudgetEntry)
-                        } label: {
-                            Label("Add Budget Entry", systemImage: "dollarsign.circle")
-                        }
+                    Button {
+                        open(.quickAddMission)
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -162,7 +121,18 @@ struct HomeHubView: View {
             .task {
                 refreshWidgets()
             }
+            .onAppear {
+                refreshWidgets()
+            }
             .onChange(of: spaceRepository.selectedSpace?.id) { _, _ in
+                refreshWidgets()
+            }
+            .onChange(of: scenePhase) { _, newValue in
+                if newValue == .active {
+                    refreshWidgets()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .homeWidgetsDataDidChange)) { _ in
                 refreshWidgets()
             }
             .sheet(isPresented: $showProfileSheet) {
@@ -171,6 +141,11 @@ struct HomeHubView: View {
             }
             .sheet(isPresented: $showNotificationSheet) {
                 NotificationCenterView()
+                    .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showCustomizeSheet) {
+                HomeCustomizationView()
+                    .environment(appPreferences)
                     .presentationDetents([.medium, .large])
             }
         }
@@ -193,8 +168,8 @@ struct HomeHubView: View {
             IncidentsListView()
         case .locations:
             LocationsView()
-        case .links:
-            LinksListView()
+        case .routines:
+            RoutinesView()
         case .budget:
             BudgetView()
         case .quickAddMission:
@@ -255,18 +230,27 @@ struct HomeHubView: View {
                 )
             )
 
-            let latestLink = try modelContext.fetch(
-                FetchDescriptor<LinkedThing>(
-                    predicate: #Predicate { $0.deletedAt == nil },
-                    sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+            let routines = try modelContext.fetch(
+                FetchDescriptor<Routine>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.startMinuteOfDay, order: .forward)]
                 )
-            ).first
-
-            let linksCount = try modelContext.fetch(
-                FetchDescriptor<LinkedThing>(
-                    predicate: #Predicate { $0.deletedAt == nil }
+            )
+            let todayWeekday = Calendar.current.component(.weekday, from: .now)
+            let todayRoutines = routines.filter { $0.activeWeekdays.contains(todayWeekday) }
+            let currentMinute = Calendar.current.component(.hour, from: .now) * 60 + Calendar.current.component(.minute, from: .now)
+            let nextRoutine = todayRoutines.first(where: { $0.startMinuteOfDay >= currentMinute }) ?? todayRoutines.first
+            let routineLogs = try modelContext.fetch(
+                FetchDescriptor<RoutineLog>(
+                    predicate: #Predicate { $0.spaceId == spaceId },
+                    sortBy: [SortDescriptor(\.loggedAt, order: .reverse)]
                 )
-            ).count
+            )
+            let completedTodayRoutineIds = Set(
+                routineLogs
+                    .filter { Calendar.current.isDateInToday($0.loggedAt) }
+                    .map(\.routineId)
+            )
 
             let budgetEntries = try modelContext.fetch(
                 FetchDescriptor<BudgetEntry>(
@@ -291,8 +275,9 @@ struct HomeHubView: View {
                 criticalIncidentsCount: allIncidents.filter { $0.resolvedSeverity == IncidentSeverity.critical.rawValue }.count,
                 savedPlacesCount: savedPlaces.count,
                 recentCheckInText: checkIns.first.map { "\($0.userDisplayName) · \($0.placeName ?? "Current")" },
-                linksCount: linksCount,
-                latestLinkDateText: latestLink?.updatedAt.formatted(date: .abbreviated, time: .shortened),
+                routinesCount: todayRoutines.count,
+                completedTodayRoutinesCount: completedTodayRoutineIds.count,
+                nextRoutineText: nextRoutine.map { "\($0.title) · \(String(format: "%02d:%02d", $0.startMinuteOfDay / 60, $0.startMinuteOfDay % 60))" },
                 budgetEntries: budgetEntries
             )
         } catch {
@@ -315,6 +300,125 @@ struct HomeHubView: View {
 #else
         .topBarLeading
 #endif
+    }
+
+    private var visibleWidgetPreferences: [HomeWidgetPreference] {
+        appPreferences.homeWidgets.filter(\.isVisible)
+    }
+
+    private var widgetRows: [HomeWidgetRow] {
+        var rows: [HomeWidgetRow] = []
+        var halfRow: [HomeWidgetPreference] = []
+
+        for widgetPreference in visibleWidgetPreferences {
+            if widgetPreference.span == .full {
+                if !halfRow.isEmpty {
+                    rows.append(HomeWidgetRow(style: .pair, widgets: halfRow))
+                    halfRow.removeAll()
+                }
+                rows.append(HomeWidgetRow(style: .single, widgets: [widgetPreference]))
+            } else {
+                halfRow.append(widgetPreference)
+                if halfRow.count == 2 {
+                    rows.append(HomeWidgetRow(style: .pair, widgets: halfRow))
+                    halfRow.removeAll()
+                }
+            }
+        }
+
+        if !halfRow.isEmpty {
+            rows.append(HomeWidgetRow(style: .pair, widgets: halfRow))
+        }
+
+        return rows
+    }
+
+    @ViewBuilder
+    private func homeWidgetView(_ preference: HomeWidgetPreference) -> some View {
+        switch preference.kind {
+        case .missions:
+            metricWidgetButton(route: .missions) {
+                HomeMetricCard(
+                    sectionTitle: String(localized: "home.hub.shortcut.missions.title"),
+                    sectionIcon: "target",
+                    title: String(localized: "home.hub.widget.nextMission.title"),
+                    value: widget.nextMissionTitle ?? String(localized: "home.hub.widget.nextMission.empty"),
+                    subtitle: widget.nextMissionTitle == nil
+                        ? String(localized: "home.hub.widget.nextMission.subtitleEmpty")
+                        : String(localized: "home.hub.widget.nextMission.subtitle"),
+                    tint: .orange,
+                    span: preference.span
+                )
+            }
+        case .lists:
+            metricWidgetButton(route: .lists) {
+                HomeMetricCard(
+                    sectionTitle: String(localized: "home.hub.shortcut.lists.title"),
+                    sectionIcon: "checklist",
+                    title: String(localized: "home.hub.widget.activeLists.title"),
+                    value: "\(widget.activeListsCount)",
+                    subtitle: String(localized: "home.hub.widget.activeLists.subtitle"),
+                    tint: .pink,
+                    span: preference.span
+                )
+            }
+        case .notes:
+            metricWidgetButton(route: .notes) {
+                HomeMetricCard(
+                    sectionTitle: String(localized: "home.hub.shortcut.notes.title"),
+                    sectionIcon: "note.text",
+                    title: String(localized: "home.hub.widget.notes.title"),
+                    value: "\(widget.notesCount)",
+                    subtitle: String(localized: "home.hub.widget.notes.subtitle"),
+                    tint: .blue,
+                    span: preference.span
+                )
+            }
+        case .incidents:
+            metricWidgetButton(route: .incidents) {
+                HomeMetricCard(
+                    sectionTitle: String(localized: "home.hub.shortcut.incidents.title"),
+                    sectionIcon: "bolt.horizontal",
+                    title: String(localized: "home.hub.widget.nearestIncident.title"),
+                    value: widget.nearestIncidentTitle ?? String(localized: "home.hub.widget.nearestIncident.empty"),
+                    subtitle: widget.nearestIncidentDateText ?? String(localized: "home.hub.widget.nearestIncident.subtitle"),
+                    tint: .red,
+                    span: preference.span
+                )
+            }
+        case .routines:
+            metricWidgetButton(route: .routines) {
+                HomeMetricCard(
+                    sectionTitle: "Routines",
+                    sectionIcon: "clock.arrow.circlepath",
+                    title: "Plan today",
+                    value: widget.routinesProgressText,
+                    subtitle: widget.nextRoutineText ?? "No routines scheduled",
+                    tint: .green,
+                    span: preference.span
+                )
+            }
+        case .summary:
+            TodaySummaryCard(widget: widget)
+        case .budget:
+            HomeBudgetCard(
+                entries: widget.budgetEntries,
+                range: $budgetRange,
+                onOpen: { open(.budget) }
+            )
+        }
+    }
+
+    private func metricWidgetButton<Label: View>(route: HomeRoute, @ViewBuilder label: () -> Label) -> some View {
+        Button {
+            open(route)
+        } label: {
+            label()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -388,11 +492,35 @@ private struct NotificationBellButton: View {
     }
 }
 
+private struct HomeWidgetRow: Identifiable {
+    enum Style {
+        case single
+        case pair
+    }
+
+    let style: Style
+    let widgets: [HomeWidgetPreference]
+
+    var id: String {
+        widgets.map(\.kind.rawValue).joined(separator: "_")
+    }
+}
+
+private struct HomeMetricCardPlaceholder: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(Color.clear)
+            .frame(maxWidth: .infinity, minHeight: 136, maxHeight: 136, alignment: .leading)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
 private struct ActiveSpaceMenuButton: View {
     let space: Space
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Circle()
                 .fill(space.type == .personal || space.type == .private ? Color.orange.opacity(0.2) : Color.blue.opacity(0.2))
                 .frame(width: 30, height: 30)
@@ -401,6 +529,18 @@ private struct ActiveSpaceMenuButton: View {
                         .font(.caption.bold())
                         .foregroundStyle(space.type == .personal || space.type == .private ? .orange : .blue)
                 }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Grupa")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                Text(space.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
 
             Image(systemName: "chevron.down")
                 .font(.caption.weight(.semibold))
@@ -415,7 +555,7 @@ private enum HomeRoute: Hashable, Identifiable {
     case notes
     case incidents
     case locations
-    case links
+    case routines
     case budget
     case quickAddMission
     case quickAddIncident
@@ -429,7 +569,7 @@ private enum HomeRoute: Hashable, Identifiable {
         case .notes: "notes"
         case .incidents: "incidents"
         case .locations: "locations"
-        case .links: "links"
+        case .routines: "routines"
         case .budget: "budget"
         case .quickAddMission: "quickAddMission"
         case .quickAddIncident: "quickAddIncident"
@@ -474,9 +614,15 @@ private struct HomeWidgetState {
     var criticalIncidentsCount: Int = 0
     var savedPlacesCount: Int = 0
     var recentCheckInText: String?
-    var linksCount: Int = 0
-    var latestLinkDateText: String?
+    var routinesCount: Int = 0
+    var completedTodayRoutinesCount: Int = 0
+    var nextRoutineText: String?
     var budgetEntries: [BudgetEntry] = []
+
+    var routinesProgressText: String {
+        guard routinesCount > 0 else { return "0" }
+        return "\(completedTodayRoutinesCount)/\(routinesCount)"
+    }
 }
 
 private struct TodaySummaryCard: View {
@@ -484,23 +630,29 @@ private struct TodaySummaryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Today / Family Hub")
-                .font(.headline)
+            HomeWidgetSectionHeader(
+                title: "Family Hub",
+                icon: "person.3.sequence.fill"
+            )
+
+            Text("Quick snapshot of today across missions, notes, incidents and saved places.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             HStack(spacing: 12) {
-                summaryPill(title: "Due today", value: "\(widget.dueTodayCount)", tint: .orange)
+                summaryPill(title: "Due missions", value: "\(widget.dueTodayCount)", tint: .orange)
                 summaryPill(title: "Recurring", value: "\(widget.recurringMissionCount)", tint: .blue)
-                summaryPill(title: "Pinned", value: "\(widget.pinnedNotesCount)", tint: .pink)
+                summaryPill(title: "Pinned notes", value: "\(widget.pinnedNotesCount)", tint: .pink)
             }
 
             HStack(spacing: 12) {
-                summaryPill(title: "Open", value: "\(widget.openIncidentsCount)", tint: .red)
-                summaryPill(title: "Critical", value: "\(widget.criticalIncidentsCount)", tint: .red.opacity(0.8))
-                summaryPill(title: "Places", value: "\(widget.savedPlacesCount)", tint: .green)
+                summaryPill(title: "Open incidents", value: "\(widget.openIncidentsCount)", tint: .red)
+                summaryPill(title: "Critical alerts", value: "\(widget.criticalIncidentsCount)", tint: .red.opacity(0.8))
+                summaryPill(title: "Saved places", value: "\(widget.savedPlacesCount)", tint: .green)
             }
 
             if let recentCheckInText = widget.recentCheckInText {
-                Label(recentCheckInText, systemImage: "location.circle.fill")
+                Label("Last check-in: \(recentCheckInText)", systemImage: "location.circle.fill")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
@@ -559,18 +711,11 @@ private struct HomeBudgetCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Text("Budget")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button(action: onOpen) {
-                    Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-            }
+            HomeWidgetSectionHeader(
+                title: "Budget",
+                icon: "dollarsign.circle",
+                onOpen: onOpen
+            )
 
             HStack(spacing: 8) {
                 ForEach(BudgetWidgetRange.allCases, id: \.self) { option in
@@ -644,23 +789,79 @@ private struct HomeBudgetCard: View {
     }
 }
 
+private struct HomeWidgetSectionHeader: View {
+    let title: String
+    let icon: String
+    var onOpen: (() -> Void)? = nil
+
+    private var sectionForeground: Color {
+        Color.primary.opacity(0.92)
+    }
+
+    private var chevronForeground: Color {
+        Color.primary.opacity(0.72)
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(sectionForeground)
+
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(sectionForeground)
+
+            Spacer()
+
+            if let onOpen {
+                Button(action: onOpen) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(chevronForeground)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
 private struct HomeMetricCard: View {
     let sectionTitle: String
+    let sectionIcon: String
     let title: String
     let value: String
     let subtitle: String
     let tint: Color
+    let span: HomeWidgetSpan
+
+    private var sectionForeground: Color {
+        Color.primary.opacity(0.92)
+    }
+
+    private var chevronForeground: Color {
+        Color.primary.opacity(0.72)
+    }
+
+    private var cardHeight: CGFloat {
+        span == .full ? 112 : 136
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
+                Image(systemName: sectionIcon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(sectionForeground)
+
                 Text(sectionTitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(sectionForeground)
+
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(chevronForeground)
             }
             Text(title)
                 .font(.subheadline.weight(.semibold))
@@ -669,13 +870,79 @@ private struct HomeMetricCard: View {
                 .font(.title2.bold())
                 .foregroundStyle(tint)
                 .lineLimit(2)
+                .minimumScaleFactor(0.78)
             Text(subtitle)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .lineLimit(2)
         }
-        .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
-        .padding()
+        .frame(maxWidth: .infinity, minHeight: cardHeight, maxHeight: cardHeight, alignment: .leading)
+        .padding(18)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private struct HomeCustomizationView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AppPreferences.self) private var appPreferences
+
+    var body: some View {
+        @Bindable var appPreferences = appPreferences
+
+        NavigationStack {
+            List {
+                Section {
+                    Text("Dodaj, ukryj i ustaw kolejność widgetów ekranu głównego. Przeciągnij uchwyt po prawej, żeby zmienić kolejność.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Widgets") {
+                    ForEach($appPreferences.homeWidgets) { $preference in
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(spacing: 12) {
+                                Label(preference.kind.title, systemImage: preference.kind.systemImage)
+                                    .font(.body.weight(.semibold))
+
+                                Spacer()
+
+                                Button {
+                                    preference.isVisible.toggle()
+                                } label: {
+                                    Image(systemName: preference.isVisible ? "minus.circle.fill" : "plus.circle.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(preference.isVisible ? .red : .green)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(preference.isVisible ? "Hide widget" : "Show widget")
+                            }
+
+                            if preference.kind.supportedSpans.count > 1 {
+                                Picker("Size", selection: $preference.span) {
+                                    ForEach(preference.kind.supportedSpans) { span in
+                                        Text(span.title).tag(span)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .onMove { fromOffsets, toOffset in
+                        appPreferences.homeWidgets.move(fromOffsets: fromOffsets, toOffset: toOffset)
+                    }
+                }
+            }
+            .environment(\.editMode, .constant(.active))
+            .navigationTitle("Customize Home")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -733,7 +1000,9 @@ private struct AvatarCircle: View {
         BudgetEntry.self,
         Incident.self,
         SavedPlace.self,
-        LocationCheckIn.self
+        LocationCheckIn.self,
+        Routine.self,
+        RoutineLog.self
     ])
     let container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     let context = container.mainContext
@@ -758,6 +1027,9 @@ private struct AvatarCircle: View {
     context.insert(LocationCheckIn(spaceId: space.id, userId: user.id, userDisplayName: "Preview User", placeId: savedPlace.id, placeName: savedPlace.name, latitude: savedPlace.latitude, longitude: savedPlace.longitude))
     context.insert(BudgetEntry(spaceId: space.id, title: "Salary", kind: "income", amount: 4200, category: "Work"))
     context.insert(BudgetEntry(spaceId: space.id, title: "Groceries", kind: "expense", amount: 300, category: "Food"))
+    let routine = Routine(spaceId: space.id, title: "Dinner", category: RoutineCategory.food.rawValue, startMinuteOfDay: 1080, durationMinutes: 45, createdBy: user.id)
+    context.insert(routine)
+    context.insert(RoutineLog(routineId: routine.id, spaceId: space.id, loggedAt: .now, createdBy: user.id))
     do {
         try context.save()
     } catch {
@@ -770,10 +1042,12 @@ private struct AvatarCircle: View {
     let authStore = AuthStore(authRepository: authRepo, spaceRepository: spaceRepo)
     authStore.state = .ready
     let notificationStore = AppNotificationStore(modelContext: context)
+    let appPreferences = AppPreferences.shared
 
     return HomeHubView()
         .environment(authStore)
         .environment(spaceRepo)
         .environment(notificationStore)
+        .environment(appPreferences)
         .modelContainer(container)
 }
