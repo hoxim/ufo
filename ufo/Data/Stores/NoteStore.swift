@@ -82,10 +82,10 @@ final class NoteStore {
         relatedLocationLongitude: Double?,
         relatedLocationLabel: String?,
         actor: UUID?
-    ) async {
-        guard let spaceId = currentSpaceId else { return }
+    ) async -> Note? {
+        guard let spaceId = currentSpaceId else { return nil }
         do {
-            _ = try repository.createLocal(
+            let note = try repository.createLocal(
                 spaceId: spaceId,
                 title: title,
                 content: content,
@@ -107,8 +107,10 @@ final class NoteStore {
             folders = try repository.fetchFoldersLocal(spaceId: spaceId)
             notifyHomeWidgetsDataDidChange()
             await syncPending()
+            return note
         } catch {
             lastErrorMessage = "Nie udało się dodać notatki: \(error)"
+            return nil
         }
     }
 

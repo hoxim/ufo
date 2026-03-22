@@ -15,8 +15,7 @@ struct MessagesView: View {
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 8) {
+        VStack(spacing: 8) {
                 if let error = messageStore?.lastErrorMessage {
                     Text(error)
                         .font(.caption)
@@ -59,6 +58,9 @@ struct MessagesView: View {
                         }
                     }
                     .listStyle(.plain)
+                    .refreshable {
+                        await refreshMessages()
+                    }
                     .onChange(of: messageStore?.messages.count) { _, _ in
                         if let lastId = messageStore?.messages.last?.id {
                             withAnimation { proxy.scrollTo(lastId, anchor: .bottom) }
@@ -86,58 +88,48 @@ struct MessagesView: View {
                     .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .padding()
+        }
+        .navigationTitle("messages.view.title")
+        .toolbar(.hidden, for: .tabBar)
+        .task { await setupStoreIfNeeded() }
+        .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
+            messageStore?.setSpace(newValue)
+            Task {
+                await messageStore?.refreshRemote()
+                await loadRecipients()
             }
-            .navigationTitle("messages.view.title")
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
+        }
+        .sheet(isPresented: $showRecipientsSheet) {
+            NavigationStack {
+                List(recipients) { recipient in
                     Button {
-                        Task { await messageStore?.syncPending() }
+                        toggleRecipient(recipient.id)
                     } label: {
-                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                }
-            }
-            .task { await setupStoreIfNeeded() }
-            .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
-                messageStore?.setSpace(newValue)
-                Task {
-                    await messageStore?.refreshRemote()
-                    await loadRecipients()
-                }
-            }
-            .sheet(isPresented: $showRecipientsSheet) {
-                NavigationStack {
-                    List(recipients) { recipient in
-                        Button {
-                            toggleRecipient(recipient.id)
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(recipient.displayName)
-                                    Text(recipient.role.capitalized)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if selectedRecipientIds.contains(recipient.id) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.green)
-                                }
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(recipient.displayName)
+                                Text(recipient.role.capitalized)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if selectedRecipientIds.contains(recipient.id) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
                             }
                         }
-                        .buttonStyle(.plain)
                     }
-                    .navigationTitle("messages.recipients.title")
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("common.close") { showRecipientsSheet = false }
-                        }
-                    }
+                    .buttonStyle(.plain)
                 }
-                #if os(macOS)
-                .frame(minWidth: 360, minHeight: 420)
-                #endif
+                .navigationTitle("messages.recipients.title")
+                .modalInlineTitleDisplayMode()
+                .toolbar {
+                    ModalCloseToolbarItem { showRecipientsSheet = false }
+                }
             }
+            #if os(macOS)
+            .frame(minWidth: 360, minHeight: 420)
+            #endif
         }
     }
 
@@ -190,6 +182,13 @@ struct MessagesView: View {
                 )
             ]
         }
+    }
+
+    @MainActor
+    private func refreshMessages() async {
+        await messageStore?.syncPending()
+        await loadRecipients()
+        await messageStore?.refreshRemote()
     }
 
     @MainActor

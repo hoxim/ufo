@@ -37,6 +37,7 @@ final class MissionRepository {
         let deletedAt: Date?
         let iconName: String?
         let iconColorHex: String?
+        let visibilityMode: String?
 
         enum CodingKeys: String, CodingKey {
             case id, title, description, difficulty, version
@@ -56,6 +57,7 @@ final class MissionRepository {
             case deletedAt = "deleted_at"
             case iconName = "icon_name"
             case iconColorHex = "icon_color_hex"
+            case visibilityMode = "visibility_mode"
         }
     }
 
@@ -80,6 +82,7 @@ final class MissionRepository {
         let deleted_at: Date?
         let icon_name: String?
         let icon_color_hex: String?
+        let visibility_mode: String
     }
 
     // MARK: - Backward compatibility (old API used in MissionStore)
@@ -118,7 +121,8 @@ final class MissionRepository {
             updated_by: mission.updatedBy,
             deleted_at: mission.deletedAt,
             icon_name: mission.iconName,
-            icon_color_hex: mission.iconColorHex
+            icon_color_hex: mission.iconColorHex,
+            visibility_mode: mission.resolvedVisibilityMode
         )
 
         try await client
@@ -183,6 +187,7 @@ final class MissionRepository {
         savedPlaceName: String?,
         priority: String,
         isRecurring: Bool,
+        visibilityMode: String = SpaceContentVisibilityMode.everyone.rawValue,
         createdBy: UUID?
     ) throws -> Mission {
         guard let context else { throw RepositoryError.missingLocalContext }
@@ -197,6 +202,7 @@ final class MissionRepository {
             savedPlaceName: savedPlaceName,
             priority: priority,
             isRecurring: isRecurring,
+            visibilityMode: visibilityMode,
             createdBy: createdBy
         )
         mission.pendingSync = true
@@ -217,6 +223,7 @@ final class MissionRepository {
         savedPlaceName: String?? = nil,
         priority: String? = nil,
         isRecurring: Bool? = nil,
+        visibilityMode: String? = nil,
         isCompleted: Bool? = nil,
         updatedBy: UUID?
     ) throws {
@@ -230,6 +237,7 @@ final class MissionRepository {
         if let savedPlaceName { mission.savedPlaceName = savedPlaceName }
         if let priority { mission.priority = priority }
         if let isRecurring { mission.isRecurring = isRecurring }
+        if let visibilityMode { mission.visibilityMode = visibilityMode }
         if let isCompleted { mission.isCompleted = isCompleted }
         mission.updatedBy = updatedBy
         mission.version += 1
@@ -284,6 +292,7 @@ final class MissionRepository {
                     local.deletedAt = record.deletedAt
                     local.iconName = record.iconName
                     local.iconColorHex = record.iconColorHex
+                    local.visibilityMode = record.visibilityMode ?? SpaceContentVisibilityMode.everyone.rawValue
                     local.pendingSync = false
                 }
             } else {
@@ -299,6 +308,7 @@ final class MissionRepository {
                     savedPlaceName: record.savedPlaceName,
                     priority: record.priority,
                     isRecurring: record.isRecurring,
+                    visibilityMode: record.visibilityMode ?? SpaceContentVisibilityMode.everyone.rawValue,
                     iconName: record.iconName,
                     iconColorHex: record.iconColorHex,
                     createdBy: record.createdBy

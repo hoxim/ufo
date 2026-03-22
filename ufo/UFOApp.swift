@@ -15,12 +15,17 @@ struct UFOApp: App {
     let container: ModelContainer = {
         let schema = Schema([
             AppNotification.self,
+            UserSettings.self,
             UserProfile.self,
             Space.self,
             SpaceMembership.self,
             SpaceRoleDefinition.self,
+            SpaceAccessRole.self,
+            SpaceVisibilityGroup.self,
+            SpaceVisibilityGroupMember.self,
             SpaceInvitation.self,
             Mission.self,
+            MissionVisibilityGroup.self,
             Incident.self,
             LinkedThing.self,
             Assignment.self,
@@ -38,7 +43,7 @@ struct UFOApp: App {
             RoutineLog.self
         ])
         // New local store name to avoid loading an old incompatible SwiftData file.
-        let config = ModelConfiguration("UFO_Clean_DB_v5", isStoredInMemoryOnly: false)
+        let config = ModelConfiguration("UFO_Clean_DB_v6", isStoredInMemoryOnly: false)
 
         do {
             return try ModelContainer(for: schema, configurations: [config])

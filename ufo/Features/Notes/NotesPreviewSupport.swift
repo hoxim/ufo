@@ -9,7 +9,9 @@ struct NotesPreviewData {
     let store: NoteStore
     let note: Note
     let folders: [NoteFolder]
+    let missions: [Mission]
     let incidents: [Incident]
+    let people: [UserProfile]
     let locations: [LocationPing]
     let savedPlaces: [SavedPlace]
 }
@@ -23,6 +25,7 @@ enum NotesPreviewFactory {
             SpaceMembership.self,
             Note.self,
             NoteFolder.self,
+            Mission.self,
             Incident.self,
             LocationPing.self,
             SavedPlace.self
@@ -41,6 +44,13 @@ enum NotesPreviewFactory {
         )
         let space = Space(id: UUID(), name: "Family Crew", inviteCode: "UFO123")
         let folder = NoteFolder(spaceId: space.id, name: "Work", createdBy: user.id)
+        let mission = Mission(
+            spaceId: space.id,
+            title: "Prepare travel bag",
+            missionDescription: "Pack essentials and documents.",
+            difficulty: 2,
+            createdBy: user.id
+        )
         let incident = Incident(
             spaceId: space.id,
             title: "Storm",
@@ -85,6 +95,7 @@ enum NotesPreviewFactory {
         context.insert(space)
         context.insert(SpaceMembership(user: user, space: space, role: "admin"))
         context.insert(folder)
+        context.insert(mission)
         context.insert(incident)
         context.insert(location)
         context.insert(savedPlace)
@@ -103,7 +114,9 @@ enum NotesPreviewFactory {
             store: store,
             note: note,
             folders: [folder],
+            missions: [mission],
             incidents: [incident],
+            people: [user],
             locations: [location],
             savedPlaces: [savedPlace]
         )

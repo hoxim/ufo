@@ -49,23 +49,18 @@ struct UserProfileView: View {
                 }
             }
             .navigationTitle("profile.user.title")
+            .modalInlineTitleDisplayMode()
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
+                ModalCloseToolbarItem {
+                    dismiss()
                 }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
+                ModalConfirmToolbarItem(
+                    isDisabled: isSaving,
+                    isProcessing: isSaving,
+                    action: {
                         Task { await save() }
-                    } label: {
-                        if isSaving {
-                            ProgressView()
-                        } else {
-                            Text("common.save")
-                        }
                     }
-                    .disabled(isSaving)
-                }
+                )
             }
             .task {
                 fullName = authRepo.currentUser?.fullName ?? ""

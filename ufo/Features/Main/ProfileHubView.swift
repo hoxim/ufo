@@ -30,12 +30,9 @@ struct ProfileHubView: View {
                 }
             }
             .navigationTitle("profile.hub.title")
+            .modalInlineTitleDisplayMode()
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.close") {
-                        dismiss()
-                    }
-                }
+                ModalCloseToolbarItem { dismiss() }
             }
         }
     }

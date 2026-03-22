@@ -15,7 +15,6 @@ final class LocationViewModel {
     var locationErrorMessage: String?
 
     private let locationManager = LocationManager()
-    private let geocoder = CLGeocoder()
     private var modelContext: ModelContext?
     private var observedCheckInIDs: Set<UUID> = []
     private var lastNearbySuggestionPlaceId: UUID?
@@ -93,8 +92,12 @@ final class LocationViewModel {
 
     func resolveAddress(_ address: String) async -> CLLocationCoordinate2D? {
         do {
-            let matches = try await geocoder.geocodeAddressString(address)
-            guard let coordinate = matches.first?.location?.coordinate else {
+            guard let request = MKGeocodingRequest(addressString: address) else {
+                locationErrorMessage = "Address could not be found."
+                return nil
+            }
+            let matches = try await request.mapItems
+            guard let coordinate = matches.first?.location.coordinate else {
                 locationErrorMessage = "Address could not be found."
                 return nil
             }
@@ -111,17 +114,37 @@ final class LocationViewModel {
 
     func reverseGeocode(coordinate: CLLocationCoordinate2D) async -> String? {
         do {
-            let placemarks = try await geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
-            guard let placemark = placemarks.first else { return nil }
-            let parts = [
-                placemark.name,
-                placemark.locality,
-                placemark.administrativeArea,
-                placemark.country
-            ]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty }
-            return parts.joined(separator: ", ")
+            guard let request = MKReverseGeocodingRequest(
+                location: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            ) else {
+                return nil
+            }
+
+            let mapItems = try await request.mapItems
+            guard let mapItem = mapItems.first else { return nil }
+
+            if let fullAddress = mapItem.addressRepresentations?.fullAddress(includingRegion: true, singleLine: true),
+               !fullAddress.isEmpty {
+                return fullAddress
+            }
+
+            if let fullAddress = mapItem.address?.fullAddress, !fullAddress.isEmpty {
+                return fullAddress
+            }
+
+            if let shortAddress = mapItem.address?.shortAddress, !shortAddress.isEmpty {
+                return shortAddress
+            }
+
+            if let cityWithContext = mapItem.addressRepresentations?.cityWithContext, !cityWithContext.isEmpty {
+                return cityWithContext
+            }
+
+            if let name = mapItem.name, !name.isEmpty {
+                return name
+            }
+
+            return nil
         } catch {
             return nil
         }

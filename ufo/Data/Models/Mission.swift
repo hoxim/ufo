@@ -35,6 +35,7 @@ final class Mission: Thing {
     var iconName: String?
     var iconColorHex: String?
     var imageData: Data?
+    var visibilityMode: String = SpaceContentVisibilityMode.everyone.rawValue
     
     // relation to  UserProfile
     @Relationship(inverse: \UserProfile.assignedMissions)
@@ -55,6 +56,7 @@ final class Mission: Thing {
         savedPlaceName: String? = nil,
         priority: String = MissionPriority.medium.rawValue,
         isRecurring: Bool = false,
+        visibilityMode: String = SpaceContentVisibilityMode.everyone.rawValue,
         iconName: String? = nil,
         iconColorHex: String? = "#F59E0B",
         imageData: Data? = nil,
@@ -73,6 +75,7 @@ final class Mission: Thing {
         self.savedPlaceName = savedPlaceName
         self.priority = priority
         self.isRecurring = isRecurring
+        self.visibilityMode = visibilityMode
         self.iconName = iconName
         self.iconColorHex = iconColorHex
         self.imageData = imageData
@@ -95,6 +98,18 @@ extension Mission {
     var isRecurringValue: Bool {
         isRecurring ?? false
     }
+
+    var resolvedVisibilityMode: String {
+        visibilityMode.isEmpty ? SpaceContentVisibilityMode.everyone.rawValue : visibilityMode
+    }
+}
+
+enum SpaceContentVisibilityMode: String, CaseIterable, Identifiable {
+    case everyone
+    case groups
+    case `private`
+
+    var id: String { rawValue }
 }
 
 enum MissionPriority: String, CaseIterable, Identifiable {

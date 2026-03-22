@@ -11,6 +11,7 @@ struct MissionsListView: View {
     @State private var editingMission: Mission?
     @State private var viewingMission: Mission?
     @State private var didAutoPresentAdd = false
+    @State private var searchText = ""
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     let autoPresentAdd: Bool
 
@@ -19,95 +20,97 @@ struct MissionsListView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if let missionStore {
-                    content(store: missionStore)
-                } else {
-                    ProgressView("missions.list.loading")
-                }
+        Group {
+            if let missionStore {
+                content(store: missionStore)
+            } else {
+                ProgressView("missions.list.loading")
             }
-            .navigationTitle("missions.list.title")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { isAddingMission = true }) {
-                        Label("missions.list.action.add", systemImage: "plus")
-                    }
-                    .disabled(spaceRepo.selectedSpace == nil || missionStore == nil)
+        }
+        .navigationTitle("missions.list.title")
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { isAddingMission = true }) {
+                    Label("missions.list.action.add", systemImage: "plus")
                 }
-
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        Task { await missionStore?.syncPending() }
-                    } label: {
-                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .disabled(missionStore?.isSyncing == true || spaceRepo.selectedSpace == nil)
-                }
+                .disabled(spaceRepo.selectedSpace == nil || missionStore == nil)
             }
-            .sheet(isPresented: $isAddingMission) {
-                if let missionStore {
-                    AddMissionView(
-                        store: missionStore,
-                        userId: authRepo.currentUser?.id,
-                        availableOwners: availableOwners,
-                        availablePlaces: availablePlaces
-                    )
-                        #if os(iOS)
-                        .presentationDetents([.medium, .large])
-                        #endif
-                        #if os(macOS)
-                        .frame(minWidth: 520, minHeight: 520)
-                        #endif
-                }
-            }
-            .sheet(item: $editingMission) { mission in
-                if let missionStore {
-                    EditMissionView(
-                        store: missionStore,
-                        mission: mission,
-                        userId: authRepo.currentUser?.id,
-                        availableOwners: availableOwners,
-                        availablePlaces: availablePlaces
-                    )
-                    #if os(iOS)
-                    .presentationDetents([.medium, .large])
-                    #endif
-                    #if os(macOS)
-                    .frame(minWidth: 520, minHeight: 520)
-                    #endif
-                }
-            }
-            .sheet(item: $viewingMission) { mission in
-                MissionDetailView(
-                    mission: mission,
-                    onEdit: {
-                        viewingMission = nil
-                        DispatchQueue.main.async {
-                            editingMission = mission
-                        }
-                    }
+        }
+        .sheet(isPresented: $isAddingMission) {
+            if let missionStore {
+                AddMissionView(
+                    store: missionStore,
+                    userId: authRepo.currentUser?.id,
+                    availableOwners: availableOwners,
+                    availablePlaces: availablePlaces,
+                    availableLists: availableLists,
+                    availableNotes: availableNotes,
+                    availableIncidents: availableIncidents
                 )
                 #if os(iOS)
-                .presentationDetents([.large])
+                .presentationDetents([.medium, .large])
                 #endif
                 #if os(macOS)
-                .frame(minWidth: 560, minHeight: 560)
+                .frame(minWidth: 520, minHeight: 520)
                 #endif
             }
-            .task {
-                await setupStoreIfNeeded(performRemoteRefresh: !autoPresentAdd)
-                if autoPresentAdd && !didAutoPresentAdd && missionStore != nil {
-                    didAutoPresentAdd = true
-                    try? await Task.sleep(for: .milliseconds(300))
-                    isAddingMission = true
+        }
+        .sheet(item: $editingMission) { mission in
+            if let missionStore {
+                EditMissionView(
+                    store: missionStore,
+                    mission: mission,
+                    userId: authRepo.currentUser?.id,
+                    availableOwners: availableOwners,
+                    availablePlaces: availablePlaces,
+                    availableLists: availableLists,
+                    availableNotes: availableNotes,
+                    availableIncidents: availableIncidents,
+                    initialRelatedListId: linkedChildId(for: mission.id, matching: Set(availableLists.map(\.id))),
+                    initialRelatedNoteId: linkedChildId(for: mission.id, matching: Set(availableNotes.map(\.id))),
+                    initialRelatedIncidentId: linkedChildId(for: mission.id, matching: Set(availableIncidents.map(\.id)))
+                )
+                #if os(iOS)
+                .presentationDetents([.medium, .large])
+                #endif
+                #if os(macOS)
+                .frame(minWidth: 520, minHeight: 520)
+                #endif
+            }
+        }
+        .sheet(item: $viewingMission) { mission in
+            MissionDetailView(
+                mission: mission,
+                onEdit: {
+                    viewingMission = nil
+                    DispatchQueue.main.async {
+                        editingMission = mission
+                    }
                 }
+            )
+            #if os(iOS)
+            .presentationDetents([.large])
+            #endif
+            #if os(macOS)
+            .frame(minWidth: 560, minHeight: 560)
+            #endif
+        }
+        .task {
+            await setupStoreIfNeeded(performRemoteRefresh: !autoPresentAdd)
+            if autoPresentAdd && !didAutoPresentAdd && missionStore != nil {
+                didAutoPresentAdd = true
+                try? await Task.sleep(for: .milliseconds(300))
+                isAddingMission = true
             }
-            .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
-                guard let missionStore else { return }
-                missionStore.setSpace(newValue)
-                Task { await missionStore.refreshRemote() }
-            }
+        }
+        .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
+            guard let missionStore else { return }
+            missionStore.setSpace(newValue)
+            Task { await missionStore.refreshRemote() }
+        }
+        .safeAreaInset(edge: .bottom) {
+            FeatureBottomSearchBar(text: $searchText, prompt: "Search missions")
         }
     }
 
@@ -120,7 +123,7 @@ struct MissionsListView: View {
                     .foregroundStyle(.red)
             }
 
-            ForEach(store.missions) { mission in
+            ForEach(filteredMissions(in: store)) { mission in
                 MissionListRowView(
                     mission: mission,
                     onToggleCompleted: {
@@ -158,6 +161,9 @@ struct MissionsListView: View {
                 }
             }
         }
+        .refreshable {
+            await refreshMissions()
+        }
         .overlay {
             if store.isSyncing {
                 ProgressView("common.synchronizing")
@@ -165,6 +171,23 @@ struct MissionsListView: View {
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
             }
         }
+    }
+
+    private func filteredMissions(in store: MissionStore) -> [Mission] {
+        let query = normalizedSearchQuery
+        guard !query.isEmpty else { return store.missions }
+
+        return store.missions.filter { mission in
+            mission.title.localizedCaseInsensitiveContains(query)
+                || mission.missionDescription.localizedCaseInsensitiveContains(query)
+                || mission.assignees.contains(where: { $0.fullName?.localizedCaseInsensitiveContains(query) ?? false })
+                || (mission.savedPlaceName?.localizedCaseInsensitiveContains(query) ?? false)
+                || mission.resolvedPriority.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    private var normalizedSearchQuery: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     @MainActor
@@ -187,6 +210,12 @@ struct MissionsListView: View {
         }
     }
 
+    @MainActor
+    private func refreshMissions() async {
+        await missionStore?.syncPending()
+        await missionStore?.refreshRemote()
+    }
+
     private var availableOwners: [UserProfile] {
         guard let currentUser = authRepo.currentUser else { return [] }
         let selectedSpaceId = spaceRepo.selectedSpace?.id
@@ -206,6 +235,62 @@ struct MissionsListView: View {
             )
         } catch {
             return []
+        }
+    }
+
+    private var availableLists: [SharedList] {
+        guard let selectedSpaceId = spaceRepo.selectedSpace?.id else { return [] }
+        do {
+            return try modelContext.fetch(
+                FetchDescriptor<SharedList>(
+                    predicate: #Predicate { $0.spaceId == selectedSpaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+                )
+            )
+        } catch {
+            return []
+        }
+    }
+
+    private var availableNotes: [Note] {
+        guard let selectedSpaceId = spaceRepo.selectedSpace?.id else { return [] }
+        do {
+            return try modelContext.fetch(
+                FetchDescriptor<Note>(
+                    predicate: #Predicate { $0.spaceId == selectedSpaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+                )
+            )
+        } catch {
+            return []
+        }
+    }
+
+    private var availableIncidents: [Incident] {
+        guard let selectedSpaceId = spaceRepo.selectedSpace?.id else { return [] }
+        do {
+            return try modelContext.fetch(
+                FetchDescriptor<Incident>(
+                    predicate: #Predicate { $0.spaceId == selectedSpaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.occurrenceDate, order: .reverse)]
+                )
+            )
+        } catch {
+            return []
+        }
+    }
+
+    private func linkedChildId(for parentId: UUID, matching ids: Set<UUID>) -> UUID? {
+        guard let selectedSpaceId = spaceRepo.selectedSpace?.id else { return nil }
+        do {
+            let links = try modelContext.fetch(
+                FetchDescriptor<LinkedThing>(
+                    predicate: #Predicate { $0.thingId == selectedSpaceId && $0.parentId == parentId && $0.deletedAt == nil }
+                )
+            )
+            return links.first(where: { ids.contains($0.childId) })?.childId
+        } catch {
+            return nil
         }
     }
 }

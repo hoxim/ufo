@@ -24,28 +24,19 @@ struct InviteMemberView: View {
                 }
             }
             .navigationTitle("spaces.invite.title")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .modalInlineTitleDisplayMode()
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.close") {
-                        dismiss()
-                    }
+                ModalCloseToolbarItem {
+                    dismiss()
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    if let vm = viewModel, space.allowsInvitations {
-                        Button {
+                if let vm = viewModel, space.allowsInvitations {
+                    ModalConfirmToolbarItem(
+                        isDisabled: vm.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || vm.isProcessing,
+                        isProcessing: vm.isProcessing,
+                        action: {
                             Task { await vm.sendInvite() }
-                        } label: {
-                            if vm.isProcessing {
-                                ProgressView()
-                            } else {
-                                Image(systemName: "checkmark")
-                            }
                         }
-                        .disabled(vm.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || vm.isProcessing)
-                    }
+                    )
                 }
             }
         }

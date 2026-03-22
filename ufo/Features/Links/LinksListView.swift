@@ -14,8 +14,7 @@ struct LinksListView: View {
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
     var body: some View {
-        NavigationStack {
-            List {
+        List {
                 if let error = linkStore?.lastErrorMessage {
                     Text(error)
                         .font(.caption)
@@ -62,25 +61,19 @@ struct LinksListView: View {
                         }
                     }
                 }
-            }
-            .navigationTitle("links.view.title")
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        Task { await linkStore?.syncPending() }
-                    } label: {
-                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                }
-            }
-            .task { await setupStoreIfNeeded() }
-            .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
-                linkStore?.setScope(newValue)
-                Task { await linkStore?.refreshRemote() }
-            }
-            .sheet(item: $viewingLink) { link in
-                LinkDetailView(link: link)
-            }
+        }
+        .navigationTitle("links.view.title")
+        .toolbar(.hidden, for: .tabBar)
+        .refreshable {
+            await refreshLinks()
+        }
+        .task { await setupStoreIfNeeded() }
+        .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
+            linkStore?.setScope(newValue)
+            Task { await linkStore?.refreshRemote() }
+        }
+        .sheet(item: $viewingLink) { link in
+            LinkDetailView(link: link)
         }
     }
 
@@ -112,6 +105,12 @@ struct LinksListView: View {
             await store.refreshRemote()
         }
     }
+
+    @MainActor
+    private func refreshLinks() async {
+        await linkStore?.syncPending()
+        await linkStore?.refreshRemote()
+    }
 }
 
 private struct LinkDetailView: View {
@@ -127,10 +126,9 @@ private struct LinkDetailView: View {
                 LabeledContent("Updated", value: link.updatedAt.formatted(date: .abbreviated, time: .shortened))
             }
             .navigationTitle("Link")
+            .modalInlineTitleDisplayMode()
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.close") { dismiss() }
-                }
+                ModalCloseToolbarItem { dismiss() }
             }
         }
     }

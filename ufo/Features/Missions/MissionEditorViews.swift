@@ -1,15 +1,21 @@
 import SwiftUI
 import PhotosUI
+import SwiftData
 
 struct EditMissionView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Environment(AppNotificationStore.self) private var notificationStore
+    @Environment(SpaceRepository.self) private var spaceRepo
 
     let store: MissionStore
     let mission: Mission
     let userId: UUID?
     let availableOwners: [UserProfile]
     let availablePlaces: [SavedPlace]
+    let availableLists: [SharedList]
+    let availableNotes: [Note]
+    let availableIncidents: [Incident]
 
     @State private var title: String
     @State private var description: String
@@ -18,6 +24,9 @@ struct EditMissionView: View {
     @State private var dueDateEnabled: Bool
     @State private var dueDate: Date
     @State private var savedPlaceId: UUID?
+    @State private var relatedListId: UUID?
+    @State private var relatedNoteId: UUID?
+    @State private var relatedIncidentId: UUID?
     @State private var priority: MissionPriority
     @State private var isRecurring: Bool
     @State private var iconName: String
@@ -26,12 +35,27 @@ struct EditMissionView: View {
     @State private var imageData: Data?
     @State private var isSaving = false
 
-    init(store: MissionStore, mission: Mission, userId: UUID?, availableOwners: [UserProfile] = [], availablePlaces: [SavedPlace] = []) {
+    init(
+        store: MissionStore,
+        mission: Mission,
+        userId: UUID?,
+        availableOwners: [UserProfile] = [],
+        availablePlaces: [SavedPlace] = [],
+        availableLists: [SharedList] = [],
+        availableNotes: [Note] = [],
+        availableIncidents: [Incident] = [],
+        initialRelatedListId: UUID? = nil,
+        initialRelatedNoteId: UUID? = nil,
+        initialRelatedIncidentId: UUID? = nil
+    ) {
         self.store = store
         self.mission = mission
         self.userId = userId
         self.availableOwners = availableOwners
         self.availablePlaces = availablePlaces
+        self.availableLists = availableLists
+        self.availableNotes = availableNotes
+        self.availableIncidents = availableIncidents
         _title = State(initialValue: mission.title)
         _description = State(initialValue: mission.missionDescription)
         _difficulty = State(initialValue: mission.difficulty)
@@ -39,6 +63,9 @@ struct EditMissionView: View {
         _dueDateEnabled = State(initialValue: mission.dueDate != nil)
         _dueDate = State(initialValue: mission.dueDate ?? .now)
         _savedPlaceId = State(initialValue: mission.savedPlaceId)
+        _relatedListId = State(initialValue: initialRelatedListId)
+        _relatedNoteId = State(initialValue: initialRelatedNoteId)
+        _relatedIncidentId = State(initialValue: initialRelatedIncidentId)
         _priority = State(initialValue: MissionPriority(rawValue: mission.resolvedPriority) ?? .medium)
         _isRecurring = State(initialValue: mission.isRecurringValue)
         _iconName = State(initialValue: mission.iconName ?? "target")
@@ -55,14 +82,20 @@ struct EditMissionView: View {
             dueDateEnabled: $dueDateEnabled,
             dueDate: $dueDate,
             savedPlaceId: $savedPlaceId,
+            relatedListId: $relatedListId,
+            relatedNoteId: $relatedNoteId,
+            relatedIncidentId: $relatedIncidentId,
             priority: $priority,
             isRecurring: $isRecurring,
             iconName: $iconName,
             iconColorHex: $iconColorHex,
             selectedPhotoItem: $selectedPhotoItem,
             imageData: $imageData,
-            availablePlaces: availablePlaces,
+            availablePlaces: resolvedAvailablePlaces,
             availableOwners: availableOwners,
+            availableLists: resolvedAvailableLists,
+            availableNotes: resolvedAvailableNotes,
+            availableIncidents: resolvedAvailableIncidents,
             isSaving: isSaving,
             navigationTitle: "missions.editor.title.edit",
             onSave: {
@@ -90,12 +123,16 @@ struct EditMissionView: View {
             ownerId: ownerId,
             dueDate: dueDateEnabled ? dueDate : nil,
             savedPlaceId: savedPlaceId,
-            savedPlaceName: availablePlaces.first(where: { $0.id == savedPlaceId })?.name,
+            savedPlaceName: resolvedAvailablePlaces.first(where: { $0.id == savedPlaceId })?.name,
             priority: priority.rawValue,
             isRecurring: isRecurring,
             iconName: iconName.isEmpty ? nil : iconName,
             iconColorHex: iconColorHex,
             imageData: imageData,
+            relatedListId: relatedListId,
+            relatedNoteId: relatedNoteId,
+            relatedIncidentId: relatedIncidentId,
+            managedRelatedIds: managedRelatedIds,
             userId: userId
         )
         guard didSave else { return }
@@ -110,16 +147,54 @@ struct EditMissionView: View {
         )
         dismiss()
     }
+
+    private var resolvedAvailablePlaces: [SavedPlace] {
+        MissionEditorSupport.resolvedPlaces(
+            modelContext: modelContext,
+            spaceId: spaceRepo.selectedSpace?.id,
+            fallback: availablePlaces
+        )
+    }
+
+    private var resolvedAvailableLists: [SharedList] {
+        MissionEditorSupport.resolvedLists(
+            modelContext: modelContext,
+            spaceId: spaceRepo.selectedSpace?.id,
+            fallback: availableLists
+        )
+    }
+
+    private var resolvedAvailableNotes: [Note] {
+        MissionEditorSupport.resolvedNotes(
+            modelContext: modelContext,
+            spaceId: spaceRepo.selectedSpace?.id,
+            fallback: availableNotes
+        )
+    }
+
+    private var resolvedAvailableIncidents: [Incident] {
+        MissionEditorSupport.resolvedIncidents(
+            modelContext: modelContext,
+            spaceId: spaceRepo.selectedSpace?.id,
+            fallback: availableIncidents
+        )
+    }
 }
 
 struct AddMissionView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Environment(AppNotificationStore.self) private var notificationStore
+    @Environment(SpaceRepository.self) private var spaceRepo
 
     let store: MissionStore
     let userId: UUID?
     let availableOwners: [UserProfile]
     let availablePlaces: [SavedPlace]
+    let availableLists: [SharedList]
+    let availableNotes: [Note]
+    let availableIncidents: [Incident]
+    var onCreated: ((UUID) -> Void)? = nil
 
     @State private var title = ""
     @State private var description = ""
@@ -128,6 +203,9 @@ struct AddMissionView: View {
     @State private var dueDateEnabled = false
     @State private var dueDate = Date()
     @State private var savedPlaceId: UUID?
+    @State private var relatedListId: UUID?
+    @State private var relatedNoteId: UUID?
+    @State private var relatedIncidentId: UUID?
     @State private var priority: MissionPriority = .medium
     @State private var isRecurring = false
     @State private var iconName = "target"
@@ -136,11 +214,32 @@ struct AddMissionView: View {
     @State private var imageData: Data?
     @State private var isSaving = false
 
-    init(store: MissionStore, userId: UUID?, availableOwners: [UserProfile] = [], availablePlaces: [SavedPlace] = []) {
+    init(
+        store: MissionStore,
+        userId: UUID?,
+        availableOwners: [UserProfile] = [],
+        availablePlaces: [SavedPlace] = [],
+        availableLists: [SharedList] = [],
+        availableNotes: [Note] = [],
+        availableIncidents: [Incident] = [],
+        initialSavedPlaceId: UUID? = nil,
+        initialRelatedListId: UUID? = nil,
+        initialRelatedNoteId: UUID? = nil,
+        initialRelatedIncidentId: UUID? = nil,
+        onCreated: ((UUID) -> Void)? = nil
+    ) {
         self.store = store
         self.userId = userId
         self.availableOwners = availableOwners
         self.availablePlaces = availablePlaces
+        self.availableLists = availableLists
+        self.availableNotes = availableNotes
+        self.availableIncidents = availableIncidents
+        self.onCreated = onCreated
+        _savedPlaceId = State(initialValue: initialSavedPlaceId)
+        _relatedListId = State(initialValue: initialRelatedListId)
+        _relatedNoteId = State(initialValue: initialRelatedNoteId)
+        _relatedIncidentId = State(initialValue: initialRelatedIncidentId)
     }
 
     var body: some View {
@@ -152,14 +251,20 @@ struct AddMissionView: View {
             dueDateEnabled: $dueDateEnabled,
             dueDate: $dueDate,
             savedPlaceId: $savedPlaceId,
+            relatedListId: $relatedListId,
+            relatedNoteId: $relatedNoteId,
+            relatedIncidentId: $relatedIncidentId,
             priority: $priority,
             isRecurring: $isRecurring,
             iconName: $iconName,
             iconColorHex: $iconColorHex,
             selectedPhotoItem: $selectedPhotoItem,
             imageData: $imageData,
-            availablePlaces: availablePlaces,
+            availablePlaces: resolvedAvailablePlaces,
             availableOwners: availableOwners,
+            availableLists: resolvedAvailableLists,
+            availableNotes: resolvedAvailableNotes,
+            availableIncidents: resolvedAvailableIncidents,
             isSaving: isSaving,
             navigationTitle: "missions.editor.title.new",
             onSave: {
@@ -188,15 +293,19 @@ struct AddMissionView: View {
             ownerId: ownerId,
             dueDate: dueDateEnabled ? dueDate : nil,
             savedPlaceId: savedPlaceId,
-            savedPlaceName: availablePlaces.first(where: { $0.id == savedPlaceId })?.name,
+            savedPlaceName: resolvedAvailablePlaces.first(where: { $0.id == savedPlaceId })?.name,
             priority: priority.rawValue,
             isRecurring: isRecurring,
             iconName: iconName.isEmpty ? nil : iconName,
             iconColorHex: iconColorHex,
             imageData: imageData,
+            relatedListId: relatedListId,
+            relatedNoteId: relatedNoteId,
+            relatedIncidentId: relatedIncidentId,
+            managedRelatedIds: managedRelatedIds,
             userId: userId
         )
-        guard createdMission != nil else { return }
+        guard let createdMission else { return }
 
         notificationStore.addNotification(
             title: "Mission dodana",
@@ -220,105 +329,59 @@ struct AddMissionView: View {
                 )
             }
         }
+        onCreated?(createdMission.id)
         dismiss()
+    }
+
+    private var resolvedAvailablePlaces: [SavedPlace] {
+        MissionEditorSupport.resolvedPlaces(
+            modelContext: modelContext,
+            spaceId: spaceRepo.selectedSpace?.id,
+            fallback: availablePlaces
+        )
+    }
+
+    private var resolvedAvailableLists: [SharedList] {
+        MissionEditorSupport.resolvedLists(
+            modelContext: modelContext,
+            spaceId: spaceRepo.selectedSpace?.id,
+            fallback: availableLists
+        )
+    }
+
+    private var resolvedAvailableNotes: [Note] {
+        MissionEditorSupport.resolvedNotes(
+            modelContext: modelContext,
+            spaceId: spaceRepo.selectedSpace?.id,
+            fallback: availableNotes
+        )
+    }
+
+    private var resolvedAvailableIncidents: [Incident] {
+        MissionEditorSupport.resolvedIncidents(
+            modelContext: modelContext,
+            spaceId: spaceRepo.selectedSpace?.id,
+            fallback: availableIncidents
+        )
     }
 }
 
-private struct MissionEditorForm: View {
-    @Environment(\.dismiss) private var dismiss
+private extension EditMissionView {
+    var managedRelatedIds: [UUID] {
+        MissionEditorSupport.managedRelatedIds(
+            lists: resolvedAvailableLists,
+            notes: resolvedAvailableNotes,
+            incidents: resolvedAvailableIncidents
+        )
+    }
+}
 
-    @Binding var title: String
-    @Binding var description: String
-    @Binding var difficulty: Int
-    @Binding var ownerId: UUID?
-    @Binding var dueDateEnabled: Bool
-    @Binding var dueDate: Date
-    @Binding var savedPlaceId: UUID?
-    @Binding var priority: MissionPriority
-    @Binding var isRecurring: Bool
-    @Binding var iconName: String
-    @Binding var iconColorHex: String
-    @Binding var selectedPhotoItem: PhotosPickerItem?
-    @Binding var imageData: Data?
-    @State private var showStylePicker = false
-
-    let availablePlaces: [SavedPlace]
-    let availableOwners: [UserProfile]
-    let isSaving: Bool
-    let navigationTitle: LocalizedStringKey
-    let onSave: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("missions.editor.field.title", text: $title)
-                        .submitLabel(.done)
-                    TextField("missions.editor.field.description", text: $description, axis: .vertical)
-                        .lineLimit(2...5)
-                }
-                Section {
-                    Stepper(
-                        "\(String(localized: "missions.editor.field.difficulty")): \(difficulty)",
-                        value: $difficulty,
-                        in: 1...5
-                    )
-                    Picker("Owner", selection: $ownerId) {
-                        Text("Unassigned").tag(UUID?.none)
-                        ForEach(availableOwners) { owner in
-                            Text(owner.effectiveDisplayName ?? owner.email).tag(UUID?.some(owner.id))
-                        }
-                    }
-                    Picker("Place", selection: $savedPlaceId) {
-                        Text("No place").tag(UUID?.none)
-                        ForEach(availablePlaces) { place in
-                            Text(place.name).tag(UUID?.some(place.id))
-                        }
-                    }
-                    Picker("Priority", selection: $priority) {
-                        ForEach(MissionPriority.allCases) { value in
-                            Text(value.localizedLabel).tag(value)
-                        }
-                    }
-                    Toggle("Recurring", isOn: $isRecurring)
-                    Toggle("Due date", isOn: $dueDateEnabled)
-                    if dueDateEnabled {
-                        DatePicker("Due", selection: $dueDate)
-                    }
-                }
-                Section {
-                    DisclosureGroup("Style", isExpanded: $showStylePicker) {
-                        OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
-                    }
-                }
-                Section {
-                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                        Label("common.selectImage", systemImage: "photo")
-                    }
-                    .buttonStyle(.bordered)
-                    if imageData != nil {
-                        Text("common.imageSelected")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .navigationTitle(navigationTitle)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(action: onSave) {
-                        if isSaving {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
-                }
-            }
-        }
+private extension AddMissionView {
+    var managedRelatedIds: [UUID] {
+        MissionEditorSupport.managedRelatedIds(
+            lists: resolvedAvailableLists,
+            notes: resolvedAvailableNotes,
+            incidents: resolvedAvailableIncidents
+        )
     }
 }

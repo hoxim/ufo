@@ -15,10 +15,15 @@ enum MainNavigationPreviewFactory {
     static func make() -> MainNavigationPreviewData {
         let schema = Schema([
             AppNotification.self,
+            UserSettings.self,
             UserProfile.self,
             Space.self,
             SpaceMembership.self,
+            SpaceAccessRole.self,
+            SpaceVisibilityGroup.self,
+            SpaceVisibilityGroupMember.self,
             Mission.self,
+            MissionVisibilityGroup.self,
             SharedList.self,
             Note.self,
             BudgetEntry.self,

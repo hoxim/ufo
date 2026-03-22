@@ -12,8 +12,7 @@ struct AuthView: View {
     
     var body: some View {
         ZStack {
-            
-            Color(.systemGroupedBackground).ignoresSafeArea(edges: .all)
+            authBackgroundColor.ignoresSafeArea(edges: .all)
             
             VStack(spacing: 20) {
                 Group {
@@ -40,6 +39,16 @@ struct AuthView: View {
             }
             .padding()
         }
+    }
+}
+
+private extension AuthView {
+    var authBackgroundColor: Color {
+        #if os(macOS)
+        return Color(nsColor: .windowBackgroundColor)
+        #else
+        return Color(uiColor: .systemGroupedBackground)
+        #endif
     }
 }
 

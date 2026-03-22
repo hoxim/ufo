@@ -127,8 +127,30 @@ private struct StartupLoadingView: View {
 }
 
 // MARK: - Shared Models
-enum TabItem: Hashable {
+enum TabItem: Hashable, CaseIterable {
     case home, people, spaces
+
+    var title: String {
+        switch self {
+        case .home:
+            return "Home"
+        case .people:
+            return "People"
+        case .spaces:
+            return "Spaces"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .home:
+            return "house"
+        case .people:
+            return "person.2"
+        case .spaces:
+            return "person.3"
+        }
+    }
 }
 
 #Preview {

@@ -12,6 +12,9 @@ struct LocationsView: View {
     @State private var isPresentingAddPlace = false
     @State private var isShowingSavedPlacesMap = false
     @State private var isSubmittingNearbyCheckIn = false
+    @State private var activeRelatedRoute: RelatedContentRoute?
+    @State private var editingPlace: SavedPlace?
+    @State private var placeToDelete: SavedPlace?
 
     init() {
         _locationViewModel = State(wrappedValue: LocationViewModel())
@@ -20,8 +23,7 @@ struct LocationsView: View {
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
     var body: some View {
-        NavigationStack {
-            List {
+        List {
                 if let error = locationViewModel.locationErrorMessage {
                     messageRow(error, color: .orange)
                 }
@@ -35,10 +37,7 @@ struct LocationsView: View {
                         region: $locationViewModel.region,
                         places: locationViewModel.locationStore?.savedPlaces ?? [],
                         latestPins: latestPins(),
-                        currentLocation: locationViewModel.currentLocation,
-                        onUseMapCenter: {
-                            locationViewModel.useMapCenterForInput()
-                        }
+                        currentLocation: locationViewModel.currentLocation
                     )
                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                     .listRowBackground(Color.clear)
@@ -59,25 +58,79 @@ struct LocationsView: View {
                             } label: {
                                 if isSubmittingNearbyCheckIn {
                                     ProgressView()
+                                        .frame(maxWidth: .infinity)
                                 } else {
-                                    Label("Check in at \(nearbyPlace.name)", systemImage: "mappin.and.ellipse")
+                                    Text("Check in at \(nearbyPlace.name)")
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                        .multilineTextAlignment(.center)
+                                        .frame(maxWidth: .infinity, alignment: .center)
                                 }
                             }
                             .buttonStyle(.borderedProminent)
+                            .frame(maxWidth: .infinity)
                             .disabled(isSubmittingNearbyCheckIn)
                         }
                         .padding(.vertical, 4)
                     }
                 }
 
-                Section("Saved Places") {
+                Section("Places") {
                     if let places = locationViewModel.locationStore?.savedPlaces, !places.isEmpty {
                         ForEach(places) { place in
-                            SavedPlaceRow(place: place)
+                            HStack(alignment: .top, spacing: 12) {
+                                SavedPlaceRow(place: place)
+
+                                Spacer(minLength: 8)
+
+                                Menu {
+                                    Button {
+                                        activeRelatedRoute = .place(place.id)
+                                    } label: {
+                                        Label("Details", systemImage: "info.circle")
+                                    }
+
+                                    Button {
+                                        editingPlace = place
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+
+                                    Button(role: .destructive) {
+                                        placeToDelete = place
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .font(.title3)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                activeRelatedRoute = .place(place.id)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    placeToDelete = place
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button {
+                                    editingPlace = place
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
                         }
                     } else {
                         ContentUnavailableView(
-                            "No saved places yet",
+                            "No places yet",
                             systemImage: "mappin.slash",
                             description: Text("Add places like home, school, work or dentist to reuse them across the app.")
                         )
@@ -122,79 +175,107 @@ struct LocationsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-            }
-            .navigationTitle("Locations")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        isPresentingAddPlace = true
-                    } label: {
-                        Label("Add Place", systemImage: "plus")
-                    }
-                    .disabled(spaceRepo.selectedSpace == nil)
+        }
+        .navigationTitle("Places")
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    isPresentingAddPlace = true
+                } label: {
+                    Label("Add Place", systemImage: "plus")
                 }
+                .disabled(spaceRepo.selectedSpace == nil)
+            }
 
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        isShowingSavedPlacesMap = true
-                    } label: {
-                        Label("Map", systemImage: "map")
-                    }
-                    .disabled((locationViewModel.locationStore?.savedPlaces.isEmpty ?? true) && locationViewModel.currentLocation == nil)
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    isShowingSavedPlacesMap = true
+                } label: {
+                    Label("Map", systemImage: "map")
                 }
-
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        Task { await locationViewModel.locationStore?.syncPending() }
-                    } label: {
-                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                }
+                .disabled((locationViewModel.locationStore?.savedPlaces.isEmpty ?? true) && locationViewModel.currentLocation == nil)
             }
-            .sheet(isPresented: $isPresentingAddPlace) {
-                AddSavedPlaceSheet(
-                    viewModel: locationViewModel,
-                    actorId: authRepo.currentUser?.id
-                )
-                #if os(iOS)
-                .presentationDetents([.large])
-                #endif
-            }
-            .sheet(isPresented: $isShowingSavedPlacesMap) {
-                SavedPlacesMapView(
-                    places: locationViewModel.locationStore?.savedPlaces ?? [],
-                    latestPins: latestPins(),
-                    currentLocation: locationViewModel.currentLocation,
-                    initialRegion: locationViewModel.region
-                )
-                #if os(iOS)
-                .presentationDetents([.large])
-                #endif
-            }
-            .task {
-                Log.msg("LocationsView.task start selectedSpace=\(spaceRepo.selectedSpace?.id.uuidString ?? "nil")")
-                await locationViewModel.setup(modelContext: modelContext, spaceRepo: spaceRepo, isPreview: isPreview)
-                consumeLocationSignals()
-            }
-            .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
-                Log.msg("LocationsView selected space changed to \(newValue?.uuidString ?? "nil")")
+        }
+        .refreshable {
+            await refreshPlaces()
+        }
+        .sheet(isPresented: $isPresentingAddPlace) {
+            AddSavedPlaceSheet(
+                viewModel: locationViewModel,
+                actorId: authRepo.currentUser?.id
+            )
+            #if os(iOS)
+            .presentationDetents([.large])
+            #endif
+        }
+        .sheet(isPresented: $isShowingSavedPlacesMap) {
+            SavedPlacesMapView(
+                places: locationViewModel.locationStore?.savedPlaces ?? [],
+                latestPins: latestPins(),
+                currentLocation: locationViewModel.currentLocation,
+                initialRegion: locationViewModel.region
+            )
+            #if os(iOS)
+            .presentationDetents([.large])
+            #endif
+        }
+        .sheet(item: $editingPlace) { place in
+            AddSavedPlaceSheet(
+                viewModel: locationViewModel,
+                actorId: authRepo.currentUser?.id,
+                placeToEdit: place
+            )
+            #if os(iOS)
+            .presentationDetents([.large])
+            #endif
+        }
+        .navigationDestination(item: $activeRelatedRoute) { route in
+            RelatedContentDestinationView(route: route, originLabel: "Places")
+        }
+        .alert(
+            "Delete place?",
+            isPresented: Binding(
+                get: { placeToDelete != nil },
+                set: { if !$0 { placeToDelete = nil } }
+            ),
+            presenting: placeToDelete
+        ) { place in
+            Button("Delete", role: .destructive) {
                 Task {
-                    await locationViewModel.handleSpaceChange(newValue)
-                    consumeLocationSignals()
+                    await locationViewModel.locationStore?.deleteSavedPlace(place, actor: authRepo.currentUser?.id)
+                    placeToDelete = nil
                 }
             }
-            .onChange(of: locationViewModel.currentLocation?.coordinate.latitude) { _, _ in
+            Button("Cancel", role: .cancel) {
+                placeToDelete = nil
+            }
+        } message: { place in
+            Text("Place \(place.name) will be removed from the list.")
+        }
+        .task {
+            Log.msg("LocationsView.task start selectedSpace=\(spaceRepo.selectedSpace?.id.uuidString ?? "nil")")
+            await locationViewModel.setup(modelContext: modelContext, spaceRepo: spaceRepo, isPreview: isPreview)
+            consumeLocationSignals()
+        }
+        .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
+            Log.msg("LocationsView selected space changed to \(newValue?.uuidString ?? "nil")")
+            Task {
+                await locationViewModel.handleSpaceChange(newValue)
                 consumeLocationSignals()
             }
-            .onChange(of: locationViewModel.currentLocation?.coordinate.longitude) { _, _ in
-                consumeLocationSignals()
-            }
-            .onChange(of: locationViewModel.locationStore?.checkIns.count) { _, _ in
-                consumeLocationSignals()
-            }
-            .onDisappear {
-                locationViewModel.stopTracking()
-            }
+        }
+        .onChange(of: locationViewModel.currentLocation?.coordinate.latitude) { _, _ in
+            consumeLocationSignals()
+        }
+        .onChange(of: locationViewModel.currentLocation?.coordinate.longitude) { _, _ in
+            consumeLocationSignals()
+        }
+        .onChange(of: locationViewModel.locationStore?.checkIns.count) { _, _ in
+            consumeLocationSignals()
+        }
+        .onDisappear {
+            locationViewModel.stopTracking()
         }
     }
 
@@ -231,6 +312,13 @@ struct LocationsView: View {
             currentUserId: authRepo.currentUser?.id,
             notificationStore: notificationStore
         )
+    }
+
+    @MainActor
+    private func refreshPlaces() async {
+        await locationViewModel.locationStore?.syncPending()
+        await locationViewModel.locationStore?.refreshRemote()
+        locationViewModel.requestFreshLocation()
     }
 
     private func createNearbyCheckIn(for place: SavedPlace) async {
@@ -276,444 +364,6 @@ struct LocationsView: View {
         )
 
         consumeLocationSignals()
-    }
-}
-
-struct SavedPlacesMapView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let places: [SavedPlace]
-    let latestPins: [LocationPing]
-    let currentLocation: CLLocation?
-    let initialRegion: MKCoordinateRegion
-
-    @State private var region: MKCoordinateRegion
-
-    init(
-        places: [SavedPlace],
-        latestPins: [LocationPing],
-        currentLocation: CLLocation?,
-        initialRegion: MKCoordinateRegion
-    ) {
-        self.places = places
-        self.latestPins = latestPins
-        self.currentLocation = currentLocation
-        self.initialRegion = initialRegion
-        _region = State(initialValue: initialRegion)
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                Map(coordinateRegion: $region, annotationItems: annotations) { item in
-                    MapMarker(coordinate: item.coordinate, tint: item.tint)
-                }
-                .ignoresSafeArea(edges: .bottom)
-
-                if !places.isEmpty {
-                    List(places) { place in
-                        SavedPlaceRow(place: place)
-                    }
-                    .frame(maxHeight: 260)
-                }
-            }
-            .navigationTitle("Places Map")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
-                }
-            }
-        }
-    }
-
-    private var annotations: [LocationAnnotation] {
-        var items = places.map {
-            LocationAnnotation(
-                id: $0.id,
-                coordinate: CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude),
-                tint: .teal
-            )
-        }
-        items.append(
-            contentsOf: latestPins.map {
-                LocationAnnotation(
-                    id: $0.id,
-                    coordinate: CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude),
-                    tint: .red
-                )
-            }
-        )
-        if let currentLocation {
-            items.append(
-                LocationAnnotation(
-                    id: UUID(),
-                    coordinate: currentLocation.coordinate,
-                    tint: .blue
-                )
-            )
-        }
-        return items
-    }
-}
-
-private struct SavedPlaceRow: View {
-    let place: SavedPlace
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: place.iconName ?? "mappin.circle.fill")
-                .font(.title3)
-                .foregroundStyle(Color(hex: place.iconColorHex ?? "#0F766E"))
-                .frame(width: 28)
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(place.name)
-                    .font(.headline)
-
-                Text(place.resolvedCategory.title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                if let description = place.placeDescription, !description.isEmpty {
-                    Text(description)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let address = place.address, !address.isEmpty {
-                    Text(address)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Text("\(place.latitude.formatted(.number.precision(.fractionLength(5)))) , \(place.longitude.formatted(.number.precision(.fractionLength(5))))")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-private struct LocationsMapCard: View {
-    @Binding var region: MKCoordinateRegion
-    let places: [SavedPlace]
-    let latestPins: [LocationPing]
-    let currentLocation: CLLocation?
-    let onUseMapCenter: () -> Void
-
-    var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Map(coordinateRegion: $region, annotationItems: annotations) { item in
-                MapMarker(coordinate: item.coordinate, tint: item.tint)
-            }
-            .frame(height: 280)
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-
-            Image(systemName: "plus")
-                .font(.headline.bold())
-                .foregroundStyle(.primary)
-                .padding(12)
-                .background(.ultraThinMaterial, in: Circle())
-
-            VStack(alignment: .leading, spacing: 8) {
-                if currentLocation != nil {
-                    Label("Current location available", systemImage: "location.fill")
-                        .font(.caption)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(.ultraThinMaterial, in: Capsule())
-                }
-
-                Spacer()
-
-                Button {
-                    onUseMapCenter()
-                } label: {
-                    Label("Use map center", systemImage: "scope")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(.ultraThinMaterial, in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-    }
-
-    private var annotations: [LocationAnnotation] {
-        var items = places.map {
-            LocationAnnotation(
-                id: $0.id,
-                coordinate: CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude),
-                tint: .teal
-            )
-        }
-        items.append(
-            contentsOf: latestPins.map {
-                LocationAnnotation(
-                    id: $0.id,
-                    coordinate: CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude),
-                    tint: .red
-                )
-            }
-        )
-        if let currentLocation {
-            items.append(
-                LocationAnnotation(
-                    id: UUID(),
-                    coordinate: currentLocation.coordinate,
-                    tint: .blue
-                )
-            )
-        }
-        return items
-    }
-}
-
-private struct LocationAnnotation: Identifiable {
-    let id: UUID
-    let coordinate: CLLocationCoordinate2D
-    let tint: Color
-}
-
-private enum SavedPlaceInputMethod: String, CaseIterable, Identifiable {
-    case address
-    case currentLocation
-    case coordinates
-    case mapCenter
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .address:
-            return "Address"
-        case .currentLocation:
-            return "Current"
-        case .coordinates:
-            return "Coords"
-        case .mapCenter:
-            return "Map"
-        }
-    }
-}
-
-private struct AddSavedPlaceSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let viewModel: LocationViewModel
-    let actorId: UUID?
-
-    @State private var title = ""
-    @State private var description = ""
-    @State private var address = ""
-    @State private var iconName = "mappin.circle.fill"
-    @State private var iconColorHex = "#0F766E"
-    @State private var category: SavedPlaceCategory = .other
-    @State private var method: SavedPlaceInputMethod = .address
-    @State private var latitudeText = ""
-    @State private var longitudeText = ""
-    @State private var isSaving = false
-    @State private var isResolvingAddress = false
-    @State private var showStylePicker = false
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Place") {
-                    TextField("Title", text: $title)
-                    TextField("Description", text: $description, axis: .vertical)
-                        .lineLimit(2...4)
-                    TextField("Address", text: $address, axis: .vertical)
-                        .lineLimit(2...3)
-                    Picker("Category", selection: $category) {
-                        ForEach(SavedPlaceCategory.allCases) { category in
-                            Text(category.title).tag(category)
-                        }
-                    }
-                }
-
-                Section("Source") {
-                    Picker("Input method", selection: $method) {
-                        ForEach(SavedPlaceInputMethod.allCases) { method in
-                            Text(method.title).tag(method)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    if method == .address {
-                        Button {
-                            Task { await resolveAddress() }
-                        } label: {
-                            if isResolvingAddress {
-                                ProgressView()
-                            } else {
-                                Label("Find address on map", systemImage: "magnifyingglass")
-                            }
-                        }
-                    }
-
-                    if method == .currentLocation {
-                        Button {
-                            viewModel.useCurrentLocationForInput()
-                            syncCoordinatesFromViewModel()
-                            Task { await fillAddressFromCurrentLocation() }
-                        } label: {
-                            Label("Use current location", systemImage: "location.fill")
-                        }
-                    }
-
-                    if method == .coordinates || method == .address {
-                        TextField("Latitude", text: $latitudeText)
-#if os(iOS)
-                            .keyboardType(.decimalPad)
-#endif
-                        TextField("Longitude", text: $longitudeText)
-#if os(iOS)
-                            .keyboardType(.decimalPad)
-#endif
-                    }
-
-                    if method == .mapCenter {
-                        Text("Move the map and save the center point.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        LocationsMapCard(
-                            region: Binding(
-                                get: { viewModel.region },
-                                set: { viewModel.region = $0 }
-                            ),
-                            places: viewModel.locationStore?.savedPlaces ?? [],
-                            latestPins: [],
-                            currentLocation: viewModel.currentLocation,
-                            onUseMapCenter: {}
-                        )
-                        .frame(height: 280)
-                        .listRowInsets(EdgeInsets())
-
-                        Button {
-                            syncCoordinatesFromMapCenter()
-                            Task { await fillAddressFromMapCenter() }
-                        } label: {
-                            Label("Use map center", systemImage: "scope")
-                        }
-                    }
-                }
-
-                Section("Style") {
-                    DisclosureGroup("Customize icon", isExpanded: $showStylePicker) {
-                        OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
-                    }
-                }
-            }
-            .navigationTitle("Add Place")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        Task { await save() }
-                    } label: {
-                        if isSaving {
-                            ProgressView()
-                        } else {
-                            Text("common.save")
-                        }
-                    }
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
-                }
-            }
-            .task {
-                syncCoordinatesFromViewModel()
-            }
-        }
-    }
-
-    private func syncCoordinatesFromViewModel() {
-        latitudeText = viewModel.latitudeText
-        longitudeText = viewModel.longitudeText
-    }
-
-    private func syncCoordinatesFromMapCenter() {
-        let coordinate = viewModel.mapCenterCoordinate()
-        latitudeText = coordinate.latitude.formatted(.number.precision(.fractionLength(6)))
-        longitudeText = coordinate.longitude.formatted(.number.precision(.fractionLength(6)))
-    }
-
-    private func resolveAddress() async {
-        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        isResolvingAddress = true
-        defer { isResolvingAddress = false }
-        if let coordinate = await viewModel.resolveAddress(trimmed) {
-            latitudeText = coordinate.latitude.formatted(.number.precision(.fractionLength(6)))
-            longitudeText = coordinate.longitude.formatted(.number.precision(.fractionLength(6)))
-        }
-    }
-
-    private func fillAddressFromCurrentLocation() async {
-        guard let coordinate = viewModel.currentCoordinate() else { return }
-        if let resolved = await viewModel.reverseGeocode(coordinate: coordinate) {
-            address = resolved
-        }
-    }
-
-    private func fillAddressFromMapCenter() async {
-        let coordinate = viewModel.mapCenterCoordinate()
-        if let resolved = await viewModel.reverseGeocode(coordinate: coordinate) {
-            address = resolved
-        }
-    }
-
-    private func selectedCoordinate() -> CLLocationCoordinate2D? {
-        switch method {
-        case .address, .coordinates:
-            let latitude = Double(latitudeText.replacingOccurrences(of: ",", with: "."))
-            let longitude = Double(longitudeText.replacingOccurrences(of: ",", with: "."))
-            guard let latitude, let longitude else { return nil }
-            return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-        case .currentLocation:
-            return viewModel.currentCoordinate()
-        case .mapCenter:
-            return viewModel.mapCenterCoordinate()
-        }
-    }
-
-    private func save() async {
-        guard let coordinate = selectedCoordinate() else {
-            viewModel.locationStore?.lastErrorMessage = "Invalid location input."
-            Log.error("AddSavedPlaceSheet.save invalid coordinate. method=\(method.rawValue) title=\(title)")
-            return
-        }
-
-        isSaving = true
-        defer { isSaving = false }
-
-        let trimmedAddress = address.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        Log.msg("AddSavedPlaceSheet.save start title=\(title.trimmingCharacters(in: .whitespacesAndNewlines)) method=\(method.rawValue) lat=\(coordinate.latitude) lon=\(coordinate.longitude) selectedSpace=\(viewModel.locationStore?.currentSpaceId?.uuidString ?? "nil")")
-        let didSave = await viewModel.locationStore?.addSavedPlace(
-            name: title.trimmingCharacters(in: .whitespacesAndNewlines),
-            description: trimmedDescription.isEmpty ? nil : trimmedDescription,
-            category: category.rawValue,
-            iconName: iconName.isEmpty ? nil : iconName,
-            iconColorHex: iconColorHex,
-            address: trimmedAddress.isEmpty ? nil : trimmedAddress,
-            latitude: coordinate.latitude,
-            longitude: coordinate.longitude,
-            radiusMeters: 100,
-            actor: actorId
-        ) ?? false
-        Log.msg("AddSavedPlaceSheet.save finished title=\(title.trimmingCharacters(in: .whitespacesAndNewlines)) didSave=\(didSave) lastError=\(viewModel.locationStore?.lastErrorMessage ?? "nil")")
-        if didSave {
-            dismiss()
-        }
     }
 }
 

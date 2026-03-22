@@ -243,6 +243,46 @@ final class LocationRepository {
         return place
     }
 
+    func markSavedPlaceUpdatedLocal(
+        _ place: SavedPlace,
+        name: String,
+        description: String?,
+        category: String?,
+        iconName: String?,
+        iconColorHex: String?,
+        address: String?,
+        latitude: Double,
+        longitude: Double,
+        radiusMeters: Double,
+        updatedBy: UUID?
+    ) throws {
+        guard context != nil else { throw RepositoryError.missingLocalContext }
+        place.name = name
+        place.placeDescription = description
+        place.category = category
+        place.iconName = iconName
+        place.iconColorHex = iconColorHex
+        place.address = address
+        place.latitude = latitude
+        place.longitude = longitude
+        place.radiusMeters = radiusMeters
+        place.updatedBy = updatedBy
+        place.version += 1
+        place.updatedAt = .now
+        place.pendingSync = true
+        try context?.save()
+    }
+
+    func softDeleteSavedPlaceLocal(_ place: SavedPlace, updatedBy: UUID?) throws {
+        guard context != nil else { throw RepositoryError.missingLocalContext }
+        place.deletedAt = .now
+        place.updatedBy = updatedBy
+        place.version += 1
+        place.updatedAt = .now
+        place.pendingSync = true
+        try context?.save()
+    }
+
     func createCheckInLocal(
         spaceId: UUID,
         userId: UUID,

@@ -58,10 +58,9 @@ struct NotificationCenterView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Powiadomienia")
+            .modalInlineTitleDisplayMode()
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Zamknij") { dismiss() }
-                }
+                ModalCloseToolbarItem { dismiss() }
 
                 ToolbarItemGroup(placement: .primaryAction) {
                     if filter == .unread && !filteredNotifications.isEmpty {

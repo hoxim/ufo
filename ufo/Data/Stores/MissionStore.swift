@@ -7,6 +7,7 @@ import SwiftData
 final class MissionStore {
     private let modelContext: ModelContext
     private let repository: MissionRepository
+    private let linkRepository: LinkRepository
     private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var missions: [Mission] = []
@@ -17,6 +18,7 @@ final class MissionStore {
     init(modelContext: ModelContext, missionRepository: MissionRepository) {
         self.modelContext = modelContext
         self.repository = missionRepository
+        self.linkRepository = LinkRepository(client: SupabaseConfig.client, context: modelContext)
     }
 
     /// Sets space.
@@ -74,6 +76,10 @@ final class MissionStore {
         iconName: String?,
         iconColorHex: String?,
         imageData: Data?,
+        relatedListId: UUID?,
+        relatedNoteId: UUID?,
+        relatedIncidentId: UUID?,
+        managedRelatedIds: [UUID],
         userId: UUID?
     ) async -> Mission? {
         guard let spaceId = currentSpaceId else { return nil }
@@ -95,6 +101,13 @@ final class MissionStore {
             mission.iconColorHex = iconColorHex
             mission.imageData = imageData
             mission.pendingSync = true
+            try syncRelatedLinks(
+                parentId: mission.id,
+                spaceId: spaceId,
+                desiredChildIds: [relatedListId, relatedNoteId, relatedIncidentId],
+                managedRelatedIds: managedRelatedIds,
+                actor: userId
+            )
             missions = try repository.fetchAllLocal(spaceId: spaceId)
             notifyHomeWidgetsDataDidChange()
             await syncPending()
@@ -120,6 +133,10 @@ final class MissionStore {
         iconName: String? = nil,
         iconColorHex: String? = nil,
         imageData: Data? = nil,
+        relatedListId: UUID? = nil,
+        relatedNoteId: UUID? = nil,
+        relatedIncidentId: UUID? = nil,
+        managedRelatedIds: [UUID] = [],
         isCompleted: Bool? = nil,
         userId: UUID?
     ) async -> Bool {
@@ -149,6 +166,13 @@ final class MissionStore {
             }
             mission.pendingSync = true
             if let spaceId = currentSpaceId {
+                try syncRelatedLinks(
+                    parentId: mission.id,
+                    spaceId: spaceId,
+                    desiredChildIds: [relatedListId, relatedNoteId, relatedIncidentId],
+                    managedRelatedIds: managedRelatedIds,
+                    actor: userId
+                )
                 missions = try repository.fetchAllLocal(spaceId: spaceId)
             }
             notifyHomeWidgetsDataDidChange()
@@ -199,6 +223,32 @@ final class MissionStore {
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = "Nie udało się zsynchronizować Missions: \(error)"
+        }
+    }
+
+    private func syncRelatedLinks(
+        parentId: UUID,
+        spaceId: UUID,
+        desiredChildIds: [UUID?],
+        managedRelatedIds: [UUID],
+        actor: UUID?
+    ) throws {
+        let desired = Set(desiredChildIds.compactMap { $0 })
+        let managed = Set(managedRelatedIds)
+        let existing = try linkRepository.fetchAllLocal(scopeId: spaceId).filter { $0.parentId == parentId }
+
+        for link in existing where managed.contains(link.childId) && !desired.contains(link.childId) {
+            try linkRepository.softDeleteLocal(link, actor: actor)
+        }
+
+        let existingChildIds = Set(existing.filter { $0.deletedAt == nil }.map(\.childId))
+        for childId in desired where !existingChildIds.contains(childId) {
+            _ = try linkRepository.createLocal(
+                thingId: spaceId,
+                parentId: parentId,
+                childId: childId,
+                actor: actor
+            )
         }
     }
 }

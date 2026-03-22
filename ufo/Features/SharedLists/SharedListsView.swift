@@ -10,6 +10,7 @@ struct SharedListsView: View {
     @State private var isAddingList = false
     @State private var selectedListId: UUID?
     @State private var didAutoPresentAdd = false
+    @State private var searchText = ""
 
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     let autoPresentAdd: Bool
@@ -27,6 +28,7 @@ struct SharedListsView: View {
             }
         }
         .navigationTitle("lists.view.title")
+        .toolbar(.hidden, for: .tabBar)
         .navigationDestination(item: $selectedListId) { listId in
             detailDestination(for: listId)
         }
@@ -38,14 +40,6 @@ struct SharedListsView: View {
                     Label("lists.view.action.add", systemImage: "plus")
                 }
                 .disabled(spaceRepo.selectedSpace == nil || listStore == nil)
-            }
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    Task { await listStore?.syncPending() }
-                } label: {
-                    Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
-                }
-                .disabled(listStore?.isSyncing == true || spaceRepo.selectedSpace == nil)
             }
         }
         .sheet(isPresented: $isAddingList) {
@@ -80,12 +74,17 @@ struct SharedListsView: View {
             selectedListId = nil
             Task { await listStore?.refreshRemote() }
         }
+        .safeAreaInset(edge: .bottom) {
+            FeatureBottomSearchBar(text: $searchText, prompt: "Search lists")
+        }
     }
 
     @ViewBuilder
     /// Renders main list content.
     private func content(store: SharedListStore) -> some View {
-        if store.lists.isEmpty {
+        let lists = filteredLists(in: store)
+
+        if lists.isEmpty {
             VStack(spacing: 12) {
                 Image(systemName: "list.bullet.clipboard")
                     .font(.title)
@@ -105,7 +104,7 @@ struct SharedListsView: View {
                         .foregroundStyle(.red)
                 }
 
-                ForEach(store.lists) { list in
+                ForEach(lists) { list in
                     Button {
                         selectedListId = list.id
                     } label: {
@@ -137,7 +136,25 @@ struct SharedListsView: View {
                     })
                 }
             }
+            .refreshable {
+                await refreshLists()
+            }
         }
+    }
+
+    private func filteredLists(in store: SharedListStore) -> [SharedList] {
+        let query = normalizedSearchQuery
+        guard !query.isEmpty else { return store.lists }
+
+        return store.lists.filter { list in
+            list.name.localizedCaseInsensitiveContains(query)
+                || list.type.localizedCaseInsensitiveContains(query)
+                || (list.savedPlaceName?.localizedCaseInsensitiveContains(query) ?? false)
+        }
+    }
+
+    private var normalizedSearchQuery: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     @ViewBuilder
@@ -179,6 +196,12 @@ struct SharedListsView: View {
         }
     }
 
+    @MainActor
+    private func refreshLists() async {
+        await listStore?.syncPending()
+        await listStore?.refreshRemote()
+    }
+
     private func availablePlaces() -> [SavedPlace] {
         guard let spaceId = spaceRepo.selectedSpace?.id else { return [] }
         do {
@@ -194,13 +217,17 @@ struct SharedListsView: View {
     }
 }
 
-private struct AddSharedListView: View {
+struct AddSharedListView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Environment(SpaceRepository.self) private var spaceRepo
 
     let store: SharedListStore
     let actorId: UUID?
     let availablePlaces: [SavedPlace]
     let onCreated: (UUID) -> Void
+    var initialSavedPlaceId: UUID? = nil
+    var originLabel: String? = nil
 
     @State private var name = ""
     @State private var selectedType: SharedListType = .shopping
@@ -209,46 +236,70 @@ private struct AddSharedListView: View {
     @State private var savedPlaceId: UUID?
     @State private var isSaving = false
     @State private var showStylePicker = false
+    @State private var isPresentingAddPlace = false
+
+    init(
+        store: SharedListStore,
+        actorId: UUID?,
+        availablePlaces: [SavedPlace],
+        onCreated: @escaping (UUID) -> Void,
+        initialSavedPlaceId: UUID? = nil,
+        originLabel: String? = nil
+    ) {
+        self.store = store
+        self.actorId = actorId
+        self.availablePlaces = availablePlaces
+        self.onCreated = onCreated
+        self.initialSavedPlaceId = initialSavedPlaceId
+        self.originLabel = originLabel
+        _savedPlaceId = State(initialValue: initialSavedPlaceId)
+    }
 
     var body: some View {
         NavigationStack {
             Form {
-                TextField("lists.editor.field.name", text: $name)
-                Picker("lists.editor.field.type", selection: $selectedType) {
-                    ForEach(SharedListType.allCases) { type in
-                        Text(type.rawValue.capitalized).tag(type)
+                if let originLabel {
+                    Section {
+                        OpenedFromBadge(title: originLabel)
                     }
                 }
-                Picker("Place", selection: $savedPlaceId) {
-                    Text("No place").tag(UUID?.none)
-                    ForEach(availablePlaces) { place in
-                        Text(place.name).tag(UUID?.some(place.id))
+                TextField("lists.editor.field.name", text: $name)
+                SelectionMenuRow(title: "Type", value: selectedType.rawValue.capitalized) {
+                    ForEach(SharedListType.allCases) { type in
+                        Button(type.rawValue.capitalized) { selectedType = type }
                     }
+                }
+                SelectionMenuRow(title: "Place", value: selectedPlaceTitle, isPlaceholder: savedPlaceId == nil) {
+                    Button("No place") { savedPlaceId = nil }
+                    ForEach(resolvedAvailablePlaces) { place in
+                        Button(place.name) { savedPlaceId = place.id }
+                    }
+                    Divider()
+                    Button("Add new place") { isPresentingAddPlace = true }
                 }
                 DisclosureGroup("Style", isExpanded: $showStylePicker) {
                     OperationStylePicker(iconName: $selectedIconName, colorHex: $selectedIconColorHex)
                 }
             }
             .navigationTitle("lists.editor.title.new")
+            .modalInlineTitleDisplayMode()
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") {
-                        dismiss()
-                    }
+                ModalCloseToolbarItem {
+                    dismiss()
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
+                ModalConfirmToolbarItem(
+                    isDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving,
+                    isProcessing: isSaving,
+                    action: {
                         Task {
                             await saveList()
                         }
-                    } label: {
-                        if isSaving {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "checkmark")
-                        }
                     }
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
+                )
+            }
+            .sheet(isPresented: $isPresentingAddPlace) {
+                QuickAddPlaceSheet(originLabel: originLabel) { place in
+                    savedPlaceId = place.id
                 }
             }
         }
@@ -266,19 +317,38 @@ private struct AddSharedListView: View {
             iconName: selectedIconName,
             iconColorHex: selectedIconColorHex,
             savedPlaceId: savedPlaceId,
-            savedPlaceName: availablePlaces.first(where: { $0.id == savedPlaceId })?.name,
+            savedPlaceName: resolvedAvailablePlaces.first(where: { $0.id == savedPlaceId })?.name,
             actor: actorId
         )
         guard let listId else { return }
         dismiss()
         onCreated(listId)
     }
+
+    private var resolvedAvailablePlaces: [SavedPlace] {
+        guard let spaceId = spaceRepo.selectedSpace?.id else { return availablePlaces }
+        do {
+            return try modelContext.fetch(
+                FetchDescriptor<SavedPlace>(
+                    predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                    sortBy: [SortDescriptor(\.name, order: .forward)]
+                )
+            )
+        } catch {
+            return availablePlaces
+        }
+    }
+
+    private var selectedPlaceTitle: String {
+        resolvedAvailablePlaces.first(where: { $0.id == savedPlaceId })?.name ?? "No place"
+    }
 }
 
-private struct SharedListDetailView: View {
+struct SharedListDetailView: View {
     let store: SharedListStore
     let listId: UUID
     let actorId: UUID?
+    var openedFromLabel: String? = nil
 
     @State private var newItemName = ""
 
@@ -292,6 +362,11 @@ private struct SharedListDetailView: View {
 
     var body: some View {
         List {
+            if let openedFromLabel {
+                Section {
+                    OpenedFromBadge(title: openedFromLabel)
+                }
+            }
             if let error = store.lastErrorMessage {
                 Text(error)
                     .font(.caption)
@@ -363,23 +438,16 @@ private struct SharedListDetailView: View {
             }
         }
         .navigationTitle(list?.name ?? String(localized: "lists.detail.fallbackTitle"))
+        .refreshable {
+            await store.syncPending()
+            await store.refreshRemote()
+        }
         .onAppear {
             let listName = list?.name ?? "nil"
             let knownIds = store.lists.map(\.id.uuidString).joined(separator: ",")
             Log.msg("SharedListDetailView appear. requestedListId=\(listId.uuidString) resolvedName=\(listName) itemCount=\(items.count) knownListIds=[\(knownIds)]")
             if list == nil {
                 Log.error("SharedListDetailView could not resolve list for listId=\(listId.uuidString)")
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    Task {
-                        await store.syncPending()
-                    }
-                } label: {
-                    Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
-                }
             }
         }
     }

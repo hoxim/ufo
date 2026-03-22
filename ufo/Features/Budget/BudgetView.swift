@@ -18,6 +18,7 @@ struct BudgetView: View {
     @State private var selectedKindFilter: BudgetKindFilter = .all
     @State private var selectedRangeFilter: BudgetRangeFilter = .month
     @State private var selectedCategoryFilter = "All"
+    @State private var searchText = ""
 
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     let autoPresentAddEntry: Bool
@@ -27,39 +28,11 @@ struct BudgetView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
+        List {
                 if let error = budgetStore?.lastErrorMessage {
                     Text(error)
                         .font(.caption)
                         .foregroundStyle(.red)
-                }
-
-                Section {
-                    Picker("Period", selection: $selectedRangeFilter) {
-                        ForEach(BudgetRangeFilter.allCases, id: \.self) { filter in
-                            Text(filter.title).tag(filter)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    Picker("Type", selection: $selectedKindFilter) {
-                        ForEach(BudgetKindFilter.allCases, id: \.self) { filter in
-                            Text(filter.title).tag(filter)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    Picker("Category", selection: $selectedCategoryFilter) {
-                        Text("All").tag("All")
-                        ForEach(availableCategories, id: \.self) { category in
-                            Text(category).tag(category)
-                        }
-                    }
-                } header: {
-                    Text("Filters")
-                } footer: {
-                    Text("Keep filters at the top to quickly narrow down transactions, subscriptions and category budgets.")
                 }
 
                 Section("Overview") {
@@ -182,7 +155,7 @@ struct BudgetView: View {
                 }
 
                 Section {
-                    ForEach(budgetStore?.goals ?? []) { goal in
+                    ForEach(filteredGoals) { goal in
                         VStack(alignment: .leading) {
                             Text(goal.title).font(.headline)
                             ProgressView(value: goal.progress)
@@ -234,85 +207,131 @@ struct BudgetView: View {
                         }
                     }
                 }
-            }
-            .navigationTitle("budget.view.title")
-            .toolbar {
-                ToolbarItemGroup(placement: .primaryAction) {
-                    Button {
-                        showAddEntry = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
+        }
+        .navigationTitle("budget.view.title")
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Menu {
+                        Section("Period") {
+                            ForEach(BudgetRangeFilter.allCases, id: \.self) { filter in
+                                Button {
+                                    selectedRangeFilter = filter
+                                } label: {
+                                    filterMenuLabel(title: filter.title, isSelected: selectedRangeFilter == filter)
+                                }
+                            }
+                        }
+
+                        Section("Type") {
+                            ForEach(BudgetKindFilter.allCases, id: \.self) { filter in
+                                Button {
+                                    selectedKindFilter = filter
+                                } label: {
+                                    filterMenuLabel(title: filter.title, isSelected: selectedKindFilter == filter)
+                                }
+                            }
+                        }
+
+                        Section("Category") {
+                            Button {
+                                selectedCategoryFilter = "All"
+                            } label: {
+                                filterMenuLabel(title: "All", isSelected: selectedCategoryFilter == "All")
+                            }
+
+                            ForEach(availableCategories, id: \.self) { category in
+                                Button {
+                                    selectedCategoryFilter = category
+                                } label: {
+                                    filterMenuLabel(title: category, isSelected: selectedCategoryFilter == category)
+                                }
+                            }
+                        }
+
+                        if hasActiveFilters {
+                            Divider()
+
+                            Button("Reset Filters") {
+                                resetFilters()
+                            }
+                        }
+                } label: {
+                    Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                 }
 
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        Task { await budgetStore?.syncPending() }
-                    } label: {
-                        Label("common.sync", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                }
-            }
-            .sheet(isPresented: $showAddEntry) {
-                if let budgetStore {
-                    AddBudgetEntryView(
-                        store: budgetStore,
-                        actor: authRepo.currentUser?.id,
-                        customCategories: appPreferences.budgetCustomCategories
-                    )
-                        .presentationDetents([.medium, .large])
-                }
-            }
-            .sheet(isPresented: $showAddGoal) {
-                if let budgetStore {
-                    AddBudgetGoalView(store: budgetStore, actor: authRepo.currentUser?.id)
-                        .presentationDetents([.medium, .large])
-                }
-            }
-            .sheet(isPresented: $showAddCategoryBudget) {
-                AddCategoryBudgetView(
-                    initialCategory: nil,
-                    initialAmount: nil,
-                    customCategories: appPreferences.budgetCustomCategories,
-                    existingCategories: availableCategories
-                ) { category, amount in
-                    appPreferences.setBudgetCategoryLimit(category: category, amount: amount)
-                } onAddCategory: { value in
-                    appPreferences.addBudgetCustomCategory(value)
-                }
-                .presentationDetents([.medium, .large])
-            }
-            .sheet(item: $editingCategoryBudget) { categoryBudget in
-                AddCategoryBudgetView(
-                    initialCategory: categoryBudget.category,
-                    initialAmount: categoryBudget.amount,
-                    customCategories: appPreferences.budgetCustomCategories,
-                    existingCategories: availableCategories
-                ) { category, amount in
-                    appPreferences.setBudgetCategoryLimit(category: category, amount: amount)
-                } onAddCategory: { value in
-                    appPreferences.addBudgetCustomCategory(value)
-                }
-                .presentationDetents([.medium, .large])
-            }
-            .sheet(isPresented: $showAddCustomCategory) {
-                AddCustomBudgetCategoryView { value in
-                    appPreferences.addBudgetCustomCategory(value)
-                }
-                .presentationDetents([.medium])
-            }
-            .task {
-                await setupStoreIfNeeded(performRemoteRefresh: !autoPresentAddEntry)
-                if autoPresentAddEntry && !didAutoPresentAddEntry && budgetStore != nil {
-                    didAutoPresentAddEntry = true
-                    try? await Task.sleep(for: .milliseconds(300))
+                Button {
                     showAddEntry = true
+                } label: {
+                    Image(systemName: "plus")
                 }
             }
-            .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
-                budgetStore?.setSpace(newValue)
-                Task { await budgetStore?.refreshRemote() }
+        }
+        .refreshable {
+            await refreshBudget()
+        }
+        .sheet(isPresented: $showAddEntry) {
+            if let budgetStore {
+                AddBudgetEntryView(
+                    store: budgetStore,
+                    actor: authRepo.currentUser?.id,
+                    customCategories: appPreferences.budgetCustomCategories
+                )
+                    .presentationDetents([.medium, .large])
             }
+        }
+        .sheet(isPresented: $showAddGoal) {
+            if let budgetStore {
+                AddBudgetGoalView(store: budgetStore, actor: authRepo.currentUser?.id)
+                    .presentationDetents([.medium, .large])
+            }
+        }
+        .sheet(isPresented: $showAddCategoryBudget) {
+            AddCategoryBudgetView(
+                initialCategory: nil,
+                initialAmount: nil,
+                customCategories: appPreferences.budgetCustomCategories,
+                existingCategories: availableCategories
+            ) { category, amount in
+                appPreferences.setBudgetCategoryLimit(category: category, amount: amount)
+            } onAddCategory: { value in
+                appPreferences.addBudgetCustomCategory(value)
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $editingCategoryBudget) { categoryBudget in
+            AddCategoryBudgetView(
+                initialCategory: categoryBudget.category,
+                initialAmount: categoryBudget.amount,
+                customCategories: appPreferences.budgetCustomCategories,
+                existingCategories: availableCategories
+            ) { category, amount in
+                appPreferences.setBudgetCategoryLimit(category: category, amount: amount)
+            } onAddCategory: { value in
+                appPreferences.addBudgetCustomCategory(value)
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showAddCustomCategory) {
+            AddCustomBudgetCategoryView { value in
+                appPreferences.addBudgetCustomCategory(value)
+            }
+            .presentationDetents([.medium])
+        }
+        .task {
+            await setupStoreIfNeeded(performRemoteRefresh: !autoPresentAddEntry)
+            if autoPresentAddEntry && !didAutoPresentAddEntry && budgetStore != nil {
+                didAutoPresentAddEntry = true
+                try? await Task.sleep(for: .milliseconds(300))
+                showAddEntry = true
+            }
+        }
+        .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
+            budgetStore?.setSpace(newValue)
+            Task { await budgetStore?.refreshRemote() }
+        }
+        .safeAreaInset(edge: .bottom) {
+            FeatureBottomSearchBar(text: $searchText, prompt: "Search budget")
         }
     }
 
@@ -328,6 +347,14 @@ struct BudgetView: View {
         }
         if selectedCategoryFilter != "All" {
             values = values.filter { $0.category == selectedCategoryFilter }
+        }
+        let query = normalizedSearchQuery
+        if !query.isEmpty {
+            values = values.filter { entry in
+                entry.title.localizedCaseInsensitiveContains(query)
+                    || entry.category.localizedCaseInsensitiveContains(query)
+                    || (entry.notes?.localizedCaseInsensitiveContains(query) ?? false)
+            }
         }
         return values
     }
@@ -372,6 +399,10 @@ struct BudgetView: View {
                 }
                 return lhs.category.localizedCaseInsensitiveCompare(rhs.category) == .orderedAscending
             }
+            .filter { summary in
+                let query = normalizedSearchQuery
+                return query.isEmpty || summary.category.localizedCaseInsensitiveContains(query)
+            }
     }
 
     private var filteredIncome: Double {
@@ -390,6 +421,38 @@ struct BudgetView: View {
         filteredIncome - filteredExpense
     }
 
+    private var hasActiveFilters: Bool {
+        selectedKindFilter != .all || selectedRangeFilter != .month || selectedCategoryFilter != "All"
+    }
+
+    private var filteredGoals: [BudgetGoal] {
+        let query = normalizedSearchQuery
+        let goals = budgetStore?.goals ?? []
+        guard !query.isEmpty else { return goals }
+        return goals.filter { $0.title.localizedCaseInsensitiveContains(query) }
+    }
+
+    private var normalizedSearchQuery: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func resetFilters() {
+        selectedKindFilter = .all
+        selectedRangeFilter = .month
+        selectedCategoryFilter = "All"
+    }
+
+    @ViewBuilder
+    private func filterMenuLabel(title: String, isSelected: Bool) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark")
+            }
+        }
+    }
+
     @MainActor
     /// Sets up store if needed.
     private func setupStoreIfNeeded(performRemoteRefresh: Bool = true) async {
@@ -403,445 +466,11 @@ struct BudgetView: View {
             await store.refreshRemote()
         }
     }
-}
-
-private struct AddBudgetEntryView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let store: BudgetStore
-    let actor: UUID?
-    let customCategories: [String]
-
-    @State private var title = ""
-    @State private var kind: BudgetEntryKind = .expense
-    @State private var amountText = ""
-    @State private var category = BudgetPresetCategory.food.title
-    @State private var customCategoryName = ""
-    @State private var iconName = "dollarsign.circle"
-    @State private var iconColorHex = "#22C55E"
-    @State private var notes = ""
-    @State private var date = Date()
-    @State private var isRecurring = false
-    @State private var recurringInterval: BudgetRecurringInterval = .monthly
-    @State private var isSaving = false
-    @State private var showStylePicker = false
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                TextField("budget.entry.field.title", text: $title)
-                Picker("budget.entry.field.type", selection: $kind) {
-                    ForEach(BudgetEntryKind.allCases) { kind in
-                        Text(kind.displayName).tag(kind)
-                    }
-                }
-                .onChange(of: kind) { _, newValue in
-                    if !categoryOptions(for: newValue).contains(category) {
-                        category = categoryOptions(for: newValue).first ?? "Other"
-                    }
-                }
-                TextField("budget.entry.field.amount", text: $amountText)
-                    #if os(iOS)
-                    .keyboardType(.decimalPad)
-                    #endif
-                Picker("budget.entry.field.category", selection: $category) {
-                    ForEach(categoryOptions(for: kind), id: \.self) { option in
-                        Text(option).tag(option)
-                    }
-                }
-                TextField("Custom category", text: $customCategoryName)
-                Toggle("Recurring transaction", isOn: $isRecurring)
-                if isRecurring {
-                    Picker("Interval", selection: $recurringInterval) {
-                        ForEach(BudgetRecurringInterval.allCases, id: \.self) { interval in
-                            Text(interval.title).tag(interval)
-                        }
-                    }
-                }
-                DisclosureGroup("Style", isExpanded: $showStylePicker) {
-                    OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
-                }
-                TextField("budget.entry.field.notes", text: $notes)
-                DatePicker("budget.entry.field.date", selection: $date, displayedComponents: [.date])
-
-            }
-            .navigationTitle("Add Transaction")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        Task { await save() }
-                    } label: {
-                        if isSaving {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
-                }
-            }
-        }
-    }
 
     @MainActor
-    private func save() async {
-        isSaving = true
-        defer { isSaving = false }
-
-        let amount = Double(amountText.replacingOccurrences(of: ",", with: ".")) ?? 0
-        let resolvedCategory = customCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? category
-            : customCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        await store.addEntry(
-            title: title,
-            kind: kind,
-            amount: amount,
-            category: resolvedCategory,
-            iconName: iconName,
-            iconColorHex: iconColorHex,
-            notes: notes.isEmpty ? nil : notes,
-            date: date,
-            recurring: isRecurring,
-            recurringInterval: isRecurring ? recurringInterval.rawValue : nil,
-            actor: actor
-        )
-        dismiss()
-    }
-
-    private func categoryOptions(for kind: BudgetEntryKind) -> [String] {
-        switch kind {
-        case .income:
-            return (BudgetPresetIncomeCategory.allCases.map(\.title) + customCategories).uniquedPreservingOrder()
-        case .expense:
-            return (BudgetPresetCategory.allCases.map(\.title) + customCategories).uniquedPreservingOrder()
-        }
-    }
-}
-
-private struct AddBudgetGoalView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let store: BudgetStore
-    let actor: UUID?
-
-    @State private var title = ""
-    @State private var targetText = ""
-    @State private var currentText = ""
-    @State private var dueDate = Date()
-    @State private var isSaving = false
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                TextField("Goal", text: $title)
-                TextField("Target amount", text: $targetText)
-                #if os(iOS)
-                    .keyboardType(.decimalPad)
-                #endif
-                TextField("Saved so far", text: $currentText)
-                #if os(iOS)
-                    .keyboardType(.decimalPad)
-                #endif
-                DatePicker("Due date", selection: $dueDate, displayedComponents: [.date])
-
-            }
-            .navigationTitle("Add Goal")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        Task { await save() }
-                    } label: {
-                        if isSaving {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
-                }
-            }
-        }
-    }
-
-    @MainActor
-    private func save() async {
-        isSaving = true
-        defer { isSaving = false }
-
-        let target = Double(targetText.replacingOccurrences(of: ",", with: ".")) ?? 0
-        let current = Double(currentText.replacingOccurrences(of: ",", with: ".")) ?? 0
-        await store.addGoal(title: title, target: target, current: current, dueDate: dueDate, actor: actor)
-        dismiss()
-    }
-}
-
-private struct AddCategoryBudgetView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let initialCategory: String?
-    let initialAmount: Double?
-    let customCategories: [String]
-    let existingCategories: [String]
-    let onSave: (String, Double) -> Void
-    let onAddCategory: (String) -> Void
-
-    @State private var selectedCategory: String
-    @State private var customCategory: String
-    @State private var amountText: String
-
-    init(
-        initialCategory: String?,
-        initialAmount: Double?,
-        customCategories: [String],
-        existingCategories: [String],
-        onSave: @escaping (String, Double) -> Void,
-        onAddCategory: @escaping (String) -> Void
-    ) {
-        self.initialCategory = initialCategory
-        self.initialAmount = initialAmount
-        self.customCategories = customCategories
-        self.existingCategories = existingCategories
-        self.onSave = onSave
-        self.onAddCategory = onAddCategory
-        _selectedCategory = State(initialValue: initialCategory ?? existingCategories.first ?? BudgetPresetCategory.home.title)
-        _customCategory = State(initialValue: "")
-        if let initialAmount {
-            _amountText = State(initialValue: String(format: "%.2f", initialAmount).replacingOccurrences(of: ".", with: ","))
-        } else {
-            _amountText = State(initialValue: "")
-        }
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Picker("Category", selection: $selectedCategory) {
-                    ForEach(existingCategories, id: \.self) { category in
-                        Text(category).tag(category)
-                    }
-                }
-
-                TextField("New custom category", text: $customCategory)
-
-                TextField("Monthly limit", text: $amountText)
-                #if os(iOS)
-                    .keyboardType(.decimalPad)
-                #endif
-            }
-            .navigationTitle(initialCategory == nil ? "Category Limit" : "Edit Limit")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        save()
-                    }
-                }
-            }
-        }
-    }
-
-    private func save() {
-        let newCategory = customCategory.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedCategory = newCategory.isEmpty ? selectedCategory : newCategory
-        let amount = Double(amountText.replacingOccurrences(of: ",", with: ".")) ?? 0
-        guard !resolvedCategory.isEmpty, amount > 0 else { return }
-
-        if !newCategory.isEmpty, !customCategories.contains(where: { $0.caseInsensitiveCompare(newCategory) == .orderedSame }) {
-            onAddCategory(newCategory)
-        }
-
-        onSave(resolvedCategory, amount)
-        dismiss()
-    }
-}
-
-private struct AddCustomBudgetCategoryView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let onSave: (String) -> Void
-
-    @State private var value = ""
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                TextField("Category name", text: $value)
-            }
-            .navigationTitle("New Category")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        let clean = value.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !clean.isEmpty else { return }
-                        onSave(clean)
-                        dismiss()
-                    }
-                    .disabled(value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-        }
-    }
-}
-
-private enum BudgetKindFilter: String, CaseIterable {
-    case all
-    case income
-    case expense
-
-    var title: String {
-        switch self {
-        case .all: return "All"
-        case .income: return "Income"
-        case .expense: return "Expense"
-        }
-    }
-}
-
-private enum BudgetRangeFilter: CaseIterable {
-    case month
-    case threeMonths
-    case year
-    case all
-
-    var title: String {
-        switch self {
-        case .month: return "Month"
-        case .threeMonths: return "3M"
-        case .year: return "Year"
-        case .all: return "All"
-        }
-    }
-
-    var startDate: Date? {
-        let calendar = Calendar.current
-        switch self {
-        case .month:
-            return calendar.date(byAdding: .month, value: -1, to: .now)
-        case .threeMonths:
-            return calendar.date(byAdding: .month, value: -3, to: .now)
-        case .year:
-            return calendar.date(byAdding: .year, value: -1, to: .now)
-        case .all:
-            return nil
-        }
-    }
-}
-
-private enum BudgetRecurringInterval: String, CaseIterable {
-    case weekly
-    case monthly
-    case yearly
-
-    var title: String {
-        switch self {
-        case .weekly: return "Weekly"
-        case .monthly: return "Monthly"
-        case .yearly: return "Yearly"
-        }
-    }
-}
-
-private enum BudgetPresetCategory: CaseIterable {
-    case home
-    case food
-    case subscriptions
-    case transport
-    case health
-    case education
-    case kids
-    case entertainment
-    case travel
-    case pets
-    case other
-
-    var title: String {
-        switch self {
-        case .home: return "Home"
-        case .food: return "Food"
-        case .subscriptions: return "Subscriptions"
-        case .transport: return "Transport"
-        case .health: return "Health"
-        case .education: return "Education"
-        case .kids: return "Kids"
-        case .entertainment: return "Entertainment"
-        case .travel: return "Travel"
-        case .pets: return "Pets"
-        case .other: return "Other"
-        }
-    }
-}
-
-private enum BudgetPresetIncomeCategory: CaseIterable {
-    case salary
-    case freelance
-    case refund
-    case gift
-    case other
-
-    var title: String {
-        switch self {
-        case .salary: return "Salary"
-        case .freelance: return "Freelance"
-        case .refund: return "Refund"
-        case .gift: return "Gift"
-        case .other: return "Other"
-        }
-    }
-}
-
-private struct BudgetCategorySummary: Identifiable {
-    let category: String
-    let spent: Double
-    let limit: Double?
-
-    var id: String { category }
-
-    var isOverLimit: Bool {
-        guard let limit else { return false }
-        return spent > limit
-    }
-
-    var progressValue: Double {
-        guard let limit, limit > 0 else { return 0 }
-        return min(spent / limit, 1)
-    }
-
-    var subtitle: String {
-        if let limit {
-            return "Spent vs limit"
-        }
-        return "No limit set yet"
-    }
-
-    var remainingText: String {
-        guard let limit else { return "No limit" }
-        let remaining = limit - spent
-        if remaining >= 0 {
-            return "\(remaining.formatted(.currency(code: "PLN"))) left"
-        }
-        return "\((-remaining).formatted(.currency(code: "PLN"))) over"
-    }
-}
-
-private extension Array where Element == String {
-    func uniquedPreservingOrder() -> [String] {
-        var seen = Set<String>()
-        return self.filter { value in
-            let key = value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-            return seen.insert(key).inserted
-        }
+    private func refreshBudget() async {
+        await budgetStore?.syncPending()
+        await budgetStore?.refreshRemote()
     }
 }
 

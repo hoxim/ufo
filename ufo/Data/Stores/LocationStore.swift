@@ -111,11 +111,11 @@ final class LocationStore {
         longitude: Double,
         radiusMeters: Double,
         actor: UUID?
-    ) async -> Bool {
+    ) async -> SavedPlace? {
         guard let spaceId = currentSpaceId else {
             lastErrorMessage = "Nie wybrano space do zapisania miejsca."
             Log.error("LocationStore.addSavedPlace aborted because currentSpaceId is nil. name=\(name)")
-            return false
+            return nil
         }
         Log.msg("LocationStore.addSavedPlace start spaceId=\(spaceId.uuidString) name=\(name) lat=\(latitude) lon=\(longitude) actor=\(actor?.uuidString ?? "nil")")
         do {
@@ -137,11 +137,72 @@ final class LocationStore {
             Log.msg("LocationStore.addSavedPlace local save success placeId=\(created.id.uuidString) savedPlaces=\(savedPlaces.count)")
             notifyHomeWidgetsDataDidChange()
             await syncPending()
-            return true
+            return created
         } catch {
             lastErrorMessage = "Nie udało się dodać miejsca: \(error)"
             Log.error("LocationStore.addSavedPlace failed for spaceId=\(spaceId.uuidString) name=\(name): \(error.localizedDescription)")
-            return false
+            return nil
+        }
+    }
+
+    @discardableResult
+    func updateSavedPlace(
+        _ place: SavedPlace,
+        name: String,
+        description: String?,
+        category: String?,
+        iconName: String?,
+        iconColorHex: String?,
+        address: String?,
+        latitude: Double,
+        longitude: Double,
+        radiusMeters: Double,
+        actor: UUID?
+    ) async -> SavedPlace? {
+        guard let spaceId = currentSpaceId else {
+            lastErrorMessage = "Nie wybrano space do zapisania miejsca."
+            return nil
+        }
+
+        do {
+            try repository.markSavedPlaceUpdatedLocal(
+                place,
+                name: name,
+                description: description,
+                category: category,
+                iconName: iconName,
+                iconColorHex: iconColorHex,
+                address: address,
+                latitude: latitude,
+                longitude: longitude,
+                radiusMeters: radiusMeters,
+                updatedBy: actor
+            )
+            savedPlaces = try repository.fetchSavedPlacesLocal(spaceId: spaceId)
+            lastErrorMessage = nil
+            notifyHomeWidgetsDataDidChange()
+            await syncPending()
+            return place
+        } catch {
+            lastErrorMessage = "Nie udało się zaktualizować miejsca: \(error)"
+            return nil
+        }
+    }
+
+    func deleteSavedPlace(_ place: SavedPlace, actor: UUID?) async {
+        guard let spaceId = currentSpaceId else {
+            lastErrorMessage = "Nie wybrano space do zapisania miejsca."
+            return
+        }
+
+        do {
+            try repository.softDeleteSavedPlaceLocal(place, updatedBy: actor)
+            savedPlaces = try repository.fetchSavedPlacesLocal(spaceId: spaceId)
+            lastErrorMessage = nil
+            notifyHomeWidgetsDataDidChange()
+            await syncPending()
+        } catch {
+            lastErrorMessage = "Nie udało się usunąć miejsca: \(error)"
         }
     }
 

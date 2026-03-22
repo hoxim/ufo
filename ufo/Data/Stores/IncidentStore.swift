@@ -7,6 +7,7 @@ import SwiftData
 final class IncidentStore {
     private let modelContext: ModelContext
     private let repository: IncidentRepository
+    private let linkRepository: LinkRepository
     private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var incidents: [Incident] = []
@@ -17,6 +18,7 @@ final class IncidentStore {
     init(modelContext: ModelContext, repository: IncidentRepository) {
         self.modelContext = modelContext
         self.repository = repository
+        self.linkRepository = LinkRepository(client: SupabaseConfig.client, context: modelContext)
     }
 
     /// Sets space.
@@ -72,9 +74,13 @@ final class IncidentStore {
         iconName: String?,
         iconColorHex: String?,
         imageData: Data?,
+        relatedMissionId: UUID?,
+        relatedListId: UUID?,
+        relatedPlaceId: UUID?,
+        managedRelatedIds: [UUID],
         userId: UUID?
-    ) async {
-        guard let spaceId = currentSpaceId else { return }
+    ) async -> Incident? {
+        guard let spaceId = currentSpaceId else { return nil }
         do {
             let incident = try repository.createLocal(
                 spaceId: spaceId,
@@ -91,11 +97,20 @@ final class IncidentStore {
             incident.iconColorHex = iconColorHex
             incident.imageData = imageData
             incident.pendingSync = true
+            try syncRelatedLinks(
+                parentId: incident.id,
+                spaceId: spaceId,
+                desiredChildIds: [relatedMissionId, relatedListId, relatedPlaceId],
+                managedRelatedIds: managedRelatedIds,
+                actor: userId
+            )
             incidents = try repository.fetchAllLocal(spaceId: spaceId)
             notifyHomeWidgetsDataDidChange()
             await syncPending()
+            return incident
         } catch {
             lastErrorMessage = "Nie udało się dodać Incident: \(error)"
+            return nil
         }
     }
 
@@ -112,6 +127,10 @@ final class IncidentStore {
         iconName: String? = nil,
         iconColorHex: String? = nil,
         imageData: Data? = nil,
+        relatedMissionId: UUID? = nil,
+        relatedListId: UUID? = nil,
+        relatedPlaceId: UUID? = nil,
+        managedRelatedIds: [UUID] = [],
         userId: UUID?
     ) async {
         do {
@@ -137,6 +156,13 @@ final class IncidentStore {
             }
             incident.pendingSync = true
             if let spaceId = currentSpaceId {
+                try syncRelatedLinks(
+                    parentId: incident.id,
+                    spaceId: spaceId,
+                    desiredChildIds: [relatedMissionId, relatedListId, relatedPlaceId],
+                    managedRelatedIds: managedRelatedIds,
+                    actor: userId
+                )
                 incidents = try repository.fetchAllLocal(spaceId: spaceId)
             }
             notifyHomeWidgetsDataDidChange()
@@ -180,6 +206,32 @@ final class IncidentStore {
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = "Nie udało się zsynchronizować Incidents: \(error)"
+        }
+    }
+
+    private func syncRelatedLinks(
+        parentId: UUID,
+        spaceId: UUID,
+        desiredChildIds: [UUID?],
+        managedRelatedIds: [UUID],
+        actor: UUID?
+    ) throws {
+        let desired = Set(desiredChildIds.compactMap { $0 })
+        let managed = Set(managedRelatedIds)
+        let existing = try linkRepository.fetchAllLocal(scopeId: spaceId).filter { $0.parentId == parentId }
+
+        for link in existing where managed.contains(link.childId) && !desired.contains(link.childId) {
+            try linkRepository.softDeleteLocal(link, actor: actor)
+        }
+
+        let existingChildIds = Set(existing.filter { $0.deletedAt == nil }.map(\.childId))
+        for childId in desired where !existingChildIds.contains(childId) {
+            _ = try linkRepository.createLocal(
+                thingId: spaceId,
+                parentId: parentId,
+                childId: childId,
+                actor: actor
+            )
         }
     }
 }

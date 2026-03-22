@@ -57,21 +57,14 @@ struct SpaceEditorView: View {
                 }
             }
             .navigationTitle(spaceToEdit == nil ? "spaces.editor.title.new" : "spaces.editor.title.edit")
-            .inlineNavigationTitle()
+            .modalInlineTitleDisplayMode()
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(action: saveSpace) {
-                        if isProcessing {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isProcessing)
-                }
+                ModalCloseToolbarItem { dismiss() }
+                ModalConfirmToolbarItem(
+                    isDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isProcessing,
+                    isProcessing: isProcessing,
+                    action: saveSpace
+                )
             }
         }
     }
