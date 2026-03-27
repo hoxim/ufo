@@ -12,19 +12,30 @@ struct NoteEditorHeaderSection: View {
     let isPinned: Bool
     let hasRichText: Bool
     let isEditingExistingNote: Bool
+    let subtitle: String
     @FocusState.Binding var isTitleFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(subtitle)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
             TextField("Tytuł", text: $title)
-                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .font(.system(size: 30, weight: .medium, design: .rounded))
+                .textFieldStyle(.plain)
                 .focused($isTitleFocused)
+                .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            Rectangle()
+                .fill(Color.separatorAdaptive.opacity(0.45))
+                .frame(height: 1)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     noteMetaBadge(
-                        title: isEditingExistingNote ? "Edytujesz notatkę" : "Nowa notatka",
+                        title: isEditingExistingNote ? "Szkic notatki" : "Nowa notatka",
                         systemImage: "square.and.pencil"
                     )
                     if isPinned {
@@ -44,7 +55,7 @@ struct NoteEditorHeaderSection: View {
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(Color(.secondarySystemBackground), in: Capsule())
+            .background(Color.secondarySystemBackgroundAdaptive, in: Capsule())
     }
 }
 
@@ -54,9 +65,17 @@ struct NoteEditorContentSection: View {
     let isPreviewMode: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Treść")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(isPreviewMode ? "Podgląd" : "Treść")
+                    .font(.headline)
+                Spacer()
+                if isPreviewMode {
+                    Label("Tryb tylko do odczytu", systemImage: "eye")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             Group {
                 if isPreviewMode {
@@ -69,10 +88,12 @@ struct NoteEditorContentSection: View {
                 } else {
                     ZStack(alignment: .topLeading) {
                         if richText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            Text("Zacznij pisać. Formatowanie działa wizualnie, a znaczniki markdown zapisujemy dopiero w tle.")
+                            Text("Zacznij pisać...")
+                                .font(.title3.weight(.medium))
                                 .foregroundStyle(.secondary)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 18)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .allowsHitTesting(false)
                         }
 
                         NoteRichTextEditorRepresentable(
@@ -85,7 +106,6 @@ struct NoteEditorContentSection: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -108,136 +128,156 @@ struct NoteEditorMetadataSection: View {
     @Binding var savedPlaceId: UUID?
     @Binding var selectedIncidentId: UUID?
     @Binding var selectedLocationId: UUID?
+    @Binding var isExpanded: Bool
     @Binding var isPresentingAddPlace: Bool
     @Binding var isPresentingAddMission: Bool
     @Binding var isPresentingAddIncident: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Szczegóły notatki")
-                .font(.headline)
-
-            metadataCard(title: "Organizacja", systemImage: "folder") {
-                VStack(spacing: 14) {
-                    SelectionMenuRow(
-                        title: "Folder",
-                        value: folderTitle(for: selectedFolderId),
-                        isPlaceholder: selectedFolderId == nil
-                    ) {
-                        Button("Bez folderu") { selectedFolderId = nil }
-                        ForEach(folders) { folder in
-                            Button(folder.name) { selectedFolderId = folder.id }
-                        }
-                    }
-
-                    Toggle("Przypnij notatkę", isOn: $isPinned)
-
-                    metadataTextField(
-                        title: "Tagi",
-                        placeholder: "Dom, praca, ważne",
-                        text: $tagsText
-                    )
-                }
-            }
-
-            metadataCard(title: "Linki i miejsce", systemImage: "link") {
-                VStack(spacing: 14) {
-                    metadataTextField(
-                        title: "Link",
-                        placeholder: "https://...",
-                        text: $attachedLinkURL,
-                        disableAutocorrection: true,
-                        disableCapitalization: true
-                    )
-
-                    SelectionMenuRow(
-                        title: "Zapisane miejsce",
-                        value: savedPlaceTitle(for: savedPlaceId),
-                        isPlaceholder: savedPlaceId == nil
-                    ) {
-                        Button("Bez miejsca") { savedPlaceId = nil }
-                        ForEach(savedPlaces) { place in
-                            Button(place.name) { savedPlaceId = place.id }
-                        }
-                        Divider()
-                        Button("Add new place") { isPresentingAddPlace = true }
-                    }
-                }
-            }
-
-            metadataCard(title: "Powiązania", systemImage: "point.3.connected.trianglepath.dotted") {
-                VStack(spacing: 14) {
-                    SelectionMenuRow(
-                        title: "Typ powiązania",
-                        value: linkedEntityType?.localizedLabel ?? "Bez powiązania",
-                        isPlaceholder: linkedEntityType == nil
-                    ) {
-                        Button("Bez powiązania") { linkedEntityType = nil }
-                        ForEach(NoteLinkedEntityType.allCases) { type in
-                            Button(type.localizedLabel) { linkedEntityType = type }
-                        }
-                    }
-
-                    if let linkedEntityType {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            VStack(alignment: .leading, spacing: 16) {
+                metadataCard(title: "Organizacja", systemImage: "folder") {
+                    VStack(spacing: 14) {
                         SelectionMenuRow(
-                            title: linkedEntityPickerTitle(for: linkedEntityType),
-                            value: linkedEntityDisplayValue(for: linkedEntityType, id: linkedEntityId),
-                            isPlaceholder: linkedEntityId == nil
+                            title: "Folder",
+                            value: folderTitle(for: selectedFolderId),
+                            isPlaceholder: selectedFolderId == nil
                         ) {
-                            Button("Brak powiązania") { linkedEntityId = nil }
-                            switch linkedEntityType {
-                            case .mission:
-                                ForEach(missions) { mission in
-                                    Button(mission.title) { linkedEntityId = mission.id }
-                                }
-                                Divider()
-                                Button("Add new mission") { isPresentingAddMission = true }
-                            case .incident:
-                                ForEach(incidents) { incident in
-                                    Button(incident.title) { linkedEntityId = incident.id }
-                                }
-                                Divider()
-                                Button("Add new incident") { isPresentingAddIncident = true }
-                            case .place:
-                                ForEach(savedPlaces) { place in
-                                    Button(place.name) { linkedEntityId = place.id }
-                                }
-                                Divider()
-                                Button("Add new place") { isPresentingAddPlace = true }
-                            case .person:
-                                ForEach(people) { person in
-                                    Button(person.effectiveDisplayName ?? person.email) { linkedEntityId = person.id }
+                            Button("Bez folderu") { selectedFolderId = nil }
+                            ForEach(folders) { folder in
+                                Button(folder.name) { selectedFolderId = folder.id }
+                            }
+                        }
+
+                        Toggle("Przypnij notatkę", isOn: $isPinned)
+
+                        metadataTextField(
+                            title: "Tagi",
+                            placeholder: "Dom, praca, ważne",
+                            text: $tagsText
+                        )
+                    }
+                }
+
+                metadataCard(title: "Linki i miejsce", systemImage: "link") {
+                    VStack(spacing: 14) {
+                        metadataTextField(
+                            title: "Link",
+                            placeholder: "https://...",
+                            text: $attachedLinkURL,
+                            disableAutocorrection: true,
+                            disableCapitalization: true
+                        )
+
+                        SelectionMenuRow(
+                            title: "Zapisane miejsce",
+                            value: savedPlaceTitle(for: savedPlaceId),
+                            isPlaceholder: savedPlaceId == nil
+                        ) {
+                            Button("Bez miejsca") { savedPlaceId = nil }
+                            ForEach(savedPlaces) { place in
+                                Button(place.name) { savedPlaceId = place.id }
+                            }
+                            Divider()
+                            Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
+                        }
+                    }
+                }
+
+                metadataCard(title: "Powiązania", systemImage: "point.3.connected.trianglepath.dotted") {
+                    VStack(spacing: 14) {
+                        SelectionMenuRow(
+                            title: "Typ powiązania",
+                            value: linkedEntityType?.localizedLabel ?? "Bez powiązania",
+                            isPlaceholder: linkedEntityType == nil
+                        ) {
+                            Button("Bez powiązania") { linkedEntityType = nil }
+                            ForEach(NoteLinkedEntityType.allCases) { type in
+                                Button(type.localizedLabel) { linkedEntityType = type }
+                            }
+                        }
+
+                        SelectionMenuRow(
+                            title: "Incydent",
+                            value: incidentTitle(for: selectedIncidentId),
+                            isPlaceholder: selectedIncidentId == nil
+                        ) {
+                            Button("Bez incydentu") { selectedIncidentId = nil }
+                            ForEach(incidents) { incident in
+                                Button(incident.title) { selectedIncidentId = incident.id }
+                            }
+                            Divider()
+                            Button("Dodaj nowy incydent") { isPresentingAddIncident = true }
+                        }
+
+                        if let linkedEntityType {
+                            SelectionMenuRow(
+                                title: linkedEntityPickerTitle(for: linkedEntityType),
+                                value: linkedEntityDisplayValue(for: linkedEntityType, id: linkedEntityId),
+                                isPlaceholder: linkedEntityId == nil
+                            ) {
+                                Button("Brak powiązania") { linkedEntityId = nil }
+                                switch linkedEntityType {
+                                case .mission:
+                                    ForEach(missions) { mission in
+                                        Button(mission.title) { linkedEntityId = mission.id }
+                                    }
+                                    Divider()
+                                    Button("Dodaj nową misję") { isPresentingAddMission = true }
+                                case .incident:
+                                    ForEach(incidents) { incident in
+                                        Button(incident.title) { linkedEntityId = incident.id }
+                                    }
+                                    Divider()
+                                    Button("Dodaj nowy incydent") { isPresentingAddIncident = true }
+                                case .place:
+                                    ForEach(savedPlaces) { place in
+                                        Button(place.name) { linkedEntityId = place.id }
+                                    }
+                                    Divider()
+                                    Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
+                                case .person:
+                                    ForEach(people) { person in
+                                        Button(person.effectiveDisplayName ?? person.email) { linkedEntityId = person.id }
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    SelectionMenuRow(
-                        title: "Incydent",
-                        value: incidentTitle(for: selectedIncidentId),
-                        isPlaceholder: selectedIncidentId == nil
-                    ) {
-                        Button("Bez incydentu") { selectedIncidentId = nil }
-                        ForEach(incidents) { incident in
-                            Button(incident.title) { selectedIncidentId = incident.id }
-                        }
-                        Divider()
-                        Button("Add new incident") { isPresentingAddIncident = true }
-                    }
-
-                    SelectionMenuRow(
-                        title: "Lokalizacja",
-                        value: locationTitle(for: selectedLocationId),
-                        isPlaceholder: selectedLocationId == nil
-                    ) {
-                        Button("Bez lokalizacji") { selectedLocationId = nil }
-                        ForEach(locations) { location in
-                            Button("\(location.userDisplayName) · \(location.recordedAt.formatted(date: .abbreviated, time: .shortened))") {
-                                selectedLocationId = location.id
+                        SelectionMenuRow(
+                            title: "Lokalizacja",
+                            value: locationTitle(for: selectedLocationId),
+                            isPlaceholder: selectedLocationId == nil
+                        ) {
+                            Button("Bez lokalizacji") { selectedLocationId = nil }
+                            ForEach(locations) { location in
+                                Button("\(location.userDisplayName) · \(location.recordedAt.formatted(date: .abbreviated, time: .shortened))") {
+                                    selectedLocationId = location.id
+                                }
                             }
                         }
                     }
                 }
+            }
+            .padding(.top, 14)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "slider.horizontal.3")
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Szczegóły notatki")
+                        .font(.headline)
+                    Text(isExpanded ? "Mniej opcji" : "Folder, linki, powiązania i lokalizacja")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(18)
+            .background(AppTheme.Colors.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color.separatorAdaptive.opacity(0.35), lineWidth: 1)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -253,7 +293,11 @@ struct NoteEditorMetadataSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(AppTheme.Colors.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.separatorAdaptive.opacity(0.4), lineWidth: 1)
+        }
     }
 
     private func metadataTextField(
@@ -299,7 +343,7 @@ struct NoteEditorMetadataSection: View {
     private func linkedEntityPickerTitle(for type: NoteLinkedEntityType) -> String {
         switch type {
         case .mission:
-            return "Mission"
+            return "Misja"
         case .incident:
             return "Incydent"
         case .place:
@@ -313,7 +357,7 @@ struct NoteEditorMetadataSection: View {
         guard let id else { return "Brak powiązania" }
         switch type {
         case .mission:
-            return missions.first(where: { $0.id == id })?.title ?? "Nieznana mission"
+            return missions.first(where: { $0.id == id })?.title ?? "Nieznana misja"
         case .incident:
             return incidents.first(where: { $0.id == id })?.title ?? "Nieznany incydent"
         case .place:
@@ -351,10 +395,17 @@ struct NoteEditorFormattingBar: View {
                     action: onTogglePreview
                 )
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 14)
             .padding(.vertical, 12)
         }
-        .background(.thinMaterial)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.separatorAdaptive.opacity(0.2), lineWidth: 1)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 8)
     }
 
     private func formatButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
@@ -363,7 +414,7 @@ struct NoteEditorFormattingBar: View {
                 .font(.subheadline.weight(.semibold))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(Color(.secondarySystemBackground), in: Capsule())
+                .background(Color.secondarySystemBackgroundAdaptive, in: Capsule())
         }
         .buttonStyle(.plain)
     }

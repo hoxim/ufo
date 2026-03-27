@@ -39,6 +39,7 @@ struct NoteEditorView: View {
     @State private var selectedLocationId: UUID?
     @State private var isSaving = false
     @State private var isPreviewMode = false
+    @State private var isMetadataExpanded: Bool
     @State private var isPresentingAddPlace = false
     @State private var isPresentingAddMission = false
     @State private var isPresentingAddIncident = false
@@ -84,6 +85,7 @@ struct NoteEditorView: View {
         _savedPlaceId = State(initialValue: note?.savedPlaceId ?? prefillSavedPlaceId)
         _selectedIncidentId = State(initialValue: note?.relatedIncidentId ?? prefillSelectedIncidentId)
         _selectedLocationId = State(initialValue: Self.locationSelectionId(for: note, locations: locations))
+        _isMetadataExpanded = State(initialValue: note != nil || prefillLinkedEntityId != nil || prefillSavedPlaceId != nil || prefillSelectedIncidentId != nil)
     }
 
     var body: some View {
@@ -97,37 +99,27 @@ struct NoteEditorView: View {
                     editorSection
                     metadataSection
                 }
-                .frame(width: max(proxy.size.width - (horizontalScreenPadding * 2), 0), alignment: .leading)
+                .frame(maxWidth: 800, alignment: .leading)
                 .padding(.horizontal, horizontalScreenPadding)
-                .padding(.top, 16)
+                .padding(.top, 24)
                 .padding(.bottom, 120)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
-            .frame(width: proxy.size.width, alignment: .leading)
-            .background(Color(.systemBackground))
+            .frame(maxWidth: .infinity, alignment: .center)
+            .background(Color.clear)
             .navigationTitle(note == nil ? "Nowa notatka" : "Edytuj notatkę")
             .modalInlineTitleDisplayMode()
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ModalCloseToolbarItem {
                     dismiss()
                 }
 
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        isPreviewMode.toggle()
-                    } label: {
-                        Image(systemName: isPreviewMode ? "pencil" : "eye")
-                    }
-
-                    Button {
-                        Task { await save() }
-                    } label: {
-                        if isSaving {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
+                ModalConfirmToolbarItem(
+                    isDisabled: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving,
+                    isProcessing: isSaving
+                ) {
+                    Task { await save() }
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -177,6 +169,7 @@ struct NoteEditorView: View {
             isPinned: isPinned,
             hasRichText: !richText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             isEditingExistingNote: note != nil,
+            subtitle: headerSubtitle,
             isTitleFocused: $isTitleFocused
         )
     }
@@ -206,6 +199,7 @@ struct NoteEditorView: View {
             savedPlaceId: $savedPlaceId,
             selectedIncidentId: $selectedIncidentId,
             selectedLocationId: $selectedLocationId,
+            isExpanded: $isMetadataExpanded,
             isPresentingAddPlace: $isPresentingAddPlace,
             isPresentingAddMission: $isPresentingAddMission,
             isPresentingAddIncident: $isPresentingAddIncident
@@ -223,6 +217,11 @@ struct NoteEditorView: View {
             onCode: { toggleInlineStyle(.inlineCode) },
             onTogglePreview: { isPreviewMode.toggle() }
         )
+    }
+
+    private var headerSubtitle: String {
+        let referenceDate = note?.updatedAt ?? .now
+        return referenceDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
     }
 
     private func applyBlockStyle(_ style: NoteBlockStyle) {

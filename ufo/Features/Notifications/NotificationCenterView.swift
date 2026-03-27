@@ -1,42 +1,52 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 struct NotificationCenterView: View {
-    @Environment(\.dismiss) private var dismiss
     @Environment(AppNotificationStore.self) private var notificationStore
 
     @State private var filter: NotificationReadFilter = .all
     @State private var selectedCategory: AppNotificationCategory?
 
     var body: some View {
-        NavigationStack {
-            List {
-                filterSection
+        List {
+            headerSection
+            filterSection
 
-                if let error = notificationStore.lastErrorMessage {
+            if let error = notificationStore.lastErrorMessage {
+                Section {
                     Text(error)
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
+            }
 
-                if filteredNotifications.isEmpty {
-                    Section {
-                        ContentUnavailableView(
-                            emptyStateTitle,
-                            systemImage: "bell.slash",
-                            description: Text(emptyStateDescription)
-                        )
-                        .frame(maxWidth: .infinity, minHeight: 220)
-                        .listRowBackground(Color.clear)
-                    }
-                } else {
+            if filteredNotifications.isEmpty {
+                Section {
+                    ContentUnavailableView(
+                        emptyStateTitle,
+                        systemImage: "bell.slash",
+                        description: Text(emptyStateDescription)
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 240)
+                    .listRowBackground(Color.clear)
+                }
+            } else {
+                Section {
                     ForEach(filteredNotifications) { notification in
-                        Button {
+                        NotificationRowView(
+                            notification: notification,
+                            onMarkAsRead: {
+                                notificationStore.markAsRead(notification)
+                            },
+                            onDelete: {
+                                notificationStore.delete(notification)
+                            }
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
                             notificationStore.markAsRead(notification)
-                        } label: {
-                            NotificationRowView(notification: notification)
                         }
-                        .buttonStyle(.plain)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
                                 notificationStore.delete(notification)
@@ -53,34 +63,107 @@ struct NotificationCenterView: View {
                                 .tint(.green)
                             }
                         }
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle("Powiadomienia")
-            .modalInlineTitleDisplayMode()
-            .toolbar {
-                ModalCloseToolbarItem { dismiss() }
+                        .contextMenu {
+                            if !notification.isRead {
+                                Button {
+                                    notificationStore.markAsRead(notification)
+                                } label: {
+                                    Label("Oznacz jako przeczytane", systemImage: "checkmark")
+                                }
+                            }
 
-                ToolbarItemGroup(placement: .primaryAction) {
-                    if filter == .unread && !filteredNotifications.isEmpty {
-                        Button("Oznacz wszystkie") {
-                            notificationStore.markAllAsRead()
-                        }
-                    }
-
-                    if notificationStore.pushAuthorizationStatus != .authorized {
-                        Button {
-                            Task { await notificationStore.requestPushAuthorization() }
-                        } label: {
-                            Label("Włącz push", systemImage: "bell.badge")
+                            Button(role: .destructive) {
+                                notificationStore.delete(notification)
+                            } label: {
+                                Label("Usuń", systemImage: "trash")
+                            }
                         }
                     }
                 }
             }
-            .task {
-                await notificationStore.refreshPushAuthorizationStatus()
+        }
+        #if os(macOS)
+        .listStyle(.inset)
+        #else
+        .listStyle(.insetGrouped)
+        #endif
+        .appScreenBackground()
+        .navigationTitle("Powiadomienia")
+        .inlineNavigationTitle()
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if notificationStore.unreadCount > 0 {
+                    Button("Oznacz wszystkie") {
+                        notificationStore.markAllAsRead()
+                    }
+                }
+
+                if notificationStore.pushAuthorizationStatus != .authorized {
+                    Button {
+                        Task { await notificationStore.requestPushAuthorization() }
+                    } label: {
+                        Label("Włącz push", systemImage: "bell.badge")
+                    }
+                }
             }
+        }
+        .task {
+            notificationStore.loadNotifications()
+            await notificationStore.refreshPushAuthorizationStatus()
+        }
+    }
+
+    private var headerSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Inbox powiadomień")
+                    .font(.title3.weight(.bold))
+
+                Text("Tutaj trafiają alerty, przypomnienia i systemowe komunikaty z aktualnej grupy.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 12) {
+                    NotificationSummaryChip(
+                        title: "Wszystkie",
+                        value: notificationStore.notifications.count,
+                        tint: .secondary
+                    )
+                    NotificationSummaryChip(
+                        title: "Nieprzeczytane",
+                        value: notificationStore.unreadCount,
+                        tint: .accentColor
+                    )
+                }
+
+                if notificationStore.pushAuthorizationStatus != .authorized {
+                    Button {
+                        Task { await notificationStore.requestPushAuthorization() }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "bell.badge")
+                                .foregroundStyle(Color.accentColor)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Włącz powiadomienia systemowe")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+
+                                Text("Inbox działa bez tego, ale przypomnienia poza aplikacją będą wyłączone.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+                        }
+                        .padding(14)
+                        .background(AppTheme.Colors.mutedFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 6)
+            .listRowBackground(Color.clear)
         }
     }
 
@@ -182,6 +265,8 @@ private enum NotificationReadFilter: String, CaseIterable, Identifiable {
 
 private struct NotificationRowView: View {
     let notification: AppNotification
+    let onMarkAsRead: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -225,6 +310,31 @@ private struct NotificationRowView: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
             }
+
+            Spacer(minLength: 0)
+
+            #if os(macOS)
+            HStack(spacing: 8) {
+                if !notification.isRead {
+                    Button {
+                        onMarkAsRead()
+                    } label: {
+                        Image(systemName: "checkmark")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Oznacz jako przeczytane")
+                }
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+                .help("Usuń")
+            }
+            .foregroundStyle(.secondary)
+            #endif
         }
         .padding(.vertical, 4)
     }
@@ -240,6 +350,27 @@ private struct NotificationRowView: View {
         case .critical:
             return .red
         }
+    }
+}
+
+private struct NotificationSummaryChip: View {
+    let title: String
+    let value: Int
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text("\(value)")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(tint)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 

@@ -18,4 +18,41 @@ extension View {
         self
         #endif
     }
+
+    @ViewBuilder
+    func hideTabBarIfSupported() -> some View {
+        #if os(iOS)
+        self.toolbar(.hidden, for: .tabBar)
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func prominentFormTextInput() -> some View {
+        #if os(macOS)
+        self
+            .textFieldStyle(.roundedBorder)
+        #else
+        self
+        #endif
+    }
+}
+
+extension ToolbarItemPlacement {
+    static var platformTopBarLeading: ToolbarItemPlacement {
+        #if os(macOS)
+        .navigation
+        #else
+        .topBarLeading
+        #endif
+    }
+
+    static var platformTopBarTrailing: ToolbarItemPlacement {
+        #if os(macOS)
+        .primaryAction
+        #else
+        .topBarTrailing
+        #endif
+    }
 }

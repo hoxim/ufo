@@ -63,7 +63,7 @@ struct LinksListView: View {
                 }
         }
         .navigationTitle("links.view.title")
-        .toolbar(.hidden, for: .tabBar)
+        .hideTabBarIfSupported()
         .refreshable {
             await refreshLinks()
         }

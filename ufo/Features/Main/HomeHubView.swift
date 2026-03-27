@@ -11,7 +11,6 @@ struct HomeHubView: View {
     @Environment(AppPreferences.self) private var appPreferences
 
     @State private var showProfileSheet = false
-    @State private var showNotificationSheet = false
     @State private var showCustomizeSheet = false
     @State private var widget = HomeWidgetState()
     @State private var budgetRange: BudgetWidgetRange = .month
@@ -76,29 +75,33 @@ struct HomeHubView: View {
             .padding()
             .padding(.bottom, 28)
         }
-#if os(iOS)
+        .appScreenBackground()
+        #if os(iOS)
         .navigationTitle("")
-#else
+        #else
         .navigationTitle("Home")
 #endif
         .navigationDestination(item: $activeRoute) { route in
             destination(for: route)
         }
         .toolbar {
+            #if !os(macOS)
             ToolbarItem(placement: homeSpaceToolbarPlacement) {
                 spaceSwitcher
             }
+            #endif
 
             ToolbarItem(placement: profileToolbarPlacement) {
                 Button {
-                    showNotificationSheet = true
+                    open(.notifications)
                 } label: {
                     NotificationBellButton(unreadCount: notificationStore.unreadCount)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Open notifications")
+                .accessibilityLabel("Open inbox")
             }
 
+            #if !os(macOS)
             ToolbarItem(placement: profileToolbarPlacement) {
                 Button {
                     showProfileSheet = true
@@ -108,6 +111,7 @@ struct HomeHubView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("home.hub.profile.open")
             }
+            #endif
         }
         .task {
             refreshWidgets()
@@ -128,10 +132,6 @@ struct HomeHubView: View {
         }
         .sheet(isPresented: $showProfileSheet) {
             ProfileHubView()
-                .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $showNotificationSheet) {
-            NotificationCenterView()
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showCustomizeSheet) {
@@ -156,6 +156,8 @@ struct HomeHubView: View {
             NotesView()
         case .incidents:
             IncidentsListView()
+        case .notifications:
+            NotificationCenterView()
         case .locations:
             LocationsView()
         case .routines:

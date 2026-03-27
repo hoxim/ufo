@@ -1,6 +1,8 @@
 import SwiftUI
 #if os(iOS)
 import UIKit
+#elseif os(macOS)
+import AppKit
 #endif
 
 enum NoteInlineStyle {
@@ -281,23 +283,21 @@ enum NoteRichTextCodec {
         return mutable.string
     }
 
-#if os(iOS)
     static func attributes(for style: NoteBlockStyle, bold: Bool = false, inlineCode: Bool = false, isPrefix: Bool = false) -> [NSAttributedString.Key: Any] {
         var values: [NSAttributedString.Key: Any] = [
             .font: font(for: style, bold: bold, inlineCode: inlineCode, isPrefix: isPrefix),
-            .foregroundColor: style == .quote ? UIColor.secondaryLabel : UIColor.label,
+            .foregroundColor: foregroundColor(for: style),
             .noteBlockStyle: style.rawValue,
             .noteBold: bold,
             .noteInlineCode: inlineCode
         ]
 
         if inlineCode && !isPrefix {
-            values[.backgroundColor] = UIColor.secondarySystemFill
+            values[.backgroundColor] = inlineCodeBackgroundColor
         }
 
         return values
     }
-#endif
 
     private static func blockStyleAndContent(for line: String) -> (NoteBlockStyle, String) {
         if let match = line.range(of: #"^#{1,6}\s+"#, options: .regularExpression) {
@@ -418,7 +418,23 @@ enum NoteRichTextCodec {
             .replacingOccurrences(of: "*", with: "\\*")
     }
 
-#if os(iOS)
+    private static func foregroundColor(for style: NoteBlockStyle) -> Any {
+        #if os(iOS)
+        return style == .quote ? UIColor.secondaryLabel : UIColor.label
+        #else
+        return style == .quote ? NSColor.secondaryLabelColor : NSColor.labelColor
+        #endif
+    }
+
+    private static var inlineCodeBackgroundColor: Any {
+        #if os(iOS)
+        return UIColor.secondarySystemFill
+        #else
+        return NSColor.controlAccentColor.withAlphaComponent(0.12)
+        #endif
+    }
+
+    #if os(iOS)
     private static func font(for style: NoteBlockStyle, bold: Bool, inlineCode: Bool, isPrefix: Bool) -> UIFont {
         let size: CGFloat
         switch style {
@@ -443,7 +459,31 @@ enum NoteRichTextCodec {
 
         return font
     }
-#endif
+    #elseif os(macOS)
+    private static func font(for style: NoteBlockStyle, bold: Bool, inlineCode: Bool, isPrefix: Bool) -> NSFont {
+        let size: CGFloat
+        switch style {
+        case .heading:
+            size = 30
+        default:
+            size = 18
+        }
+
+        if inlineCode && !isPrefix {
+            return .monospacedSystemFont(ofSize: max(size - 1, 15), weight: bold ? .semibold : .regular)
+        }
+
+        let weight: NSFont.Weight = (bold || style == .heading) ? .bold : .regular
+        var font = NSFont.systemFont(ofSize: size, weight: weight)
+
+        if style == .quote && !isPrefix {
+            let italicDescriptor = font.fontDescriptor.withSymbolicTraits(.italic)
+            font = NSFont(descriptor: italicDescriptor, size: size) ?? font
+        }
+
+        return font
+    }
+    #endif
 }
 
 extension NSAttributedString.Key {

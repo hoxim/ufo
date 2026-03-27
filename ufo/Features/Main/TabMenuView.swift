@@ -20,6 +20,12 @@ struct TabMenuView: View {
                 .tag(TabItem.home)
 
             NavigationStack {
+                SearchView()
+            }
+                .tabItem { Label("Szukaj", systemImage: "magnifyingglass") }
+                .tag(TabItem.search)
+
+            NavigationStack {
                 PeopleHubView()
             }
                 .tabItem { Label("main.tabs.people", systemImage: "person.2") }

@@ -27,8 +27,9 @@ struct SharedListsView: View {
                 ProgressView("lists.view.loading")
             }
         }
+        .appScreenBackground()
         .navigationTitle("lists.view.title")
-        .toolbar(.hidden, for: .tabBar)
+        .hideTabBarIfSupported()
         .navigationDestination(item: $selectedListId) { listId in
             detailDestination(for: listId)
         }
@@ -42,7 +43,7 @@ struct SharedListsView: View {
                 .disabled(spaceRepo.selectedSpace == nil || listStore == nil)
             }
         }
-        .sheet(isPresented: $isAddingList) {
+        .adaptiveFormPresentation(isPresented: $isAddingList) {
             if let listStore {
                 AddSharedListView(
                     store: listStore,
@@ -111,6 +112,7 @@ struct SharedListsView: View {
                         HStack(spacing: 12) {
                             Image(systemName: list.iconName ?? "checklist")
                                 .foregroundStyle(Color(hex: list.iconColorHex ?? "#6366F1"))
+                                .frame(width: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(list.name)
                                     .font(.headline)
@@ -129,6 +131,8 @@ struct SharedListsView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 4)
                     }
                     .buttonStyle(.plain)
                     .simultaneousGesture(TapGesture().onEnded {
@@ -136,6 +140,7 @@ struct SharedListsView: View {
                     })
                 }
             }
+            .appPrimaryListChrome()
             .refreshable {
                 await refreshLists()
             }
@@ -237,6 +242,7 @@ struct AddSharedListView: View {
     @State private var isSaving = false
     @State private var showStylePicker = false
     @State private var isPresentingAddPlace = false
+    @FocusState private var isNameFocused: Bool
 
     init(
         store: SharedListStore,
@@ -256,7 +262,7 @@ struct AddSharedListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        AdaptiveFormContent {
             Form {
                 if let originLabel {
                     Section {
@@ -264,20 +270,22 @@ struct AddSharedListView: View {
                     }
                 }
                 TextField("lists.editor.field.name", text: $name)
-                SelectionMenuRow(title: "Type", value: selectedType.rawValue.capitalized) {
+                    .prominentFormTextInput()
+                    .focused($isNameFocused)
+                SelectionMenuRow(title: "Typ", value: selectedType.rawValue.capitalized) {
                     ForEach(SharedListType.allCases) { type in
                         Button(type.rawValue.capitalized) { selectedType = type }
                     }
                 }
-                SelectionMenuRow(title: "Place", value: selectedPlaceTitle, isPlaceholder: savedPlaceId == nil) {
-                    Button("No place") { savedPlaceId = nil }
+                SelectionMenuRow(title: "Miejsce", value: selectedPlaceTitle, isPlaceholder: savedPlaceId == nil) {
+                    Button("Brak miejsca") { savedPlaceId = nil }
                     ForEach(resolvedAvailablePlaces) { place in
                         Button(place.name) { savedPlaceId = place.id }
                     }
                     Divider()
-                    Button("Add new place") { isPresentingAddPlace = true }
+                    Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
                 }
-                DisclosureGroup("Style", isExpanded: $showStylePicker) {
+                DisclosureGroup("Styl", isExpanded: $showStylePicker) {
                     OperationStylePicker(iconName: $selectedIconName, colorHex: $selectedIconColorHex)
                 }
             }
@@ -300,6 +308,11 @@ struct AddSharedListView: View {
             .sheet(isPresented: $isPresentingAddPlace) {
                 QuickAddPlaceSheet(originLabel: originLabel) { place in
                     savedPlaceId = place.id
+                }
+            }
+            .onAppear {
+                if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    isNameFocused = true
                 }
             }
         }
@@ -340,7 +353,7 @@ struct AddSharedListView: View {
     }
 
     private var selectedPlaceTitle: String {
-        resolvedAvailablePlaces.first(where: { $0.id == savedPlaceId })?.name ?? "No place"
+        resolvedAvailablePlaces.first(where: { $0.id == savedPlaceId })?.name ?? "Brak miejsca"
     }
 }
 
@@ -376,6 +389,7 @@ struct SharedListDetailView: View {
             Section("lists.items.section.newItem") {
                 HStack {
                     TextField("lists.items.field.name", text: $newItemName)
+                        .prominentFormTextInput()
                     Button {
                         Task {
                             await addItem()
@@ -386,6 +400,8 @@ struct SharedListDetailView: View {
                     }
                     .disabled(newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 2)
             }
 
             Section("lists.items.section.items") {
@@ -407,6 +423,7 @@ struct SharedListDetailView: View {
                         } label: {
                             Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(item.isCompleted ? .green : .secondary)
+                                .frame(width: 22)
                         }
                         .buttonStyle(.plain)
                         Text(item.title)
@@ -426,6 +443,8 @@ struct SharedListDetailView: View {
                         }
                         .buttonStyle(.plain)
                     }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 2)
                 }
                 .onDelete { offsets in
                     let values = offsets.map { items[$0] }

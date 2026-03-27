@@ -5,31 +5,29 @@ struct NotificationBellButton: View {
     let unreadCount: Int
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color.secondary.opacity(0.12))
-                .frame(width: 36, height: 36)
+        HStack(spacing: 8) {
+            Image(systemName: unreadCount > 0 ? "bell.fill" : "bell")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(unreadCount > 0 ? Color.accentColor : .primary)
 
-            Image(systemName: unreadCount > 0 ? "bell.badge.fill" : "bell")
-                .font(.title3)
-                .foregroundStyle(.primary)
-        }
-        .frame(width: 44, height: 44)
-        .overlay(alignment: .topTrailing) {
             if unreadCount > 0 {
                 Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
-                    .font(.caption2.bold())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, unreadCount > 9 ? 5 : 4)
-                    .padding(.vertical, 2)
-                    .background(Color.red, in: Capsule())
-                    .overlay {
-                        Capsule()
-                            .stroke(Color.white, lineWidth: 2)
-                    }
-                    .offset(x: 1, y: 6)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 8)
+                    .frame(height: 28)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(AppTheme.Colors.mutedFill)
+                    )
             }
         }
+        .padding(.horizontal, 12)
+        .frame(minHeight: 44)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.secondary.opacity(0.12))
+        )
     }
 }
 
@@ -71,22 +69,17 @@ struct ActiveSpaceMenuButton: View {
                         .foregroundStyle(space.type == .personal || space.type == .private ? .orange : .blue)
                 }
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Grupa")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-
-                Text(space.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
+            Text(space.name)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
 
             Image(systemName: "chevron.down")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -95,6 +88,7 @@ enum HomeRoute: Hashable, Identifiable {
     case lists
     case notes
     case incidents
+    case notifications
     case locations
     case routines
     case budget
@@ -110,6 +104,7 @@ enum HomeRoute: Hashable, Identifiable {
         case .lists: "lists"
         case .notes: "notes"
         case .incidents: "incidents"
+        case .notifications: "notifications"
         case .locations: "locations"
         case .routines: "routines"
         case .budget: "budget"
@@ -476,7 +471,9 @@ struct HomeCustomizationView: View {
                     }
                 }
             }
+            #if os(iOS)
             .environment(\.editMode, .constant(.active))
+            #endif
             .navigationTitle("Customize Home")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -491,13 +488,14 @@ struct HomeCustomizationView: View {
 
 struct AvatarCircle: View {
     let user: UserProfile?
+    var size: CGFloat = 36
 
     var body: some View {
         Group {
             if let user, let localURL = AvatarCache.shared.existingURL(userId: user.id, version: user.avatarVersion) {
                 AsyncImage(url: localURL) { phase in
                     if case .success(let image) = phase {
-                        image.resizable().scaledToFill()
+                        avatarImage(from: image)
                     } else {
                         fallbackAvatar
                     }
@@ -505,7 +503,7 @@ struct AvatarCircle: View {
             } else if let urlString = user?.effectiveAvatarURL, let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
                     if case .success(let image) = phase {
-                        image.resizable().scaledToFill()
+                        avatarImage(from: image)
                     } else {
                         fallbackAvatar
                     }
@@ -514,7 +512,8 @@ struct AvatarCircle: View {
                 fallbackAvatar
             }
         }
-        .frame(width: 36, height: 36)
+        .frame(width: size, height: size)
+        .compositingGroup()
         .clipShape(Circle())
         .overlay(Circle().stroke(.white.opacity(0.12), lineWidth: 1))
     }
@@ -522,10 +521,19 @@ struct AvatarCircle: View {
     private var fallbackAvatar: some View {
         Circle()
             .fill(Color.accentColor.gradient)
+            .frame(width: size, height: size)
             .overlay {
                 Text(user?.effectiveDisplayName?.prefix(1) ?? "U")
                     .foregroundStyle(.white)
-                    .fontWeight(.bold)
+                    .font(.system(size: max(size * 0.42, 11), weight: .bold))
             }
+    }
+
+    private func avatarImage(from image: Image) -> some View {
+        image
+            .resizable()
+            .scaledToFill()
+            .frame(width: size, height: size)
+            .clipped()
     }
 }

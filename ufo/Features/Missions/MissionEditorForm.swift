@@ -25,6 +25,7 @@ struct MissionEditorForm: View {
     @Binding var selectedPhotoItem: PhotosPickerItem?
     @Binding var imageData: Data?
     @State private var showStylePicker = false
+    @FocusState private var isTitleFocused: Bool
 
     let availablePlaces: [SavedPlace]
     let availableOwners: [UserProfile]
@@ -36,13 +37,16 @@ struct MissionEditorForm: View {
     let onSave: () -> Void
 
     var body: some View {
-        NavigationStack {
+        AdaptiveFormContent {
             Form {
                 Section {
                     TextField("missions.editor.field.title", text: $title)
+                        .prominentFormTextInput()
+                        .focused($isTitleFocused)
                         .submitLabel(.done)
                     TextField("missions.editor.field.description", text: $description, axis: .vertical)
                         .lineLimit(2...5)
+                        .prominentFormTextInput()
                 }
                 Section {
                     Stepper(
@@ -51,44 +55,44 @@ struct MissionEditorForm: View {
                         in: 1...5
                     )
                     SelectionMenuRow(
-                        title: "Owner",
+                        title: "Właściciel",
                         value: selectedOwnerTitle,
                         isPlaceholder: ownerId == nil
                     ) {
-                        Button("Unassigned") { ownerId = nil }
+                        Button("Nieprzypisane") { ownerId = nil }
                         ForEach(availableOwners) { owner in
                             Button(owner.effectiveDisplayName ?? owner.email) { ownerId = owner.id }
                         }
                     }
                     SelectionMenuRow(
-                        title: "Place",
+                        title: "Miejsce",
                         value: selectedPlaceTitle,
                         isPlaceholder: savedPlaceId == nil
                     ) {
-                        Button("No place") { savedPlaceId = nil }
+                        Button("Brak miejsca") { savedPlaceId = nil }
                         ForEach(availablePlaces) { place in
                             Button(place.name) { savedPlaceId = place.id }
                         }
                         Divider()
-                        Button("Add new place") { isPresentingAddPlace = true }
+                        Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
                     }
                     SelectionMenuRow(
-                        title: "Priority",
+                        title: "Priorytet",
                         value: priority.localizedLabel
                     ) {
                         ForEach(MissionPriority.allCases) { value in
                             Button(value.localizedLabel) { priority = value }
                         }
                     }
-                    Toggle("Recurring", isOn: $isRecurring)
-                    Toggle("Due date", isOn: $dueDateEnabled)
+                    Toggle("Powtarzalna", isOn: $isRecurring)
+                    Toggle("Termin", isOn: $dueDateEnabled)
                     if dueDateEnabled {
-                        DatePicker("Due", selection: $dueDate)
+                        DatePicker("Data", selection: $dueDate)
                     }
                 }
-                Section("Related") {
+                Section("Powiązane") {
                     SelectionMenuRow(
-                        title: "List",
+                        title: "Lista",
                         value: selectedListTitle,
                         isPlaceholder: relatedListId == nil
                     ) {
@@ -97,10 +101,10 @@ struct MissionEditorForm: View {
                             Button(list.name) { relatedListId = list.id }
                         }
                         Divider()
-                        Button("Add new list") { isPresentingAddList = true }
+                        Button("Dodaj nową listę") { isPresentingAddList = true }
                     }
                     SelectionMenuRow(
-                        title: "Note",
+                        title: "Notatka",
                         value: selectedNoteTitle,
                         isPlaceholder: relatedNoteId == nil
                     ) {
@@ -109,10 +113,10 @@ struct MissionEditorForm: View {
                             Button(note.title) { relatedNoteId = note.id }
                         }
                         Divider()
-                        Button("Add new note") { isPresentingAddNote = true }
+                        Button("Dodaj nową notatkę") { isPresentingAddNote = true }
                     }
                     SelectionMenuRow(
-                        title: "Incident",
+                        title: "Incydent",
                         value: selectedIncidentTitle,
                         isPlaceholder: relatedIncidentId == nil
                     ) {
@@ -121,11 +125,11 @@ struct MissionEditorForm: View {
                             Button(incident.title) { relatedIncidentId = incident.id }
                         }
                         Divider()
-                        Button("Add new incident") { isPresentingAddIncident = true }
+                        Button("Dodaj nowy incydent") { isPresentingAddIncident = true }
                     }
                 }
                 Section {
-                    DisclosureGroup("Style", isExpanded: $showStylePicker) {
+                    DisclosureGroup("Styl", isExpanded: $showStylePicker) {
                         OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                     }
                 }
@@ -187,6 +191,11 @@ struct MissionEditorForm: View {
                     relatedIncidentId = incidentId
                 }
             }
+            .onAppear {
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    isTitleFocused = true
+                }
+            }
         }
     }
 
@@ -198,11 +207,11 @@ struct MissionEditorForm: View {
     private var selectedOwnerTitle: String {
         availableOwners.first(where: { $0.id == ownerId })?.effectiveDisplayName
             ?? availableOwners.first(where: { $0.id == ownerId })?.email
-            ?? "Unassigned"
+            ?? "Nieprzypisane"
     }
 
     private var selectedPlaceTitle: String {
-        availablePlaces.first(where: { $0.id == savedPlaceId })?.name ?? "No place"
+        availablePlaces.first(where: { $0.id == savedPlaceId })?.name ?? "Brak miejsca"
     }
 
     private var selectedListTitle: String {

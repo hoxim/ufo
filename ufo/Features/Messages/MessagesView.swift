@@ -57,7 +57,7 @@ struct MessagesView: View {
                             .listRowSeparator(.hidden)
                         }
                     }
-                    .listStyle(.plain)
+                    .appPrimaryListChrome()
                     .refreshable {
                         await refreshMessages()
                     }
@@ -89,8 +89,9 @@ struct MessagesView: View {
                 }
                 .padding()
         }
+        .appScreenBackground()
         .navigationTitle("messages.view.title")
-        .toolbar(.hidden, for: .tabBar)
+        .hideTabBarIfSupported()
         .task { await setupStoreIfNeeded() }
         .onChange(of: spaceRepo.selectedSpace?.id) { _, newValue in
             messageStore?.setSpace(newValue)

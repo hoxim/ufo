@@ -33,6 +33,7 @@ struct AddIncidentView: View {
     @State private var isPresentingAddPlace = false
     @State private var isPresentingAddList = false
     @State private var isPresentingAddMission = false
+    @FocusState private var isTitleFocused: Bool
 
     init(
         store: IncidentStore,
@@ -57,12 +58,15 @@ struct AddIncidentView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        AdaptiveFormContent {
             Form {
                 TextField("incidents.editor.field.title", text: $title)
+                    .prominentFormTextInput()
+                    .focused($isTitleFocused)
                 TextField("incidents.editor.field.description", text: $details)
+                    .prominentFormTextInput()
                 DatePicker("incidents.editor.field.date", selection: $date)
-                SelectionMenuRow(title: "Severity", value: severity.localizedLabel) {
+                SelectionMenuRow(title: "Priorytet", value: severity.localizedLabel) {
                     ForEach(IncidentSeverity.allCases) { value in
                         Button(value.localizedLabel) { severity = value }
                     }
@@ -72,43 +76,44 @@ struct AddIncidentView: View {
                         Button(value.localizedLabel) { status = value }
                     }
                 }
-                SelectionMenuRow(title: "Assignee", value: selectedAssigneeTitle, isPlaceholder: assigneeId == nil) {
-                    Button("Unassigned") { assigneeId = nil }
+                SelectionMenuRow(title: "Przypisany", value: selectedAssigneeTitle, isPlaceholder: assigneeId == nil) {
+                    Button("Nieprzypisane") { assigneeId = nil }
                     if let currentUser = userId {
                         Button(currentUser.uuidString.prefix(8).description) { assigneeId = currentUser }
                     }
                 }
-                TextField("Cost", text: $costText)
+                TextField("Koszt", text: $costText)
+                    .prominentFormTextInput()
 #if os(iOS)
                     .keyboardType(.decimalPad)
 #endif
-                Section("Related") {
-                    SelectionMenuRow(title: "Mission", value: selectedMissionTitle, isPlaceholder: relatedMissionId == nil) {
+                Section("Powiązane") {
+                    SelectionMenuRow(title: "Misja", value: selectedMissionTitle, isPlaceholder: relatedMissionId == nil) {
                         Button(String(localized: "common.none")) { relatedMissionId = nil }
                         ForEach(resolvedAvailableMissions) { mission in
                             Button(mission.title) { relatedMissionId = mission.id }
                         }
                         Divider()
-                        Button("Add new mission") { isPresentingAddMission = true }
+                        Button("Dodaj nową misję") { isPresentingAddMission = true }
                     }
-                    SelectionMenuRow(title: "List", value: selectedListTitle, isPlaceholder: relatedListId == nil) {
+                    SelectionMenuRow(title: "Lista", value: selectedListTitle, isPlaceholder: relatedListId == nil) {
                         Button(String(localized: "common.none")) { relatedListId = nil }
                         ForEach(resolvedAvailableLists) { list in
                             Button(list.name) { relatedListId = list.id }
                         }
                         Divider()
-                        Button("Add new list") { isPresentingAddList = true }
+                        Button("Dodaj nową listę") { isPresentingAddList = true }
                     }
-                    SelectionMenuRow(title: "Place", value: selectedPlaceTitle, isPlaceholder: relatedPlaceId == nil) {
+                    SelectionMenuRow(title: "Miejsce", value: selectedPlaceTitle, isPlaceholder: relatedPlaceId == nil) {
                         Button(String(localized: "common.none")) { relatedPlaceId = nil }
                         ForEach(resolvedAvailablePlaces) { place in
                             Button(place.name) { relatedPlaceId = place.id }
                         }
                         Divider()
-                        Button("Add new place") { isPresentingAddPlace = true }
+                        Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
                     }
                 }
-                DisclosureGroup("Style", isExpanded: $showStylePicker) {
+                DisclosureGroup("Styl", isExpanded: $showStylePicker) {
                     OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 }
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
@@ -162,6 +167,11 @@ struct AddIncidentView: View {
                     originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "incident draft" : title
                 ) { listId in
                     relatedListId = listId
+                }
+            }
+            .onAppear {
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    isTitleFocused = true
                 }
             }
         }
@@ -238,7 +248,7 @@ struct AddIncidentView: View {
     }
 
     private var selectedAssigneeTitle: String {
-        assigneeId.map { String($0.uuidString.prefix(8)) } ?? "Unassigned"
+        assigneeId.map { String($0.uuidString.prefix(8)) } ?? "Nieprzypisane"
     }
 }
 
@@ -273,6 +283,7 @@ struct EditIncidentView: View {
     @State private var isPresentingAddPlace = false
     @State private var isPresentingAddList = false
     @State private var isPresentingAddMission = false
+    @FocusState private var isTitleFocused: Bool
 
     init(
         store: IncidentStore,
@@ -307,12 +318,15 @@ struct EditIncidentView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        AdaptiveFormContent {
             Form {
                 TextField("incidents.editor.field.title", text: $title)
+                    .prominentFormTextInput()
+                    .focused($isTitleFocused)
                 TextField("incidents.editor.field.description", text: $details)
+                    .prominentFormTextInput()
                 DatePicker("incidents.editor.field.date", selection: $date)
-                SelectionMenuRow(title: "Severity", value: severity.localizedLabel) {
+                SelectionMenuRow(title: "Priorytet", value: severity.localizedLabel) {
                     ForEach(IncidentSeverity.allCases) { value in
                         Button(value.localizedLabel) { severity = value }
                     }
@@ -322,43 +336,44 @@ struct EditIncidentView: View {
                         Button(value.localizedLabel) { status = value }
                     }
                 }
-                SelectionMenuRow(title: "Assignee", value: selectedAssigneeTitle, isPlaceholder: assigneeId == nil) {
-                    Button("Unassigned") { assigneeId = nil }
+                SelectionMenuRow(title: "Przypisany", value: selectedAssigneeTitle, isPlaceholder: assigneeId == nil) {
+                    Button("Nieprzypisane") { assigneeId = nil }
                     if let currentUser = userId {
                         Button(currentUser.uuidString.prefix(8).description) { assigneeId = currentUser }
                     }
                 }
-                TextField("Cost", text: $costText)
+                TextField("Koszt", text: $costText)
+                    .prominentFormTextInput()
 #if os(iOS)
                     .keyboardType(.decimalPad)
 #endif
-                Section("Related") {
-                    SelectionMenuRow(title: "Mission", value: selectedMissionTitle, isPlaceholder: relatedMissionId == nil) {
+                Section("Powiązane") {
+                    SelectionMenuRow(title: "Misja", value: selectedMissionTitle, isPlaceholder: relatedMissionId == nil) {
                         Button(String(localized: "common.none")) { relatedMissionId = nil }
                         ForEach(resolvedAvailableMissions) { mission in
                             Button(mission.title) { relatedMissionId = mission.id }
                         }
                         Divider()
-                        Button("Add new mission") { isPresentingAddMission = true }
+                        Button("Dodaj nową misję") { isPresentingAddMission = true }
                     }
-                    SelectionMenuRow(title: "List", value: selectedListTitle, isPlaceholder: relatedListId == nil) {
+                    SelectionMenuRow(title: "Lista", value: selectedListTitle, isPlaceholder: relatedListId == nil) {
                         Button(String(localized: "common.none")) { relatedListId = nil }
                         ForEach(resolvedAvailableLists) { list in
                             Button(list.name) { relatedListId = list.id }
                         }
                         Divider()
-                        Button("Add new list") { isPresentingAddList = true }
+                        Button("Dodaj nową listę") { isPresentingAddList = true }
                     }
-                    SelectionMenuRow(title: "Place", value: selectedPlaceTitle, isPlaceholder: relatedPlaceId == nil) {
+                    SelectionMenuRow(title: "Miejsce", value: selectedPlaceTitle, isPlaceholder: relatedPlaceId == nil) {
                         Button(String(localized: "common.none")) { relatedPlaceId = nil }
                         ForEach(resolvedAvailablePlaces) { place in
                             Button(place.name) { relatedPlaceId = place.id }
                         }
                         Divider()
-                        Button("Add new place") { isPresentingAddPlace = true }
+                        Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
                     }
                 }
-                DisclosureGroup("Style", isExpanded: $showStylePicker) {
+                DisclosureGroup("Styl", isExpanded: $showStylePicker) {
                     OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 }
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
@@ -410,6 +425,11 @@ struct EditIncidentView: View {
                     originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "incident draft" : title
                 ) { listId in
                     relatedListId = listId
+                }
+            }
+            .onAppear {
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    isTitleFocused = true
                 }
             }
         }
@@ -484,7 +504,7 @@ struct EditIncidentView: View {
     }
 
     private var selectedAssigneeTitle: String {
-        assigneeId.map { String($0.uuidString.prefix(8)) } ?? "Unassigned"
+        assigneeId.map { String($0.uuidString.prefix(8)) } ?? "Nieprzypisane"
     }
 }
 

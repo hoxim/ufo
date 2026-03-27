@@ -27,8 +27,9 @@ struct MissionsListView: View {
                 ProgressView("missions.list.loading")
             }
         }
+        .appScreenBackground()
         .navigationTitle("missions.list.title")
-        .toolbar(.hidden, for: .tabBar)
+        .hideTabBarIfSupported()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: { isAddingMission = true }) {
@@ -37,7 +38,7 @@ struct MissionsListView: View {
                 .disabled(spaceRepo.selectedSpace == nil || missionStore == nil)
             }
         }
-        .sheet(isPresented: $isAddingMission) {
+        .adaptiveFormPresentation(isPresented: $isAddingMission) {
             if let missionStore {
                 AddMissionView(
                     store: missionStore,
@@ -56,7 +57,7 @@ struct MissionsListView: View {
                 #endif
             }
         }
-        .sheet(item: $editingMission) { mission in
+        .adaptiveFormPresentation(item: $editingMission) { mission in
             if let missionStore {
                 EditMissionView(
                     store: missionStore,
@@ -79,9 +80,16 @@ struct MissionsListView: View {
                 #endif
             }
         }
-        .sheet(item: $viewingMission) { mission in
+        .adaptiveFormPresentation(item: $viewingMission) { mission in
             MissionDetailView(
                 mission: mission,
+                presentationMode: {
+                    #if os(macOS)
+                    .embedded
+                    #else
+                    .modal
+                    #endif
+                }(),
                 onEdit: {
                     viewingMission = nil
                     DispatchQueue.main.async {
@@ -116,59 +124,62 @@ struct MissionsListView: View {
 
     @ViewBuilder
     private func content(store: MissionStore) -> some View {
-        List {
-            if let error = store.lastErrorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
+        Group {
+            List {
+                if let error = store.lastErrorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
 
-            ForEach(filteredMissions(in: store)) { mission in
-                MissionListRowView(
-                    mission: mission,
-                    onToggleCompleted: {
-                        Task {
-                            await store.toggleCompleted(mission, userId: authRepo.currentUser?.id)
+                ForEach(filteredMissions(in: store)) { mission in
+                    MissionListRowView(
+                        mission: mission,
+                        onToggleCompleted: {
+                            Task {
+                                await store.toggleCompleted(mission, userId: authRepo.currentUser?.id)
+                            }
+                        },
+                        onOpen: {
+                            viewingMission = mission
+                        },
+                        onEdit: {
+                            editingMission = mission
+                        },
+                        onDelete: {
+                            Task {
+                                await store.deleteMission(mission, userId: authRepo.currentUser?.id)
+                            }
                         }
-                    },
-                    onOpen: {
-                        viewingMission = mission
-                    },
-                    onEdit: {
-                        editingMission = mission
-                    },
-                    onDelete: {
-                        Task {
-                            await store.deleteMission(mission, userId: authRepo.currentUser?.id)
+                    )
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            Task {
+                                await store.deleteMission(mission, userId: authRepo.currentUser?.id)
+                            }
+                        } label: {
+                            Label("common.delete", systemImage: "trash")
                         }
-                    }
-                )
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        Task {
-                            await store.deleteMission(mission, userId: authRepo.currentUser?.id)
-                        }
-                    } label: {
-                        Label("common.delete", systemImage: "trash")
-                    }
 
-                    Button {
-                        editingMission = mission
-                    } label: {
-                        Label("common.edit", systemImage: "pencil")
+                        Button {
+                            editingMission = mission
+                        } label: {
+                            Label("common.edit", systemImage: "pencil")
+                        }
+                        .tint(.blue)
                     }
-                    .tint(.blue)
                 }
             }
-        }
-        .refreshable {
-            await refreshMissions()
-        }
-        .overlay {
-            if store.isSyncing {
-                ProgressView("common.synchronizing")
-                    .padding()
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .appPrimaryListChrome()
+            .refreshable {
+                await refreshMissions()
+            }
+            .overlay {
+                if store.isSyncing {
+                    ProgressView("common.synchronizing")
+                        .padding()
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
             }
         }
     }

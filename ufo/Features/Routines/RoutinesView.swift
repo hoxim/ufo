@@ -11,6 +11,7 @@ struct RoutinesView: View {
     @State private var routines: [Routine] = []
     @State private var routineLogs: [RoutineLog] = []
     @State private var showingCreator = false
+    @State private var creatorToken = UUID()
     @State private var searchText = ""
 
     private var calendar: Calendar { .current }
@@ -22,12 +23,7 @@ struct RoutinesView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         header(for: selectedDate)
 
-                        Picker("Zakres", selection: $selectedRange) {
-                            ForEach(RoutineRange.allCases) { range in
-                                Text(range.title).tag(range)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                        rangePicker
 
                         switch selectedRange {
                         case .day:
@@ -56,10 +52,11 @@ struct RoutinesView: View {
                     }
                     .padding()
                 }
-                .navigationTitle("Routines")
-                .toolbar(.hidden, for: .tabBar)
+                .appScreenBackground()
+                .navigationTitle("Rutyny")
+                .hideTabBarIfSupported()
                 .toolbar {
-                    ToolbarItemGroup(placement: .topBarTrailing) {
+                    ToolbarItemGroup(placement: .platformTopBarTrailing) {
                         Button {
                             moveDate(by: -1)
                         } label: {
@@ -73,18 +70,24 @@ struct RoutinesView: View {
                         }
 
                         Button {
+                            creatorToken = UUID()
                             showingCreator = true
                         } label: {
                             Image(systemName: "plus")
                         }
                     }
                 }
-                .sheet(isPresented: $showingCreator) {
-                    NavigationStack {
-                        RoutineEditorView(spaceId: selectedSpace.id, actorId: authRepo.currentUser?.id) {
-                            loadData()
-                        }
+                .adaptiveFormPresentation(isPresented: $showingCreator) {
+                    RoutineEditorView(spaceId: selectedSpace.id, actorId: authRepo.currentUser?.id) {
+                        loadData()
                     }
+                    .id(creatorToken)
+                    #if os(iOS)
+                    .presentationDetents([.medium, .large])
+                    #endif
+                    #if os(macOS)
+                    .frame(minWidth: 560, minHeight: 560)
+                    #endif
                 }
                 .task {
                     loadData()
@@ -93,16 +96,17 @@ struct RoutinesView: View {
                     loadData()
                 }
                 .safeAreaInset(edge: .bottom) {
-                    FeatureBottomSearchBar(text: $searchText, prompt: "Search routines")
+                    FeatureBottomSearchBar(text: $searchText, prompt: "Szukaj rutyn")
                 }
             } else {
                 ContentUnavailableView(
                     "Wybierz grupę",
                     systemImage: "person.3.sequence",
-                    description: Text("Najpierw wybierz grupę, żeby zobaczyć plan routines.")
+                    description: Text("Najpierw wybierz grupę, żeby zobaczyć plan rutyn.")
                 )
             }
         }
+        .appScreenBackground()
     }
 
     private func header(for date: Date) -> some View {
@@ -112,6 +116,35 @@ struct RoutinesView: View {
             Text(date.formatted(.dateTime.weekday(.wide)))
                 .font(.title3)
                 .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var rangePicker: some View {
+        HStack(spacing: 12) {
+            Text("Zakres")
+                .font(.headline)
+
+            HStack(spacing: 6) {
+                ForEach(RoutineRange.allCases) { range in
+                    Button {
+                        selectedRange = range
+                    } label: {
+                        Text(range.title)
+                            .font(.headline.weight(selectedRange == range ? .semibold : .regular))
+                            .foregroundStyle(selectedRange == range ? Color.white : .primary)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(selectedRange == range ? Color.accentColor : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(4)
+            .background(Color.secondarySystemBackgroundAdaptive, in: Capsule(style: .continuous))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -9,62 +9,12 @@ struct MissionListRowView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            HStack(spacing: 10) {
-                if let iconName = mission.iconName, !iconName.isEmpty {
-                    Image(systemName: iconName)
-                        .foregroundStyle(Color(hex: mission.iconColorHex ?? "#F59E0B"))
-                }
-
-                Button(action: onToggleCompleted) {
-                    Image(systemName: mission.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(mission.isCompleted ? .green : .gray)
-                }
-                .buttonStyle(.plain)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(mission.title)
-                        .font(.headline)
-                        .lineLimit(1)
-
-                    if !mission.missionDescription.isEmpty {
-                        Text(mission.missionDescription)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-
-                    HStack(spacing: 8) {
-                        Text(MissionPriority(rawValue: mission.resolvedPriority)?.localizedLabel ?? mission.resolvedPriority.capitalized)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        if mission.isRecurringValue {
-                            Text("Recurring")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        if let dueDate = mission.dueDate {
-                            Text(dueDate.formatted(date: .abbreviated, time: .omitted))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    if mission.imageData != nil {
-                        Text("common.imageAttached")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
+            HStack(spacing: 12) {
+                leadingIconSlot
+                completionButton
+                contentColumn
                 Spacer(minLength: 8)
-
-                HStack(spacing: 2) {
-                    ForEach(0..<mission.difficulty, id: \.self) { _ in
-                        Image(systemName: "star.fill")
-                            .font(.caption2)
-                            .foregroundStyle(.yellow)
-                    }
-                }
+                difficultyStars
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: onOpen)
@@ -86,5 +36,73 @@ struct MissionListRowView: View {
             .buttonStyle(.plain)
         }
         .contentShape(Rectangle())
+    }
+
+    private var leadingIconSlot: some View {
+        Group {
+            if let iconName = mission.iconName, !iconName.isEmpty {
+                Image(systemName: iconName)
+                    .foregroundStyle(Color(hex: mission.iconColorHex ?? "#F59E0B"))
+            } else {
+                Color.clear
+            }
+        }
+        .frame(width: 18, alignment: .center)
+    }
+
+    private var completionButton: some View {
+        Button(action: onToggleCompleted) {
+            Image(systemName: mission.isCompleted ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(mission.isCompleted ? .green : .gray)
+        }
+        .buttonStyle(.plain)
+        .frame(width: 22, alignment: .center)
+    }
+
+    private var contentColumn: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(mission.title)
+                .font(.headline)
+                .lineLimit(1)
+
+            if !mission.missionDescription.isEmpty {
+                Text(mission.missionDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
+            HStack(spacing: 8) {
+                Text(MissionPriority(rawValue: mission.resolvedPriority)?.localizedLabel ?? mission.resolvedPriority.capitalized)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if mission.isRecurringValue {
+                    Text("Recurring")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                if let dueDate = mission.dueDate {
+                    Text(dueDate.formatted(date: .abbreviated, time: .omitted))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if mission.imageData != nil {
+                Text("common.imageAttached")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var difficultyStars: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<mission.difficulty, id: \.self) { _ in
+                Image(systemName: "star.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.yellow)
+            }
+        }
     }
 }

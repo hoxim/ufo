@@ -144,7 +144,7 @@ struct IncidentDetailView: View {
             .padding()
         }
         .navigationTitle("incidents.list.title")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .navigationDestination(item: $selectedRoute) { route in
             RelatedContentDestinationView(route: route, originLabel: incident.title)
         }

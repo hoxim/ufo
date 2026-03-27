@@ -29,13 +29,31 @@ extension Color {
         return Color(nsColor: .controlBackgroundColor)
         #endif
     }
-    
+
+    /// Cross-platform equivalent of secondarySystemBackground / controlBackgroundColor.
+    static var secondarySystemBackgroundAdaptive: Color {
+        #if os(iOS)
+        return Color(uiColor: .secondarySystemBackground)
+        #else
+        return Color(nsColor: .controlBackgroundColor)
+        #endif
+    }
+
     /// Odpowiednik systemBackground
     static var systemBackground: Color {
         #if os(iOS)
         return Color(uiColor: .systemBackground)
         #else
         return Color(nsColor: .windowBackgroundColor)
+        #endif
+    }
+
+    /// Cross-platform equivalent of separator / separatorColor.
+    static var separatorAdaptive: Color {
+        #if os(iOS)
+        return Color(uiColor: .separator)
+        #else
+        return Color(nsColor: .separatorColor)
         #endif
     }
     

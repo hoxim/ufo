@@ -20,11 +20,14 @@ struct AddBudgetEntryView: View {
     @State private var recurringInterval: BudgetRecurringInterval = .monthly
     @State private var isSaving = false
     @State private var showStylePicker = false
+    @FocusState private var isTitleFocused: Bool
 
     var body: some View {
-        NavigationStack {
+        AdaptiveFormContent {
             Form {
                 TextField("budget.entry.field.title", text: $title)
+                    .prominentFormTextInput()
+                    .focused($isTitleFocused)
                 Picker("budget.entry.field.type", selection: $kind) {
                     ForEach(BudgetEntryKind.allCases) { kind in
                         Text(kind.displayName).tag(kind)
@@ -36,6 +39,7 @@ struct AddBudgetEntryView: View {
                     }
                 }
                 TextField("budget.entry.field.amount", text: $amountText)
+                    .prominentFormTextInput()
                     #if os(iOS)
                     .keyboardType(.decimalPad)
                     #endif
@@ -45,6 +49,7 @@ struct AddBudgetEntryView: View {
                     }
                 }
                 TextField("Custom category", text: $customCategoryName)
+                    .prominentFormTextInput()
                 Toggle("Recurring transaction", isOn: $isRecurring)
                 if isRecurring {
                     Picker("Interval", selection: $recurringInterval) {
@@ -57,6 +62,7 @@ struct AddBudgetEntryView: View {
                     OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 }
                 TextField("budget.entry.field.notes", text: $notes)
+                    .prominentFormTextInput()
                 DatePicker("budget.entry.field.date", selection: $date, displayedComponents: [.date])
 
             }
@@ -71,6 +77,11 @@ struct AddBudgetEntryView: View {
                     isProcessing: isSaving,
                     action: { Task { await save() } }
                 )
+            }
+            .onAppear {
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    isTitleFocused = true
+                }
             }
         }
     }
@@ -122,16 +133,21 @@ struct AddBudgetGoalView: View {
     @State private var currentText = ""
     @State private var dueDate = Date()
     @State private var isSaving = false
+    @FocusState private var isTitleFocused: Bool
 
     var body: some View {
-        NavigationStack {
+        AdaptiveFormContent {
             Form {
                 TextField("Goal", text: $title)
+                    .prominentFormTextInput()
+                    .focused($isTitleFocused)
                 TextField("Target amount", text: $targetText)
+                    .prominentFormTextInput()
                 #if os(iOS)
                     .keyboardType(.decimalPad)
                 #endif
                 TextField("Saved so far", text: $currentText)
+                    .prominentFormTextInput()
                 #if os(iOS)
                     .keyboardType(.decimalPad)
                 #endif
@@ -149,6 +165,11 @@ struct AddBudgetGoalView: View {
                     isProcessing: isSaving,
                     action: { Task { await save() } }
                 )
+            }
+            .onAppear {
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    isTitleFocused = true
+                }
             }
         }
     }
@@ -203,7 +224,7 @@ struct AddCategoryBudgetView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        AdaptiveFormContent {
             Form {
                 Picker("Category", selection: $selectedCategory) {
                     ForEach(existingCategories, id: \.self) { category in
@@ -212,8 +233,10 @@ struct AddCategoryBudgetView: View {
                 }
 
                 TextField("New custom category", text: $customCategory)
+                    .prominentFormTextInput()
 
                 TextField("Monthly limit", text: $amountText)
+                    .prominentFormTextInput()
                 #if os(iOS)
                     .keyboardType(.decimalPad)
                 #endif
@@ -256,9 +279,10 @@ struct AddCustomBudgetCategoryView: View {
     @State private var value = ""
 
     var body: some View {
-        NavigationStack {
+        AdaptiveFormContent {
             Form {
                 TextField("Category name", text: $value)
+                    .prominentFormTextInput()
             }
             .navigationTitle("New Category")
             .modalInlineTitleDisplayMode()

@@ -122,7 +122,7 @@ struct SpaceCard: View {
 
             if isExpanded {
                 Divider()
-                    .overlay(Color(.separator))
+                    .overlay(Color.separatorAdaptive)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Osoby w grupie")
@@ -222,14 +222,14 @@ struct SpaceCard: View {
         if isSelected {
             return cardAccentColor.opacity(0.12)
         }
-        return Color(.systemBackground)
+        return .systemBackground
     }
 
     private var cardBorderColor: Color {
         if isSelected {
             return cardAccentColor.opacity(0.8)
         }
-        return Color(.separator).opacity(0.45)
+        return Color.separatorAdaptive.opacity(0.45)
     }
 
     private var cardAccentColor: Color {
@@ -273,7 +273,7 @@ struct SpaceMemberRow: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Color(.secondarySystemBackground), in: Capsule())
+                .background(Color.secondarySystemBackgroundAdaptive, in: Capsule())
         }
     }
 

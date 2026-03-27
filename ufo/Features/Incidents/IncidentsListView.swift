@@ -27,14 +27,15 @@ struct IncidentsListView: View {
                 ProgressView("incidents.list.loading")
             }
         }
+        .appScreenBackground()
         .navigationTitle("incidents.list.title")
-        .toolbar(.hidden, for: .tabBar)
+        .hideTabBarIfSupported()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 addIncidentToolbarButton
             }
         }
-        .sheet(isPresented: $isAddingIncident) {
+        .adaptiveFormPresentation(isPresented: $isAddingIncident) {
             if let incidentStore {
                 AddIncidentView(
                     store: incidentStore,
@@ -51,7 +52,7 @@ struct IncidentsListView: View {
                 #endif
             }
         }
-        .sheet(item: $editingIncident) { incident in
+        .adaptiveFormPresentation(item: $editingIncident) { incident in
             if let incidentStore {
                 EditIncidentView(
                     store: incidentStore,
@@ -72,9 +73,16 @@ struct IncidentsListView: View {
                 #endif
             }
         }
-        .sheet(item: $viewingIncident) { incident in
+        .adaptiveFormPresentation(item: $viewingIncident) { incident in
             IncidentDetailView(
                 incident: incident,
+                presentationMode: {
+                    #if os(macOS)
+                    .embedded
+                    #else
+                    .modal
+                    #endif
+                }(),
                 onEdit: {
                     viewingIncident = nil
                     DispatchQueue.main.async {
@@ -176,6 +184,7 @@ struct IncidentsListView: View {
                 }
             }
         }
+        .appPrimaryListChrome()
         .refreshable {
             await refreshIncidents()
         }

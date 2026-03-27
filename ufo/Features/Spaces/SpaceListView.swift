@@ -81,7 +81,7 @@ struct SpaceListView: View {
                 }
             }
         }
-        .background(Color.clear)
+        .appScreenBackground()
         .navigationTitle("Grupy")
         .searchable(text: $searchText, prompt: "Szukaj grupy lub kodu")
         .toolbar {
@@ -207,7 +207,7 @@ struct SpaceListView: View {
                                     if selectedFilter == filter {
                                         Capsule().fill(Color.accentColor)
                                     } else {
-                                        Capsule().fill(Color(.secondarySystemBackground))
+                                        Capsule().fill(Color.secondarySystemBackgroundAdaptive)
                                     }
                                 }
                             )

@@ -99,7 +99,7 @@ struct NoteDetailView: View {
             .padding()
         }
         .navigationTitle(note.title)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .navigationDestination(item: $selectedRoute) { route in
             RelatedContentDestinationView(route: route, originLabel: note.title)
         }

@@ -176,8 +176,10 @@ struct LocationsView: View {
                     }
                 }
         }
+        .appPrimaryListChrome()
+        .appScreenBackground()
         .navigationTitle("Places")
-        .toolbar(.hidden, for: .tabBar)
+        .hideTabBarIfSupported()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {

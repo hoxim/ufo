@@ -1,10 +1,17 @@
 import SwiftUI
 import SwiftData
 
+enum PeopleHubDisplayMode {
+    case hub
+    case crew
+}
+
 struct PeopleHubView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AuthStore.self) private var authStore
     @Environment(SpaceRepository.self) private var spaceRepository
+
+    var displayMode: PeopleHubDisplayMode = .hub
 
     @State private var members: [SpaceMemberRecipient] = []
     @State private var customRoles: [SpaceRoleDefinition] = []
@@ -28,6 +35,12 @@ struct PeopleHubView: View {
     }
 
     private var peopleNavigationTitle: String {
+        if displayMode == .crew {
+            if let selectedSpace {
+                return "Crew in \(selectedSpace.name)"
+            }
+            return "Crew"
+        }
         if let selectedSpace {
             return "People in \(selectedSpace.name)"
         }
@@ -44,27 +57,29 @@ struct PeopleHubView: View {
                 }
             }
 
-            Section("Tools") {
-                NavigationLink {
-                    MessagesView()
-                } label: {
-                    Label("people.hub.action.messages", systemImage: "message")
-                }
+            if displayMode == .hub {
+                Section("Tools") {
+                    NavigationLink {
+                        MessagesView()
+                    } label: {
+                        Label("people.hub.action.messages", systemImage: "message")
+                    }
 
-                NavigationLink {
-                    LocationsView()
-                } label: {
-                    Label("Places", systemImage: "map")
-                }
+                    NavigationLink {
+                        LocationsView()
+                    } label: {
+                        Label("Places", systemImage: "map")
+                    }
 
-                NavigationLink {
-                    SpaceRolesView()
-                } label: {
-                    Label("Roles", systemImage: "lock.shield")
+                    NavigationLink {
+                        SpaceRolesView()
+                    } label: {
+                        Label("Roles", systemImage: "lock.shield")
+                    }
                 }
             }
 
-            Section(selectedSpace.map { "People in \($0.name)" } ?? "Członkowie") {
+            Section(memberSectionTitle) {
                 if let selectedSpace {
                     if sortedMembers.isEmpty {
                         ContentUnavailableView(
@@ -88,6 +103,8 @@ struct PeopleHubView: View {
                 }
             }
         }
+        .appPrimaryListChrome()
+        .appScreenBackground()
         .navigationTitle(peopleNavigationTitle)
         .task {
             await refreshData()
@@ -95,6 +112,13 @@ struct PeopleHubView: View {
         .onChange(of: selectedSpace?.id) { _, _ in
             Task { await refreshData() }
         }
+    }
+
+    private var memberSectionTitle: String {
+        if let selectedSpace {
+            return displayMode == .crew ? "Crew in \(selectedSpace.name)" : "People in \(selectedSpace.name)"
+        }
+        return displayMode == .crew ? "Crew" : "Członkowie"
     }
 
     @ViewBuilder

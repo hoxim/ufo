@@ -28,188 +28,9 @@ struct BudgetView: View {
     }
 
     var body: some View {
-        List {
-                if let error = budgetStore?.lastErrorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-
-                Section("Overview") {
-                    LabeledContent("budget.view.summary.income", value: filteredIncome.formatted(.currency(code: "PLN")))
-                    LabeledContent("budget.view.summary.expense", value: filteredExpense.formatted(.currency(code: "PLN")))
-                    LabeledContent("budget.view.summary.balance", value: filteredBalance.formatted(.currency(code: "PLN")))
-                }
-
-                if budgetStore != nil, !filteredEntries.isEmpty {
-                    Section("Cash Flow") {
-                        Chart {
-                            ForEach(chartEntries) { item in
-                                LineMark(
-                                    x: .value("Date", item.entryDate),
-                                    y: .value("Amount", item.kind == BudgetEntryKind.expense.rawValue ? -item.amount : item.amount)
-                                )
-                                .foregroundStyle(item.kind == BudgetEntryKind.expense.rawValue ? .red : .green)
-                            }
-                        }
-                        .frame(height: 220)
-                    }
-                }
-
-                Section {
-                    ForEach(categorySummaries) { summary in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(summary.category)
-                                        .font(.headline)
-                                    Text(summary.subtitle)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Text(summary.spent.formatted(.currency(code: "PLN")))
-                                    .font(.headline)
-                                    .foregroundStyle(summary.isOverLimit ? .red : .primary)
-                            }
-
-                            if let limit = summary.limit {
-                                ProgressView(value: summary.progressValue)
-                                    .tint(summary.isOverLimit ? .red : .accentColor)
-                                HStack {
-                                    Text("Limit \(limit.formatted(.currency(code: "PLN")))")
-                                    Spacer()
-                                    Text(summary.remainingText)
-                                }
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            editingCategoryBudget = BudgetCategoryLimitPreference(category: summary.category, amount: summary.limit ?? 0)
-                        }
-                    }
-                    .onDelete { offsets in
-                        for index in offsets {
-                            appPreferences.removeBudgetCategoryLimit(category: categorySummaries[index].category)
-                        }
-                    }
-                } header: {
-                    HStack {
-                        Text("Category Budgets")
-                        Spacer()
-                        Button {
-                            showAddCategoryBudget = true
-                        } label: {
-                            Label("Add Limit", systemImage: "plus")
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                } footer: {
-                    Text("Set monthly limits for categories like Home, Food or Subscriptions, and compare them with the current spend.")
-                }
-
-                Section {
-                    ForEach(appPreferences.budgetCustomCategories, id: \.self) { category in
-                        Text(category)
-                    }
-                    .onDelete { offsets in
-                        for index in offsets {
-                            appPreferences.removeBudgetCustomCategory(appPreferences.budgetCustomCategories[index])
-                        }
-                    }
-                } header: {
-                    HStack {
-                        Text("Custom Categories")
-                        Spacer()
-                        Button {
-                            showAddCustomCategory = true
-                        } label: {
-                            Label("Add Category", systemImage: "plus")
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                } footer: {
-                    Text("Custom categories are available in the transaction form and can also have their own monthly limits.")
-                }
-
-                if !subscriptionEntries.isEmpty {
-                Section("Subscriptions") {
-                        ForEach(subscriptionEntries) { entry in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(entry.title)
-                                        .font(.headline)
-                                    Text("\(entry.category) · \(entry.recurringInterval ?? "Recurring")")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Text(entry.amount.formatted(.currency(code: "PLN")))
-                                    .foregroundStyle(.red)
-                            }
-                        }
-                    }
-                }
-
-                Section {
-                    ForEach(filteredGoals) { goal in
-                        VStack(alignment: .leading) {
-                            Text(goal.title).font(.headline)
-                            ProgressView(value: goal.progress)
-                            Text("\(goal.currentAmount.formatted(.currency(code: "PLN"))) / \(goal.targetAmount.formatted(.currency(code: "PLN")))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    HStack {
-                        Text("Goals")
-                        Spacer()
-                        Button {
-                            showAddGoal = true
-                        } label: {
-                            Label("Add Goal", systemImage: "plus")
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                }
-
-                Section("Transactions") {
-                    ForEach(filteredEntries) { entry in
-                        HStack {
-                            VStack(alignment: .leading) {
-                                HStack {
-                                    if let icon = entry.iconName {
-                                        Image(systemName: icon)
-                                            .foregroundStyle(Color(hex: entry.iconColorHex ?? "#22C55E"))
-                                    }
-                                    Text(entry.title).font(.headline)
-                                }
-                                Text(entry.category)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Text((entry.kind == BudgetEntryKind.expense.rawValue ? -entry.amount : entry.amount).formatted(.currency(code: "PLN")))
-                                .foregroundStyle(entry.kind == BudgetEntryKind.expense.rawValue ? .red : .green)
-                        }
-                    }
-                    .onDelete { offsets in
-                        guard let store = budgetStore else { return }
-                        let values = offsets.map { filteredEntries[$0] }
-                        Task {
-                            for entry in values {
-                                await store.deleteEntry(entry, actor: authRepo.currentUser?.id)
-                            }
-                        }
-                    }
-                }
-        }
+        contentList
         .navigationTitle("budget.view.title")
-        .toolbar(.hidden, for: .tabBar)
+        .hideTabBarIfSupported()
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Menu {
@@ -270,7 +91,7 @@ struct BudgetView: View {
         .refreshable {
             await refreshBudget()
         }
-        .sheet(isPresented: $showAddEntry) {
+        .adaptiveFormPresentation(isPresented: $showAddEntry) {
             if let budgetStore {
                 AddBudgetEntryView(
                     store: budgetStore,
@@ -280,13 +101,13 @@ struct BudgetView: View {
                     .presentationDetents([.medium, .large])
             }
         }
-        .sheet(isPresented: $showAddGoal) {
+        .adaptiveFormPresentation(isPresented: $showAddGoal) {
             if let budgetStore {
                 AddBudgetGoalView(store: budgetStore, actor: authRepo.currentUser?.id)
                     .presentationDetents([.medium, .large])
             }
         }
-        .sheet(isPresented: $showAddCategoryBudget) {
+        .adaptiveFormPresentation(isPresented: $showAddCategoryBudget) {
             AddCategoryBudgetView(
                 initialCategory: nil,
                 initialAmount: nil,
@@ -299,7 +120,7 @@ struct BudgetView: View {
             }
             .presentationDetents([.medium, .large])
         }
-        .sheet(item: $editingCategoryBudget) { categoryBudget in
+        .adaptiveFormPresentation(item: $editingCategoryBudget) { categoryBudget in
             AddCategoryBudgetView(
                 initialCategory: categoryBudget.category,
                 initialAmount: categoryBudget.amount,
@@ -312,7 +133,7 @@ struct BudgetView: View {
             }
             .presentationDetents([.medium, .large])
         }
-        .sheet(isPresented: $showAddCustomCategory) {
+        .adaptiveFormPresentation(isPresented: $showAddCustomCategory) {
             AddCustomBudgetCategoryView { value in
                 appPreferences.addBudgetCustomCategory(value)
             }
@@ -332,6 +153,189 @@ struct BudgetView: View {
         }
         .safeAreaInset(edge: .bottom) {
             FeatureBottomSearchBar(text: $searchText, prompt: "Search budget")
+        }
+    }
+
+    private var contentList: some View {
+        List {
+            if let error = budgetStore?.lastErrorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            Section("Overview") {
+                LabeledContent("budget.view.summary.income", value: filteredIncome.formatted(.currency(code: "PLN")))
+                LabeledContent("budget.view.summary.expense", value: filteredExpense.formatted(.currency(code: "PLN")))
+                LabeledContent("budget.view.summary.balance", value: filteredBalance.formatted(.currency(code: "PLN")))
+            }
+
+            if budgetStore != nil, !filteredEntries.isEmpty {
+                Section("Cash Flow") {
+                    Chart {
+                        ForEach(chartEntries) { item in
+                            LineMark(
+                                x: .value("Date", item.entryDate),
+                                y: .value("Amount", item.kind == BudgetEntryKind.expense.rawValue ? -item.amount : item.amount)
+                            )
+                            .foregroundStyle(item.kind == BudgetEntryKind.expense.rawValue ? .red : .green)
+                        }
+                    }
+                    .frame(height: 220)
+                }
+            }
+
+            Section {
+                ForEach(categorySummaries) { summary in
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(summary.category)
+                                    .font(.headline)
+                                Text(summary.subtitle)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(summary.spent.formatted(.currency(code: "PLN")))
+                                .font(.headline)
+                                .foregroundStyle(summary.isOverLimit ? .red : .primary)
+                        }
+
+                        if let limit = summary.limit {
+                            ProgressView(value: summary.progressValue)
+                                .tint(summary.isOverLimit ? .red : .accentColor)
+                            HStack {
+                                Text("Limit \(limit.formatted(.currency(code: "PLN")))")
+                                Spacer()
+                                Text(summary.remainingText)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        editingCategoryBudget = BudgetCategoryLimitPreference(category: summary.category, amount: summary.limit ?? 0)
+                    }
+                }
+                .onDelete { offsets in
+                    for index in offsets {
+                        appPreferences.removeBudgetCategoryLimit(category: categorySummaries[index].category)
+                    }
+                }
+            } header: {
+                HStack {
+                    Text("Category Budgets")
+                    Spacer()
+                    Button {
+                        showAddCategoryBudget = true
+                    } label: {
+                        Label("Add Limit", systemImage: "plus")
+                    }
+                    .buttonStyle(.borderless)
+                }
+            } footer: {
+                Text("Set monthly limits for categories like Home, Food or Subscriptions, and compare them with the current spend.")
+            }
+
+            Section {
+                ForEach(appPreferences.budgetCustomCategories, id: \.self) { category in
+                    Text(category)
+                }
+                .onDelete { offsets in
+                    for index in offsets {
+                        appPreferences.removeBudgetCustomCategory(appPreferences.budgetCustomCategories[index])
+                    }
+                }
+            } header: {
+                HStack {
+                    Text("Custom Categories")
+                    Spacer()
+                    Button {
+                        showAddCustomCategory = true
+                    } label: {
+                        Label("Add Category", systemImage: "plus")
+                    }
+                    .buttonStyle(.borderless)
+                }
+            } footer: {
+                Text("Custom categories are available in the transaction form and can also have their own monthly limits.")
+            }
+
+            if !subscriptionEntries.isEmpty {
+            Section("Subscriptions") {
+                    ForEach(subscriptionEntries) { entry in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(entry.title)
+                                    .font(.headline)
+                                Text("\(entry.category) · \(entry.recurringInterval ?? "Recurring")")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(entry.amount.formatted(.currency(code: "PLN")))
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+            }
+
+            Section {
+                ForEach(filteredGoals) { goal in
+                    VStack(alignment: .leading) {
+                        Text(goal.title).font(.headline)
+                        ProgressView(value: goal.progress)
+                        Text("\(goal.currentAmount.formatted(.currency(code: "PLN"))) / \(goal.targetAmount.formatted(.currency(code: "PLN")))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                HStack {
+                    Text("Goals")
+                    Spacer()
+                    Button {
+                        showAddGoal = true
+                    } label: {
+                        Label("Add Goal", systemImage: "plus")
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+
+            Section("Transactions") {
+                ForEach(filteredEntries) { entry in
+                    HStack {
+                        VStack(alignment: .leading) {
+                            HStack {
+                                if let icon = entry.iconName {
+                                    Image(systemName: icon)
+                                        .foregroundStyle(Color(hex: entry.iconColorHex ?? "#22C55E"))
+                                }
+                                Text(entry.title).font(.headline)
+                            }
+                            Text(entry.category)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text((entry.kind == BudgetEntryKind.expense.rawValue ? -entry.amount : entry.amount).formatted(.currency(code: "PLN")))
+                            .foregroundStyle(entry.kind == BudgetEntryKind.expense.rawValue ? .red : .green)
+                    }
+                }
+                .onDelete { offsets in
+                    guard let store = budgetStore else { return }
+                    let values = offsets.map { filteredEntries[$0] }
+                    Task {
+                        for entry in values {
+                            await store.deleteEntry(entry, actor: authRepo.currentUser?.id)
+                        }
+                    }
+                }
+            }
         }
     }
 

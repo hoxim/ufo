@@ -713,7 +713,7 @@ struct SavedPlaceDetailView: View {
                 .padding()
             }
             .navigationTitle(place.name)
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
         } else {
             ContentUnavailableView("Place unavailable", systemImage: "mappin.slash")
         }
@@ -752,7 +752,7 @@ struct SavedPlaceDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
+        .background(Color.secondarySystemBackgroundAdaptive, in: RoundedRectangle(cornerRadius: 18))
     }
 
     private func resolvePlace() -> SavedPlace? {

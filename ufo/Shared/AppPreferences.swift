@@ -90,7 +90,7 @@ struct HomeWidgetPreference: Codable, Identifiable, Equatable {
     var id: HomeWidgetKind { kind }
 }
 
-struct BudgetCategoryLimitPreference: Codable, Identifiable, Equatable {
+struct BudgetCategoryLimitPreference: Codable, Identifiable, Equatable, Hashable {
     var category: String
     var amount: Double
 

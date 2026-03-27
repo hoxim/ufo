@@ -175,7 +175,7 @@ struct MissionDetailView: View {
             .padding()
         }
         .navigationTitle("Mission")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .navigationDestination(item: $selectedRoute) { route in
             RelatedContentDestinationView(route: route, originLabel: mission.title)
         }

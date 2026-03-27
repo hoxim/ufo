@@ -48,13 +48,13 @@ struct RoutineDayTimeline: View {
 
             if routines.isEmpty {
                 ContentUnavailableView(
-                    "Brak routines",
+                    "Brak rutyn",
                     systemImage: "clock.arrow.circlepath",
                     description: Text("Dodaj pierwszy stały rytm dnia, np. drzemkę, lek albo trening.")
                 )
                 .frame(maxWidth: .infinity, minHeight: 320)
                 .overlay(alignment: .bottom) {
-                    Button("Dodaj routine", action: onAdd)
+                    Button("Dodaj rutynę", action: onAdd)
                         .buttonStyle(.borderedProminent)
                 }
             } else {
@@ -237,7 +237,7 @@ private struct RoutineTimelineCard: View {
             }
         }
         .padding(14)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color.secondarySystemBackgroundAdaptive, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private var routineTimeLabel: String {
@@ -294,7 +294,7 @@ struct RoutineWeekView: View {
                     } else {
                         HStack(spacing: 10) {
                             weekPill(title: "Plan", value: "\(dayRoutines.count)", tint: .blue)
-                            weekPill(title: "Done", value: "\(completedRoutineIds.count)", tint: .green)
+                            weekPill(title: "Ukończone", value: "\(completedRoutineIds.count)", tint: .green)
                             weekPill(title: "Wpisy", value: "\(dayLogs.count)", tint: .orange)
                         }
 
@@ -330,7 +330,7 @@ struct RoutineWeekView: View {
                     }
                 }
                 .padding()
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(Color.secondarySystemBackgroundAdaptive, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
         }
     }
@@ -423,7 +423,7 @@ struct RoutineMonthView: View {
         let fill: Color
 
         if scheduledCount == 0 {
-            fill = Color(.secondarySystemBackground).opacity(0.45)
+            fill = Color.secondarySystemBackgroundAdaptive.opacity(0.45)
         } else if completedCount >= scheduledCount {
             fill = .green.opacity(0.18)
         } else if completedCount > 0 {

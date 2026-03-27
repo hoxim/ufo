@@ -27,35 +27,37 @@ struct NotesView: View {
     }
 
     var body: some View {
-        List {
-            if let error = noteStore?.lastErrorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
+        Group {
+            List {
+                if let error = noteStore?.lastErrorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
 
-            if !pinnedNotes.isEmpty {
-                Section("Pinned") {
-                    ForEach(pinnedNotes) { note in
-                        noteRow(for: note)
+                if !pinnedNotes.isEmpty {
+                    Section("Pinned") {
+                        ForEach(pinnedNotes) { note in
+                            noteRow(for: note)
+                        }
+                    }
+                }
+
+                ForEach(datedSections) { section in
+                    Section(section.title) {
+                        ForEach(section.notes) { note in
+                            noteRow(for: note)
+                        }
                     }
                 }
             }
-
-            ForEach(datedSections) { section in
-                Section(section.title) {
-                    ForEach(section.notes) { note in
-                        noteRow(for: note)
-                    }
-                }
-            }
+            .appPrimaryListChrome()
         }
+        .appScreenBackground()
         .navigationTitle("notes.view.title")
-        .toolbar(.hidden, for: .tabBar)
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
+        .hideTabBarIfSupported()
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
+            ToolbarItem(placement: .platformTopBarLeading) {
                 Button {
                     showFolderCreator = true
                 } label: {
@@ -79,9 +81,16 @@ struct NotesView: View {
         .safeAreaInset(edge: .top) {
             folderPickerBar
         }
-        .sheet(item: $viewingNote) { note in
+        .adaptiveFormPresentation(item: $viewingNote) { note in
             NoteDetailView(
                 note: note,
+                presentationMode: {
+                    #if os(macOS)
+                    .embedded
+                    #else
+                    .modal
+                    #endif
+                }(),
                 onEdit: {
                     viewingNote = nil
                     DispatchQueue.main.async {
@@ -105,8 +114,8 @@ struct NotesView: View {
                 )
             }
         }
-        .sheet(isPresented: $showFolderCreator) {
-            NavigationStack {
+        .adaptiveFormPresentation(isPresented: $showFolderCreator) {
+            AdaptiveFormContent {
                 Form {
                     TextField("notes.folder.field.name", text: $newFolderName)
                 }
@@ -186,6 +195,12 @@ struct NotesView: View {
             }
             .padding(.horizontal)
             .padding(.top, 4)
+        }
+        .padding(.bottom, 8)
+        .appSurfaceBackground()
+        .overlay(alignment: .bottom) {
+            Divider()
+                .opacity(0.35)
         }
     }
 

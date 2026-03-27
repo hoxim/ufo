@@ -16,47 +16,59 @@ struct RoutineEditorView: View {
     @State private var startTime = RoutineEditorView.defaultTime
     @State private var durationMinutes = 30
     @State private var selectedWeekdays: Set<Int> = Set(1...7)
+    @FocusState private var isTitleFocused: Bool
 
     private static let defaultTime: Date = {
         Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: .now) ?? .now
     }()
 
     var body: some View {
-        Form {
-            Section("Routine") {
-                TextField("Tytuł", text: $title)
+        AdaptiveFormContent {
+            Form {
+                Section("Rutyna") {
+                    TextField("Nazwa rutyny", text: $title)
+                        .prominentFormTextInput()
+                        .focused($isTitleFocused)
 
-                Picker("Kategoria", selection: $category) {
-                    ForEach(RoutineCategory.allCases) { category in
-                        Label(category.label, systemImage: category.iconName).tag(category)
+                    Picker("Kategoria", selection: $category) {
+                        ForEach(RoutineCategory.allCases) { category in
+                            Label(category.label, systemImage: category.iconName).tag(category)
+                        }
                     }
+
+                    TextField("Dla kogo", text: $personName)
+                        .prominentFormTextInput()
+                    TextField("Notatka", text: $notes, axis: .vertical)
+                        .lineLimit(3...5)
+                        .prominentFormTextInput()
                 }
 
-                TextField("Dla kogo", text: $personName)
-                TextField("Notatka", text: $notes, axis: .vertical)
-                    .lineLimit(3...5)
-            }
+                Section("Czas") {
+                    DatePicker("Godzina startu", selection: $startTime, displayedComponents: .hourAndMinute)
+                    Stepper("Czas trwania: \(durationMinutes) min", value: $durationMinutes, in: 15...240, step: 15)
+                }
 
-            Section("Czas") {
-                DatePicker("Start", selection: $startTime, displayedComponents: .hourAndMinute)
-                Stepper("Czas trwania: \(durationMinutes) min", value: $durationMinutes, in: 15...240, step: 15)
+                Section("Dni tygodnia") {
+                    weekdayPicker
+                }
             }
-
-            Section("Dni") {
-                weekdayPicker
+            .navigationTitle("Nowa rutyna")
+            .modalInlineTitleDisplayMode()
+            .toolbar {
+                ModalCloseToolbarItem {
+                    dismiss()
+                }
+                ModalConfirmToolbarItem(
+                    isDisabled: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedWeekdays.isEmpty,
+                    isProcessing: false,
+                    action: save
+                )
             }
-        }
-        .navigationTitle("Nowa routine")
-        .modalInlineTitleDisplayMode()
-        .toolbar {
-            ModalCloseToolbarItem {
-                dismiss()
+            .onAppear {
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    isTitleFocused = true
+                }
             }
-            ModalConfirmToolbarItem(
-                isDisabled: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedWeekdays.isEmpty,
-                isProcessing: false,
-                action: save
-            )
         }
     }
 
@@ -78,7 +90,7 @@ struct RoutineEditorView: View {
                         .padding(.vertical, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(selectedWeekdays.contains(item.weekday) ? Color.accentColor.opacity(0.18) : Color(.secondarySystemBackground))
+                                .fill(selectedWeekdays.contains(item.weekday) ? Color.accentColor.opacity(0.18) : Color.secondarySystemBackgroundAdaptive)
                         )
                 }
                 .buttonStyle(.plain)

@@ -74,6 +74,8 @@ struct SpaceRolesView: View {
                 }
             }
         }
+        .appPrimaryListChrome()
+        .appScreenBackground()
         .navigationTitle("Roles")
         .task {
             await refreshData()
