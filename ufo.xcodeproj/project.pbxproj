@@ -13,35 +13,68 @@
 		5EEDDBD42F2BCEB30096C5E1 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 5EEDDBD32F2BCEB30096C5E1 /* Realtime */; };
 		5EEDDBD62F2BCEB30096C5E1 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 5EEDDBD52F2BCEB30096C5E1 /* Storage */; };
 		5EEDDBD82F2BCEB30096C5E1 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 5EEDDBD72F2BCEB30096C5E1 /* Supabase */; };
+		5F0A1B2C2F780001003DD0F9 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 5EEDDBD72F2BCEB30096C5E1 /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		5E3D5E702F769AF4003DD0F9 /* ufo watchOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ufo watchOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5E8F14B92F2BA87D0060CA8D /* ufo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ufo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6C2000012F800001003DD0F9 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		6C2000022F800001003DD0F9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		5EEDDCE32F371F5D0096C5E1 /* Exceptions for "ufo" folder in "ufo" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Config.xcconfig,
-				Info.plist,
-			);
-			target = 5E8F14B82F2BA87D0060CA8D /* ufo */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		5E8F14BB2F2BA87D0060CA8D /* ufo */ = {
+		6C1000012F800001003DD0F9 /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				5EEDDCE32F371F5D0096C5E1 /* Exceptions for "ufo" folder in "ufo" target */,
-			);
-			path = ufo;
+			path = App;
+			sourceTree = "<group>";
+		};
+		6C1000022F800001003DD0F9 /* AppCore */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AppCore;
+			sourceTree = "<group>";
+		};
+		6C1000032F800001003DD0F9 /* iOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = iOS;
+			sourceTree = "<group>";
+		};
+		6C1000042F800001003DD0F9 /* iPadOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = iPadOS;
+			sourceTree = "<group>";
+		};
+		6C1000052F800001003DD0F9 /* macOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = macOS;
+			sourceTree = "<group>";
+		};
+		6C1000062F800001003DD0F9 /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		6C1000072F800001003DD0F9 /* SharedUI */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SharedUI;
+			sourceTree = "<group>";
+		};
+		6C1000082F800001003DD0F9 /* watchOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = watchOS;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		5E3D5E6D2F769AF4003DD0F9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5F0A1B2C2F780001003DD0F9 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		5E8F14B62F2BA87D0060CA8D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -62,7 +95,6 @@
 			isa = PBXGroup;
 			children = (
 				5E8F14BB2F2BA87D0060CA8D /* ufo */,
-				5EEDDBCC2F2BCEB30096C5E1 /* Frameworks */,
 				5E8F14BA2F2BA87D0060CA8D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -71,20 +103,54 @@
 			isa = PBXGroup;
 			children = (
 				5E8F14B92F2BA87D0060CA8D /* ufo.app */,
+				5E3D5E702F769AF4003DD0F9 /* ufo watchOS.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		5EEDDBCC2F2BCEB30096C5E1 /* Frameworks */ = {
+		5E8F14BB2F2BA87D0060CA8D /* ufo */ = {
 			isa = PBXGroup;
 			children = (
+				6C1000012F800001003DD0F9 /* App */,
+				6C1000022F800001003DD0F9 /* AppCore */,
+				6C1000032F800001003DD0F9 /* iOS */,
+				6C1000042F800001003DD0F9 /* iPadOS */,
+				6C1000052F800001003DD0F9 /* macOS */,
+				6C1000062F800001003DD0F9 /* Resources */,
+				6C1000072F800001003DD0F9 /* SharedUI */,
+				6C1000082F800001003DD0F9 /* watchOS */,
+				6C2000012F800001003DD0F9 /* Config.xcconfig */,
+				6C2000022F800001003DD0F9 /* Info.plist */,
 			);
-			name = Frameworks;
-			sourceTree = "<group>";
+			path = ufo;
+			sourceTree = SOURCE_ROOT;
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		5E3D5E6F2F769AF4003DD0F9 /* ufo watchOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E3D5E7B2F769AF5003DD0F9 /* Build configuration list for PBXNativeTarget "ufo watchOS" */;
+			buildPhases = (
+				5E3D5E6C2F769AF4003DD0F9 /* Sources */,
+				5E3D5E6D2F769AF4003DD0F9 /* Frameworks */,
+				5E3D5E6E2F769AF4003DD0F9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6C1000082F800001003DD0F9 /* watchOS */,
+			);
+			name = "ufo watchOS";
+			packageProductDependencies = (
+				5EEDDBD72F2BCEB30096C5E1 /* Supabase */,
+			);
+			productName = "ufoWatch Watch App";
+			productReference = 5E3D5E702F769AF4003DD0F9 /* ufo watchOS.app */;
+			productType = "com.apple.product-type.application";
+		};
 		5E8F14B82F2BA87D0060CA8D /* ufo */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5E8F14C62F2BA87E0060CA8D /* Build configuration list for PBXNativeTarget "ufo" */;
@@ -104,7 +170,13 @@
 				5E8F14EF2F2BBF420060CA8D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				5E8F14BB2F2BA87D0060CA8D /* ufo */,
+				6C1000012F800001003DD0F9 /* App */,
+				6C1000022F800001003DD0F9 /* AppCore */,
+				6C1000032F800001003DD0F9 /* iOS */,
+				6C1000042F800001003DD0F9 /* iPadOS */,
+				6C1000052F800001003DD0F9 /* macOS */,
+				6C1000062F800001003DD0F9 /* Resources */,
+				6C1000072F800001003DD0F9 /* SharedUI */,
 			);
 			name = ufo;
 			packageProductDependencies = (
@@ -126,9 +198,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2620;
+				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
+					5E3D5E6F2F769AF4003DD0F9 = {
+						CreatedOnToolsVersion = 26.4;
+					};
 					5E8F14B82F2BA87D0060CA8D = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -153,11 +228,19 @@
 			projectRoot = "";
 			targets = (
 				5E8F14B82F2BA87D0060CA8D /* ufo */,
+				5E3D5E6F2F769AF4003DD0F9 /* ufo watchOS */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		5E3D5E6E2F769AF4003DD0F9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		5E8F14B72F2BA87D0060CA8D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -168,6 +251,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		5E3D5E6C2F769AF4003DD0F9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		5E8F14B52F2BA87D0060CA8D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -205,10 +295,88 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		5E3D5E7C2F769AF5003DD0F9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6C2000012F800001003DD0F9 /* Config.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = WatchAppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HPVQSJDB42;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ufoWatch;
+				INFOPLIST_KEY_SupabaseAnonKey = "$(SUPABASE_ANON_KEY)";
+				INFOPLIST_KEY_SupabaseRedirectURL = "$(SUPABASE_REDIRECT_URL)";
+				INFOPLIST_KEY_SupabaseURL = "$(SUPABASE_URL)";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.hoxim.ufo;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoxim.ufo.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.4;
+			};
+			name = Debug;
+		};
+		5E3D5E7D2F769AF5003DD0F9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6C2000012F800001003DD0F9 /* Config.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = WatchAppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HPVQSJDB42;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ufoWatch;
+				INFOPLIST_KEY_SupabaseAnonKey = "$(SUPABASE_ANON_KEY)";
+				INFOPLIST_KEY_SupabaseRedirectURL = "$(SUPABASE_REDIRECT_URL)";
+				INFOPLIST_KEY_SupabaseURL = "$(SUPABASE_URL)";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.hoxim.ufo;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoxim.ufo.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.4;
+			};
+			name = Release;
+		};
 		5E8F14C42F2BA87E0060CA8D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = 5E8F14BB2F2BA87D0060CA8D /* ufo */;
-			baseConfigurationReferenceRelativePath = Config.xcconfig;
+			baseConfigurationReference = 6C2000012F800001003DD0F9 /* Config.xcconfig */;
 			buildSettings = {
 				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -278,8 +446,7 @@
 		};
 		5E8F14C52F2BA87E0060CA8D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = 5E8F14BB2F2BA87D0060CA8D /* ufo */;
-			baseConfigurationReferenceRelativePath = Config.xcconfig;
+			baseConfigurationReference = 6C2000012F800001003DD0F9 /* Config.xcconfig */;
 			buildSettings = {
 				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -341,8 +508,7 @@
 		};
 		5E8F14C72F2BA87E0060CA8D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = 5E8F14BB2F2BA87D0060CA8D /* ufo */;
-			baseConfigurationReferenceRelativePath = Config.xcconfig;
+			baseConfigurationReference = 6C2000012F800001003DD0F9 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -364,6 +530,7 @@
 				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				EXCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = watchOS;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ufo/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = UFO;
@@ -401,8 +568,7 @@
 		};
 		5E8F14C82F2BA87E0060CA8D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = 5E8F14BB2F2BA87D0060CA8D /* ufo */;
-			baseConfigurationReferenceRelativePath = Config.xcconfig;
+			baseConfigurationReference = 6C2000012F800001003DD0F9 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -424,6 +590,7 @@
 				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				EXCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = watchOS;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ufo/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = UFO;
@@ -462,6 +629,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		5E3D5E7B2F769AF5003DD0F9 /* Build configuration list for PBXNativeTarget "ufo watchOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E3D5E7C2F769AF5003DD0F9 /* Debug */,
+				5E3D5E7D2F769AF5003DD0F9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		5E8F14B42F2BA87D0060CA8D /* Build configuration list for PBXProject "ufo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

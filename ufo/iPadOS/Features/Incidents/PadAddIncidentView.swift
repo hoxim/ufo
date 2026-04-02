@@ -1,0 +1,261 @@
+#if os(iOS)
+
+import SwiftUI
+import SwiftData
+import PhotosUI
+
+struct PadAddIncidentView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Environment(SpaceRepository.self) private var spaceRepo
+
+    let store: IncidentStore
+    let userId: UUID?
+    let availableMissions: [Mission]
+    let availableLists: [SharedList]
+    let availablePlaces: [SavedPlace]
+    var onCreated: ((UUID) -> Void)? = nil
+
+    @State private var title = ""
+    @State private var details = ""
+    @State private var date = Date()
+    @State private var severity: IncidentSeverity = .medium
+    @State private var status: IncidentStatus = .open
+    @State private var assigneeId: UUID?
+    @State private var costText = ""
+    @State private var iconName = "bolt.horizontal"
+    @State private var iconColorHex = "#F59E0B"
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var imageData: Data?
+    @State private var relatedMissionId: UUID?
+    @State private var relatedListId: UUID?
+    @State private var relatedPlaceId: UUID?
+    @State private var isSaving = false
+    @State private var showStylePicker = false
+    @State private var isPresentingAddPlace = false
+    @State private var isPresentingAddList = false
+    @State private var isPresentingAddMission = false
+    @FocusState private var isTitleFocused: Bool
+
+    init(
+        store: IncidentStore,
+        userId: UUID?,
+        availableMissions: [Mission],
+        availableLists: [SharedList],
+        availablePlaces: [SavedPlace],
+        initialRelatedMissionId: UUID? = nil,
+        initialRelatedListId: UUID? = nil,
+        initialRelatedPlaceId: UUID? = nil,
+        onCreated: ((UUID) -> Void)? = nil
+    ) {
+        self.store = store
+        self.userId = userId
+        self.availableMissions = availableMissions
+        self.availableLists = availableLists
+        self.availablePlaces = availablePlaces
+        self.onCreated = onCreated
+        _relatedMissionId = State(initialValue: initialRelatedMissionId)
+        _relatedListId = State(initialValue: initialRelatedListId)
+        _relatedPlaceId = State(initialValue: initialRelatedPlaceId)
+    }
+
+    var body: some View {
+        AdaptiveFormContent {
+            Form {
+                TextField("incidents.editor.field.title", text: $title)
+                    .prominentFormTextInput()
+                    .focused($isTitleFocused)
+                TextField("incidents.editor.field.description", text: $details)
+                    .prominentFormTextInput()
+                DatePicker("incidents.editor.field.date", selection: $date)
+                SelectionMenuRow(title: "Priorytet", value: severity.localizedLabel) {
+                    ForEach(IncidentSeverity.allCases) { value in
+                        Button(value.localizedLabel) { severity = value }
+                    }
+                }
+                SelectionMenuRow(title: "Status", value: status.localizedLabel) {
+                    ForEach(IncidentStatus.allCases) { value in
+                        Button(value.localizedLabel) { status = value }
+                    }
+                }
+                SelectionMenuRow(title: "Przypisany", value: selectedAssigneeTitle, isPlaceholder: assigneeId == nil) {
+                    Button("Nieprzypisane") { assigneeId = nil }
+                    if let currentUser = userId {
+                        Button(currentUser.uuidString.prefix(8).description) { assigneeId = currentUser }
+                    }
+                }
+                TextField("Koszt", text: $costText)
+                    .prominentFormTextInput()
+                    .decimalPadKeyboardIfSupported()
+                Section("Powiązane") {
+                    SelectionMenuRow(title: "Misja", value: selectedMissionTitle, isPlaceholder: relatedMissionId == nil) {
+                        Button(String(localized: "common.none")) { relatedMissionId = nil }
+                        ForEach(resolvedAvailableMissions) { mission in
+                            Button(mission.title) { relatedMissionId = mission.id }
+                        }
+                        Divider()
+                        Button("Dodaj nową misję") { isPresentingAddMission = true }
+                    }
+                    SelectionMenuRow(title: "Lista", value: selectedListTitle, isPlaceholder: relatedListId == nil) {
+                        Button(String(localized: "common.none")) { relatedListId = nil }
+                        ForEach(resolvedAvailableLists) { list in
+                            Button(list.name) { relatedListId = list.id }
+                        }
+                        Divider()
+                        Button("Dodaj nową listę") { isPresentingAddList = true }
+                    }
+                    SelectionMenuRow(title: "Miejsce", value: selectedPlaceTitle, isPlaceholder: relatedPlaceId == nil) {
+                        Button(String(localized: "common.none")) { relatedPlaceId = nil }
+                        ForEach(resolvedAvailablePlaces) { place in
+                            Button(place.name) { relatedPlaceId = place.id }
+                        }
+                        Divider()
+                        Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
+                    }
+                }
+                DisclosureGroup("Styl", isExpanded: $showStylePicker) {
+                    OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
+                }
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    Label("common.selectImage", systemImage: "photo")
+                }
+                if imageData != nil {
+                    Text("common.imageSelected")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("incidents.editor.title.new")
+            .modalInlineTitleDisplayMode()
+            .toolbar {
+                ModalCloseToolbarItem {
+                    dismiss()
+                }
+                ModalConfirmToolbarItem(
+                    isDisabled: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving,
+                    isProcessing: isSaving,
+                    action: {
+                        Task {
+                            await save()
+                        }
+                    }
+                )
+            }
+            .onChange(of: selectedPhotoItem) { _, newValue in
+                guard let newValue else { return }
+                Task {
+                    imageData = try? await newValue.loadTransferable(type: Data.self)
+                }
+            }
+            .sheet(isPresented: $isPresentingAddPlace) {
+                QuickAddPlaceSheet(originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "incident draft" : title) { place in
+                    relatedPlaceId = place.id
+                }
+            }
+            .sheet(isPresented: $isPresentingAddMission) {
+                QuickCreateMissionSheet(
+                    initialSavedPlaceId: relatedPlaceId,
+                    initialRelatedListId: relatedListId,
+                    originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "incident draft" : title
+                ) { missionId in
+                    relatedMissionId = missionId
+                }
+            }
+            .sheet(isPresented: $isPresentingAddList) {
+                QuickCreateLinkedListSheet(
+                    initialSavedPlaceId: relatedPlaceId,
+                    originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "incident draft" : title
+                ) { listId in
+                    relatedListId = listId
+                }
+            }
+            .onAppear {
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    isTitleFocused = true
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func save() async {
+        isSaving = true
+        defer { isSaving = false }
+
+        let createdIncident = await store.addIncident(
+            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            description: details.isEmpty ? nil : details,
+            severity: severity.rawValue,
+            status: status.rawValue,
+            assigneeId: assigneeId,
+            cost: Double(costText.replacingOccurrences(of: ",", with: ".")),
+            occurrenceDate: date,
+            iconName: iconName.isEmpty ? nil : iconName,
+            iconColorHex: iconColorHex,
+            imageData: imageData,
+            relatedMissionId: relatedMissionId,
+            relatedListId: relatedListId,
+            relatedPlaceId: relatedPlaceId,
+            managedRelatedIds: managedRelatedIds,
+            userId: userId
+        )
+        if let createdIncident {
+            onCreated?(createdIncident.id)
+        }
+        dismiss()
+    }
+
+    private var resolvedAvailableMissions: [Mission] {
+        guard let spaceId = spaceRepo.selectedSpace?.id else { return availableMissions }
+        return (try? modelContext.fetch(
+            FetchDescriptor<Mission>(
+                predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+            )
+        )) ?? availableMissions
+    }
+
+    private var resolvedAvailableLists: [SharedList] {
+        guard let spaceId = spaceRepo.selectedSpace?.id else { return availableLists }
+        return (try? modelContext.fetch(
+            FetchDescriptor<SharedList>(
+                predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+            )
+        )) ?? availableLists
+    }
+
+    private var resolvedAvailablePlaces: [SavedPlace] {
+        guard let spaceId = spaceRepo.selectedSpace?.id else { return availablePlaces }
+        return (try? modelContext.fetch(
+            FetchDescriptor<SavedPlace>(
+                predicate: #Predicate { $0.spaceId == spaceId && $0.deletedAt == nil },
+                sortBy: [SortDescriptor(\.name, order: .forward)]
+            )
+        )) ?? availablePlaces
+    }
+
+    private var selectedMissionTitle: String {
+        resolvedAvailableMissions.first(where: { $0.id == relatedMissionId })?.title ?? String(localized: "common.none")
+    }
+
+    private var selectedListTitle: String {
+        resolvedAvailableLists.first(where: { $0.id == relatedListId })?.name ?? String(localized: "common.none")
+    }
+
+    private var selectedPlaceTitle: String {
+        resolvedAvailablePlaces.first(where: { $0.id == relatedPlaceId })?.name ?? String(localized: "common.none")
+    }
+
+    private var selectedAssigneeTitle: String {
+        assigneeId.map { String($0.uuidString.prefix(8)) } ?? "Nieprzypisane"
+    }
+}
+
+private extension PadAddIncidentView {
+    var managedRelatedIds: [UUID] {
+        Array(Set(resolvedAvailableMissions.map(\.id) + resolvedAvailableLists.map(\.id) + resolvedAvailablePlaces.map(\.id)))
+    }
+}
+
+#endif

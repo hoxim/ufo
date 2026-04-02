@@ -31,7 +31,7 @@ Core feature areas:
 - Optimize for simple, obvious UX
 - Reuse shared components when the same interaction appears in multiple places
 - Do not mix unrelated responsibilities into one view
-- Keep platform-specific wrappers separate when iOS and macOS diverge
+- Keep full platform-owned feature UI in `iOS/`, `iPadOS/`, `macOS/`, and `watchOS/`
 - Avoid fragile UUID-based manual linking in UI
 - Prefer graph-like relations between entities, but do not recurse automatically in UI
 
@@ -59,9 +59,13 @@ Core feature areas:
 
 ## Important Areas To Respect
 
-- `/Users/hoxim/Developer/Xcode/ufo/ufo/Features/Main`
-- `/Users/hoxim/Developer/Xcode/ufo/ufo/Data/Stores`
-- `/Users/hoxim/Developer/Xcode/ufo/ufo/Data/Repositories`
+- `/Users/hoxim/Developer/Xcode/ufo/ufo/App`
+- `/Users/hoxim/Developer/Xcode/ufo/ufo/iOS`
+- `/Users/hoxim/Developer/Xcode/ufo/ufo/iPadOS`
+- `/Users/hoxim/Developer/Xcode/ufo/ufo/macOS`
+- `/Users/hoxim/Developer/Xcode/ufo/ufo/watchOS`
+- `/Users/hoxim/Developer/Xcode/ufo/ufo/AppCore/Stores`
+- `/Users/hoxim/Developer/Xcode/ufo/ufo/AppCore/Repositories`
 - `/Users/hoxim/Developer/Xcode/ufo/supabase/migrations`
 
 ## Known Active Themes
@@ -70,7 +74,7 @@ Core feature areas:
 - Role and visibility group architecture per space
 - User settings sync
 - Budget improvements
-- macOS-specific cleanup where shared UI becomes awkward
+- macOS-specific cleanup where platform UI still feels too close to iPad/iPhone
 
 ## Build Check
 

@@ -6,6 +6,8 @@
 	<string>Aplikacja potrzebuje lokalizacji, aby pokazać aktualną pozycję na mapie Space.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Aplikacja potrzebuje lokalizacji, aby pokazać aktualną pozycję na mapie Space.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Aplikacja potrzebuje aparatu, aby skanować kody QR przy łączeniu urządzeń.</string>
 	<key>SupabaseRedirectURL</key>
 	<string>$(SUPABASE_REDIRECT_URL)</string>
 	<key>SupabaseAnonKey</key>
