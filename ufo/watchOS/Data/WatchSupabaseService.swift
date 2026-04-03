@@ -91,6 +91,7 @@ final class WatchSupabaseService {
     }
 
     func fetchWorkspace(userId: UUID, fallbackEmail: String?) async throws -> WatchWorkspaceContext {
+        WatchLog.msg("WatchSupabaseService.fetchWorkspace user=\(userId.uuidString)")
         let profile: WatchProfileRecord = try await client
             .from("profiles")
             .select("id, email, full_name, space_members(user_id, role, joined_at, spaces(id, name, invite_code, category, version, updated_at))")
@@ -200,6 +201,7 @@ final class WatchSupabaseService {
     }
 
     func registerCurrentDevice(authMethod: String, approvedVia: String?) async throws {
+        WatchLog.msg("WatchSupabaseService.registerCurrentDevice method=\(authMethod) approvedVia=\(approvedVia ?? "nil")")
         let session = try await client.auth.session
         guard let sessionID = Self.extractSessionID(fromAccessToken: session.accessToken) else {
             throw WatchSupabaseServiceError.invalidSessionIdentifier
@@ -225,31 +227,38 @@ final class WatchSupabaseService {
     }
 
     func createPairingRequest() async throws -> WatchDevicePairingRequest {
-        let builder = try client
-            .rpc(
-                "ufo_create_pairing_request",
-                params: WatchCreatePairingRequestParams(
-                    target_platform: "watchOS",
-                    target_device_name: WatchKit.WKInterfaceDevice.current().name
+        WatchLog.msg("WatchSupabaseService.createPairingRequest started device=\(WatchKit.WKInterfaceDevice.current().name)")
+        do {
+            let builder = try client
+                .rpc(
+                    "ufo_create_pairing_request",
+                    params: WatchCreatePairingRequestParams(
+                        target_platform: "watchOS",
+                        target_device_name: WatchKit.WKInterfaceDevice.current().name
+                    )
                 )
+
+            let result: WatchPairingRequestRecord = try await builder
+                .single()
+                .execute()
+                .value
+
+            return WatchDevicePairingRequest(
+                requestID: result.requestID,
+                shortCode: result.shortCode,
+                requestSecret: result.requestSecret,
+                deviceName: WatchKit.WKInterfaceDevice.current().name,
+                platform: "watchOS",
+                expiresAt: result.expiresAt
             )
-
-        let result: WatchPairingRequestRecord = try await builder
-            .single()
-            .execute()
-            .value
-
-        return WatchDevicePairingRequest(
-            requestID: result.requestID,
-            shortCode: result.shortCode,
-            requestSecret: result.requestSecret,
-            deviceName: WatchKit.WKInterfaceDevice.current().name,
-            platform: "watchOS",
-            expiresAt: result.expiresAt
-        )
+        } catch {
+            WatchLog.error(error)
+            throw normalizePairingError(error)
+        }
     }
 
     func claimPairingRequest(requestID: UUID, requestSecret: String) async throws -> WatchDevicePairingStatus {
+        WatchLog.msg("WatchSupabaseService.claimPairingRequest request=\(requestID.uuidString)")
         let builder = try client
             .rpc(
                 "ufo_claim_pairing_request",
@@ -271,6 +280,14 @@ final class WatchSupabaseService {
             userEmail: result.userEmail,
             sourceDeviceName: result.sourceDeviceName
         )
+    }
+
+    private func normalizePairingError(_ error: Error) -> Error {
+        let details = "\(error.localizedDescription) | \(String(describing: error))".lowercased()
+        if details.contains("gen_random_bytes") {
+            return WatchSupabaseServiceError.pairingBackendUnavailable
+        }
+        return error
     }
 
     private static func extractSessionID(fromAccessToken accessToken: String) -> UUID? {
@@ -425,11 +442,14 @@ private struct WatchPairingClaimRecord: Decodable {
 
 enum WatchSupabaseServiceError: LocalizedError {
     case invalidSessionIdentifier
+    case pairingBackendUnavailable
 
     var errorDescription: String? {
         switch self {
         case .invalidSessionIdentifier:
             return "Nie udało się odczytać identyfikatora sesji zegarka."
+        case .pairingBackendUnavailable:
+            return "Logowanie kodem lub QR nie jest jeszcze poprawnie skonfigurowane na serwerze. Użyj iPhone'a albo loginu i hasła."
         }
     }
 }

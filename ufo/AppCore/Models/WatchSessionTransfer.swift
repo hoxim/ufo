@@ -23,6 +23,7 @@ struct AuthSessionSnapshot: Equatable, Sendable {
 
 enum WatchSessionTransferError: LocalizedError, Equatable {
     case unsupported
+    case companionAppNotInstalled
     case phoneUnavailable
     case phoneNotLoggedIn
     case requestRejected
@@ -33,8 +34,10 @@ enum WatchSessionTransferError: LocalizedError, Equatable {
         switch self {
         case .unsupported:
             return "To urządzenie nie obsługuje parowania sesji z Apple Watch."
+        case .companionAppNotInstalled:
+            return "UFO nie jest dostępne jako aplikacja towarzysząca na iPhonie. Sprawdź instalację aplikacji i uruchom ją raz na telefonie."
         case .phoneUnavailable:
-            return "Nie udało się połączyć z iPhonem. Otwórz UFO na telefonie i spróbuj ponownie."
+            return "Nie udało się połączyć z iPhonem. Otwórz UFO na telefonie, pozostaw aplikację na ekranie i spróbuj ponownie."
         case .phoneNotLoggedIn:
             return "Najpierw zaloguj się w UFO na iPhonie."
         case .requestRejected:

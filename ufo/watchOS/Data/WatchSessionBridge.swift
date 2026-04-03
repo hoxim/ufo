@@ -14,22 +14,38 @@ final class WatchSessionBridge: NSObject, WCSessionDelegate {
     private var activationState: WCSessionActivationState = .notActivated
 
     var isPhoneReachable = false
+    var isCompanionAppInstalled = false
 
     override init() {
         super.init()
         session?.delegate = self
         session?.activate()
         refreshState()
+        WatchLog.msg("WatchSessionBridge initialized supported=\(session != nil)")
     }
 
     func requestSessionTransfer() async throws -> WatchSessionTransferPayload {
+        WatchLog.msg("WatchSessionBridge requestSessionTransfer started")
         guard let session else {
+            WatchLog.error("WatchSessionBridge unsupported on this device")
             throw WatchSessionTransferError.unsupported
         }
 
         try await waitForActivation(of: session)
+        refreshState()
+
+        guard session.isCompanionAppInstalled else {
+            WatchLog.error("WatchSessionBridge companion app missing reachable=\(session.isReachable)")
+            throw WatchSessionTransferError.companionAppNotInstalled
+        }
+
+        guard session.isReachable else {
+            WatchLog.error("WatchSessionBridge phone unreachable companionInstalled=\(session.isCompanionAppInstalled)")
+            throw WatchSessionTransferError.phoneUnavailable
+        }
 
         guard pendingContinuation == nil else {
+            WatchLog.error("WatchSessionBridge already has pending continuation")
             throw WatchSessionTransferError.phoneUnavailable
         }
 
@@ -40,6 +56,7 @@ final class WatchSessionBridge: NSObject, WCSessionDelegate {
         )
 
         pendingRequestID = request.requestID
+        WatchLog.msg("WatchSessionBridge sending request id=\(request.requestID.uuidString) watch=\(request.watchName)")
 
         return try await withCheckedThrowingContinuation { continuation in
             self.pendingContinuation = continuation
@@ -48,7 +65,8 @@ final class WatchSessionBridge: NSObject, WCSessionDelegate {
                 // The actual session payload arrives in a follow-up message after phone approval.
             } errorHandler: { error in
                 Task { @MainActor in
-                    self.pendingContinuation?.resume(throwing: error)
+                    WatchLog.error(error)
+                    self.pendingContinuation?.resume(throwing: self.mapTransferError(error))
                     self.clearPendingRequest()
                 }
             }
@@ -59,6 +77,10 @@ final class WatchSessionBridge: NSObject, WCSessionDelegate {
         guard let session else { return }
         activationState = session.activationState
         isPhoneReachable = session.isReachable
+        isCompanionAppInstalled = session.isCompanionAppInstalled
+        WatchLog.msg(
+            "WatchSessionBridge state activation=\(String(describing: activationState.rawValue)) companionInstalled=\(session.isCompanionAppInstalled) reachable=\(session.isReachable)"
+        )
     }
 
     private func clearPendingRequest() {
@@ -77,12 +99,14 @@ final class WatchSessionBridge: NSObject, WCSessionDelegate {
         for _ in 0..<20 {
             if session.activationState == .activated {
                 activationState = .activated
+                WatchLog.msg("WatchSessionBridge activation completed")
                 return
             }
 
             try await Task.sleep(for: .milliseconds(150))
         }
 
+        WatchLog.error("WatchSessionBridge activation timed out")
         throw WatchSessionTransferError.phoneUnavailable
     }
 
@@ -91,12 +115,15 @@ final class WatchSessionBridge: NSObject, WCSessionDelegate {
             return
         }
 
+        WatchLog.msg("WatchSessionBridge received message type=\(type)")
+
         switch type {
         case WatchSessionTransferMessage.approveSession:
             guard
                 let payload = WatchSessionTransferPayload(message: message),
                 payload.requestID == pendingRequestID
             else {
+                WatchLog.error("WatchSessionBridge received invalid approval payload")
                 pendingContinuation?.resume(throwing: WatchSessionTransferError.invalidPayload)
                 clearPendingRequest()
                 return
@@ -106,11 +133,33 @@ final class WatchSessionBridge: NSObject, WCSessionDelegate {
             clearPendingRequest()
 
         case WatchSessionTransferMessage.rejectSession:
-            pendingContinuation?.resume(throwing: WatchSessionTransferError.requestRejected)
+            let explicitMessage = (message[WatchSessionTransferMessage.errorMessageKey] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let explicitMessage, !explicitMessage.isEmpty {
+                pendingContinuation?.resume(throwing: WatchSessionTransferRemoteError(message: explicitMessage))
+            } else {
+                pendingContinuation?.resume(throwing: WatchSessionTransferError.requestRejected)
+            }
             clearPendingRequest()
 
         default:
             break
+        }
+    }
+
+    private func mapTransferError(_ error: Error) -> Error {
+        let nsError = error as NSError
+        guard nsError.domain == WCErrorDomain, let code = WCError.Code(rawValue: nsError.code) else {
+            return error
+        }
+
+        switch code {
+        case .companionAppNotInstalled:
+            return WatchSessionTransferError.companionAppNotInstalled
+        case .notReachable, .deliveryFailed, .transferTimedOut:
+            return WatchSessionTransferError.phoneUnavailable
+        default:
+            return error
         }
     }
 
@@ -123,7 +172,8 @@ final class WatchSessionBridge: NSObject, WCSessionDelegate {
             self.activationState = activationState
             self.refreshState()
             if let error, self.pendingContinuation != nil {
-                self.pendingContinuation?.resume(throwing: error)
+                WatchLog.error(error)
+                self.pendingContinuation?.resume(throwing: self.mapTransferError(error))
                 self.clearPendingRequest()
             }
         }
@@ -139,6 +189,14 @@ final class WatchSessionBridge: NSObject, WCSessionDelegate {
         Task { @MainActor in
             self.handleIncomingMessage(message)
         }
+    }
+}
+
+private struct WatchSessionTransferRemoteError: LocalizedError {
+    let message: String
+
+    var errorDescription: String? {
+        message
     }
 }
 

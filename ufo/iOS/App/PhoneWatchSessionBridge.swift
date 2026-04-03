@@ -29,6 +29,7 @@ final class PhoneWatchSessionBridge: NSObject, WCSessionDelegate {
         session?.delegate = self
         session?.activate()
         refreshState()
+        Log.msg("PhoneWatchSessionBridge initialized supported=\(session != nil)")
     }
 
     var supportsWatchPairing: Bool {
@@ -37,11 +38,13 @@ final class PhoneWatchSessionBridge: NSObject, WCSessionDelegate {
 
     func approvePendingRequest() async {
         guard let pendingApproval, let session else {
+            Log.error("PhoneWatchSessionBridge approve requested without pending request")
             lastErrorMessage = WatchSessionTransferError.missingPendingRequest.localizedDescription
             return
         }
 
         do {
+            Log.msg("PhoneWatchSessionBridge approving request id=\(pendingApproval.request.requestID.uuidString)")
             let snapshot = try await authRepository.currentSessionSnapshot()
             let payload = WatchSessionTransferPayload(
                 requestID: pendingApproval.request.requestID,
@@ -55,15 +58,19 @@ final class PhoneWatchSessionBridge: NSObject, WCSessionDelegate {
             try await sendMessage(payload.message, with: session)
             self.pendingApproval = nil
             self.lastErrorMessage = nil
+            Log.msg("PhoneWatchSessionBridge approved request id=\(pendingApproval.request.requestID.uuidString)")
         } catch let error as WatchSessionTransferError {
+            Log.error(error)
             lastErrorMessage = error.localizedDescription
         } catch {
+            Log.error(error)
             lastErrorMessage = error.localizedDescription
         }
     }
 
     func rejectPendingRequest() async {
         guard let pendingApproval, let session else {
+            Log.error("PhoneWatchSessionBridge reject requested without pending request")
             lastErrorMessage = WatchSessionTransferError.missingPendingRequest.localizedDescription
             return
         }
@@ -75,8 +82,10 @@ final class PhoneWatchSessionBridge: NSObject, WCSessionDelegate {
         ]
 
         do {
+            Log.msg("PhoneWatchSessionBridge rejecting request id=\(pendingApproval.request.requestID.uuidString)")
             try await sendMessage(message, with: session)
         } catch {
+            Log.error(error)
             lastErrorMessage = error.localizedDescription
         }
 
@@ -90,15 +99,22 @@ final class PhoneWatchSessionBridge: NSObject, WCSessionDelegate {
         isWatchPaired = session.isPaired
         isWatchAppInstalled = session.isWatchAppInstalled
         isReachable = session.isReachable
+        Log.msg(
+            "PhoneWatchSessionBridge state activation=\(String(describing: activationState.rawValue)) paired=\(isWatchPaired) watchAppInstalled=\(isWatchAppInstalled) reachable=\(isReachable)"
+        )
     }
 
     private func handleRequestMessage(_ message: [String: Any]) {
         guard let request = WatchSessionTransferRequest(message: message) else {
+            Log.error("PhoneWatchSessionBridge received invalid request payload")
             lastErrorMessage = WatchSessionTransferError.invalidPayload.localizedDescription
             return
         }
 
+        Log.msg("PhoneWatchSessionBridge received request id=\(request.requestID.uuidString) watch=\(request.watchName)")
+
         guard authRepository.isLoggedIn else {
+            Log.error("PhoneWatchSessionBridge request rejected because phone is not logged in")
             lastErrorMessage = WatchSessionTransferError.phoneNotLoggedIn.localizedDescription
             if let session {
                 let message: [String: Any] = [
@@ -120,6 +136,7 @@ final class PhoneWatchSessionBridge: NSObject, WCSessionDelegate {
         try await waitForActivation(of: session)
 
         guard session.isReachable else {
+            Log.error("PhoneWatchSessionBridge sendMessage failed because watch is unreachable")
             throw WatchSessionTransferError.phoneUnavailable
         }
 
@@ -143,12 +160,14 @@ final class PhoneWatchSessionBridge: NSObject, WCSessionDelegate {
         for _ in 0..<20 {
             if session.activationState == .activated {
                 activationState = .activated
+                Log.msg("PhoneWatchSessionBridge activation completed")
                 return
             }
 
             try await Task.sleep(for: .milliseconds(150))
         }
 
+        Log.error("PhoneWatchSessionBridge activation timed out")
         throw WatchSessionTransferError.phoneUnavailable
     }
 
@@ -161,6 +180,7 @@ final class PhoneWatchSessionBridge: NSObject, WCSessionDelegate {
             self.activationState = activationState
             self.refreshState()
             if let error {
+                Log.error(error)
                 self.lastErrorMessage = error.localizedDescription
             }
         }

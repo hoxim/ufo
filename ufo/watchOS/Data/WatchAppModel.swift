@@ -36,14 +36,18 @@ final class WatchAppModel {
     }
 
     func bootstrap() async {
+        WatchLog.msg("Watch bootstrap started")
         state = .checkingSession
         errorMessage = nil
 
         do {
             let session = try await WatchSupabaseConfig.client.auth.session
+            WatchLog.msg("Watch bootstrap restored session for user=\(session.user.id.uuidString)")
             try await service.registerCurrentDevice(authMethod: "restored_session", approvedVia: nil)
             try await loadWorkspace(userId: session.user.id, fallbackEmail: session.user.email)
+            WatchLog.msg("Watch bootstrap finished with ready state")
         } catch {
+            WatchLog.error(error)
             spaces = []
             selectedSpaceID = nil
             currentUserEmail = nil
@@ -58,18 +62,22 @@ final class WatchAppModel {
     }
 
     func connectToPhone() async {
+        WatchLog.msg("Watch connectToPhone started")
         errorMessage = nil
         isAwaitingPhoneApproval = true
 
         do {
             let payload = try await sessionBridge.requestSessionTransfer()
+            WatchLog.msg("Watch connectToPhone received session payload from source=\(payload.sourceDeviceName)")
             let session = try await WatchSupabaseConfig.client.auth.setSession(
                 accessToken: payload.accessToken,
                 refreshToken: payload.refreshToken
             )
             try await service.registerCurrentDevice(authMethod: "session_transfer", approvedVia: "iphone")
             try await loadWorkspace(userId: session.user.id, fallbackEmail: payload.userEmail ?? session.user.email)
+            WatchLog.msg("Watch connectToPhone completed successfully for user=\(session.user.id.uuidString)")
         } catch {
+            WatchLog.error(error)
             state = .signedOut
             errorMessage = error.localizedDescription
         }
@@ -78,6 +86,7 @@ final class WatchAppModel {
     }
 
     func signIn(email: String, password: String) async {
+        WatchLog.msg("Watch signIn started email=\(email)")
         state = .checkingSession
         errorMessage = nil
 
@@ -85,13 +94,16 @@ final class WatchAppModel {
             let session = try await WatchSupabaseConfig.client.auth.signIn(email: email, password: password)
             try await service.registerCurrentDevice(authMethod: "password", approvedVia: nil)
             try await loadWorkspace(userId: session.user.id, fallbackEmail: session.user.email)
+            WatchLog.msg("Watch signIn completed for user=\(session.user.id.uuidString)")
         } catch {
+            WatchLog.error(error)
             state = .signedOut
             errorMessage = "Nie udało się zalogować. Sprawdź dane konta."
         }
     }
 
     func startCodePairing() async {
+        WatchLog.msg("Watch startCodePairing started")
         let pairingAttemptID = UUID()
         activePairingAttemptID = pairingAttemptID
         errorMessage = nil
@@ -103,6 +115,7 @@ final class WatchAppModel {
         do {
             let request = try await service.createPairingRequest()
             guard activePairingAttemptID == pairingAttemptID else { return }
+            WatchLog.msg("Watch pairing request created id=\(request.requestID.uuidString) code=\(request.shortCode)")
             pairingCode = request.shortCode
             pairingCodeExpiresAt = request.expiresAt
             pairingQRCodePayload = DevicePairingQRCodePayload(
@@ -123,6 +136,7 @@ final class WatchAppModel {
                     requestID: request.requestID,
                     requestSecret: request.requestSecret
                 )
+                WatchLog.msg("Watch pairing status requestID=\(request.requestID.uuidString) status=\(status.status)")
 
                 switch status.status {
                 case "approved":
@@ -144,6 +158,7 @@ final class WatchAppModel {
                         userId: session.user.id,
                         fallbackEmail: status.userEmail ?? session.user.email
                     )
+                    WatchLog.msg("Watch pairing completed successfully for user=\(session.user.id.uuidString)")
                     return
 
                 case "expired":
@@ -160,6 +175,7 @@ final class WatchAppModel {
             throw WatchAppModelError.pairingCodeExpired
         } catch {
             guard activePairingAttemptID == pairingAttemptID else { return }
+            WatchLog.error(error)
             activePairingAttemptID = nil
             isAwaitingCodeApproval = false
             state = .signedOut
@@ -169,6 +185,7 @@ final class WatchAppModel {
     }
 
     func cancelCodePairing() {
+        WatchLog.msg("Watch pairing canceled")
         activePairingAttemptID = nil
         isAwaitingCodeApproval = false
         pairingCode = nil
@@ -177,9 +194,11 @@ final class WatchAppModel {
     }
 
     func signOut() async {
+        WatchLog.msg("Watch signOut started")
         do {
             try await WatchSupabaseConfig.client.auth.signOut()
         } catch {
+            WatchLog.error(error)
             errorMessage = error.localizedDescription
         }
 
@@ -222,6 +241,7 @@ final class WatchAppModel {
     }
 
     private func loadWorkspace(userId: UUID, fallbackEmail: String?) async throws {
+        WatchLog.msg("Watch loadWorkspace started user=\(userId.uuidString)")
         state = .loadingWorkspace
 
         let workspace = try await service.fetchWorkspace(userId: userId, fallbackEmail: fallbackEmail)
@@ -237,6 +257,7 @@ final class WatchAppModel {
 
         state = .ready
         errorMessage = nil
+        WatchLog.msg("Watch loadWorkspace finished spaces=\(spaces.count) selectedSpace=\(selectedSpaceID?.uuidString ?? "nil")")
     }
 
     private var storedSpaceID: UUID? {
