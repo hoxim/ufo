@@ -8,7 +8,7 @@ struct WatchAppRootView: View {
         Group {
             switch model.state {
             case .checkingSession, .loadingWorkspace:
-                ProgressView("Ładowanie")
+                ProgressView("watch.root.loading")
             case .signedOut:
                 NavigationStack {
                     WatchSignInView()

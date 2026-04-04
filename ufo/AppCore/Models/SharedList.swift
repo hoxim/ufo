@@ -56,4 +56,13 @@ enum SharedListType: String, CaseIterable, Identifiable {
     case goals = "goals"
 
     var id: String { rawValue }
+
+    var localizedLabel: String {
+        switch self {
+        case .shopping:
+            return String(localized: "lists.type.shopping")
+        case .goals:
+            return String(localized: "lists.type.goals")
+        }
+    }
 }

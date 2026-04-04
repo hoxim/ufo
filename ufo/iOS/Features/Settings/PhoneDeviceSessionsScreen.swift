@@ -17,7 +17,7 @@ struct PhoneDeviceSessionsScreen: View {
             devicesSection
             actionsSection
         }
-        .navigationTitle("Urządzenia")
+        .navigationTitle("settings.devices.title")
         .sheet(isPresented: $isShowingQRScanner) {
             PhonePairingQRScannerSheet { payload in
                 scannedQRCodePayload = payload
@@ -27,12 +27,12 @@ struct PhoneDeviceSessionsScreen: View {
             }
         }
         .confirmationDialog(
-            "Połączyć urządzenie?",
+            "settings.devices.confirmConnectTitle",
             isPresented: scannedPayloadConfirmationBinding,
             titleVisibility: .visible
         ) {
             if let scannedQRCodePayload {
-                Button("Połącz \(scannedQRCodePayload.deviceName)") {
+                Button(String(format: String(localized: "settings.devices.confirmConnectAction"), scannedQRCodePayload.deviceName)) {
                     Task {
                         await deviceSessionStore.approvePairingQRCode(
                             scannedQRCodePayload,
@@ -43,12 +43,18 @@ struct PhoneDeviceSessionsScreen: View {
                 }
             }
 
-            Button("Anuluj", role: .cancel) {
+            Button("settings.devices.confirmCancel", role: .cancel) {
                 scannedQRCodePayload = nil
             }
         } message: {
             if let scannedQRCodePayload {
-                Text("Urządzenie: \(scannedQRCodePayload.deviceName)\nKod: \(scannedQRCodePayload.shortCode)")
+                Text(
+                    String(
+                        format: String(localized: "settings.devices.confirmMessage"),
+                        scannedQRCodePayload.deviceName,
+                        scannedQRCodePayload.shortCode
+                    )
+                )
             }
         }
         .task {
@@ -58,36 +64,36 @@ struct PhoneDeviceSessionsScreen: View {
 
     @ViewBuilder
     private var watchSection: some View {
-        Section("Apple Watch") {
+        Section("settings.devices.section.watch") {
             if !watchSessionBridge.supportsWatchPairing {
-                Text("To urządzenie nie obsługuje parowania z Apple Watch.")
+                Text("settings.devices.watch.unsupported")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else if !watchSessionBridge.isWatchPaired {
-                Text("Sparuj Apple Watch z tym iPhonem, aby przekazywać sesję bez wpisywania hasła na zegarku.")
+                Text("settings.devices.watch.notPaired")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else if let pendingApproval = watchSessionBridge.pendingApproval {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Oczekująca prośba")
+                    Text("settings.devices.watch.pendingTitle")
                         .font(.headline)
-                    Text("Zegarek „\(pendingApproval.request.watchName)” prosi o dostęp do Twojej aktywnej sesji.")
+                    Text(String(format: String(localized: "settings.devices.watch.pendingMessage"), pendingApproval.request.watchName))
                         .font(.footnote)
-                    Text("Zatwierdź tylko, jeśli to Twój zegarek i masz otwarte UFO na jego ekranie logowania.")
+                    Text("settings.devices.watch.pendingHint")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
-                Button("Zatwierdź połączenie") {
+                Button("settings.devices.watch.approve") {
                     Task { await watchSessionBridge.approvePendingRequest() }
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button("Odrzuć", role: .destructive) {
+                Button("settings.devices.watch.reject", role: .destructive) {
                     Task { await watchSessionBridge.rejectPendingRequest() }
                 }
             } else {
-                Text("Na zegarku wybierz „Połącz z iPhonem”, a tutaj pojawi się prośba do zatwierdzenia.")
+                Text("settings.devices.watch.idle")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -101,34 +107,34 @@ struct PhoneDeviceSessionsScreen: View {
     }
 
     private var pairingCodeSection: some View {
-        Section("Połącz urządzenie kodem") {
+        Section("settings.devices.section.pairCode") {
             Button {
                 isShowingQRScanner = true
             } label: {
-                Label("Zeskanuj QR z zegarka", systemImage: "qrcode.viewfinder")
+                Label("settings.devices.action.scanQR", systemImage: "qrcode.viewfinder")
             }
 
-            TextField("Kod z zegarka lub innego urządzenia", text: pairingCodeBinding)
+            TextField("settings.devices.field.code", text: pairingCodeBinding)
                 .textInputAutocapitalization(.never)
                 .keyboardType(.numberPad)
 
-            Button("Połącz urządzenie") {
+            Button("settings.devices.action.connect") {
                 Task {
                     await deviceSessionStore.approvePairingCode(deviceName: CurrentDeviceContext.make().deviceName)
                 }
             }
             .disabled(deviceSessionStore.pairingCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-            Text("Użyj tego, gdy chcesz zalogować Apple Watch albo inne ograniczone urządzenie bez pełnego formularza logowania.")
+            Text("settings.devices.pairingDescription")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
     }
 
     private var devicesSection: some View {
-        Section("Zalogowane urządzenia") {
+        Section("settings.devices.section.loggedIn") {
             if deviceSessionStore.devices.isEmpty {
-                Text("Brak aktywnych urządzeń do pokazania.")
+                Text("settings.devices.empty")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {
@@ -139,7 +145,7 @@ struct PhoneDeviceSessionsScreen: View {
                                 .font(.headline)
                             Spacer()
                             if device.sessionID == deviceSessionStore.currentSessionID {
-                                Text("To urządzenie")
+                                Text("settings.devices.current")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -149,16 +155,16 @@ struct PhoneDeviceSessionsScreen: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text("Ostatnia aktywność: \(device.lastSeenAt.formatted(date: .abbreviated, time: .shortened))")
+                        Text(String(format: String(localized: "settings.devices.lastActivity"), device.lastSeenAt.formatted(date: .abbreviated, time: .shortened)))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
 
                         if let revokedAt = device.revokedAt {
-                            Text("Zablokowane: \(revokedAt.formatted(date: .abbreviated, time: .shortened))")
+                            Text(String(format: String(localized: "settings.devices.revoked"), revokedAt.formatted(date: .abbreviated, time: .shortened)))
                                 .font(.footnote)
                                 .foregroundStyle(.red)
                         } else if device.sessionID != deviceSessionStore.currentSessionID {
-                            Button("Wyloguj to urządzenie", role: .destructive) {
+                            Button("settings.devices.action.revoke", role: .destructive) {
                                 Task {
                                     await deviceSessionStore.revokeDevice(device)
                                 }
@@ -173,23 +179,23 @@ struct PhoneDeviceSessionsScreen: View {
     }
 
     private var actionsSection: some View {
-        Section("Sesje") {
-            Button("Odśwież listę") {
+        Section("settings.devices.section.sessions") {
+            Button("settings.devices.action.refresh") {
                 Task { await deviceSessionStore.refreshDevices() }
             }
 
-            Button("Wyloguj z innych urządzeń", role: .destructive) {
+            Button("settings.devices.action.signOutOthers", role: .destructive) {
                 Task { await deviceSessionStore.signOutOtherDevices() }
             }
 
-            Button("Wyloguj wszędzie", role: .destructive) {
+            Button("settings.devices.action.signOutAll", role: .destructive) {
                 Task {
                     await deviceSessionStore.markAllDevicesRevoked()
                     await authStore.signOutEverywhere()
                 }
             }
 
-            Text("Wylogowanie konkretnego urządzenia odetnie je przy najbliższym odświeżeniu sesji w aplikacji. Wylogowanie z innych urządzeń używa także mechanizmu sesji Supabase.")
+            Text("settings.devices.footer")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 

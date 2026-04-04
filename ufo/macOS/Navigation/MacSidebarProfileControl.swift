@@ -19,7 +19,7 @@ struct MacSidebarProfileControl: View {
             HStack(spacing: 8) {
                 AvatarCircle(user: user, size: 18)
 
-                Text(user?.effectiveDisplayName ?? user?.email ?? "Profile")
+                Text(user?.effectiveDisplayName ?? user?.email ?? String(localized: "navigation.action.profile"))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
@@ -42,7 +42,7 @@ struct MacSidebarProfileControl: View {
                     AvatarCircle(user: user, size: 28)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(user?.effectiveDisplayName ?? user?.email ?? "Profile")
+                        Text(user?.effectiveDisplayName ?? user?.email ?? String(localized: "navigation.action.profile"))
                             .font(.subheadline.weight(.semibold))
 
                         if let selectedSpaceName, !selectedSpaceName.isEmpty {
@@ -56,21 +56,21 @@ struct MacSidebarProfileControl: View {
 
                 Divider()
 
-                menuButton("Profile", systemImage: "person.crop.circle") {
+                menuButton(String(localized: "navigation.action.profile"), systemImage: "person.crop.circle") {
                     onOpenProfile()
                 }
 
-                menuButton("Settings", systemImage: "gearshape") {
+                menuButton(String(localized: "navigation.action.settings"), systemImage: "gearshape") {
                     onOpenSettings()
                 }
 
-                menuButton("Manage spaces", systemImage: "person.3") {
+                menuButton(String(localized: "navigation.action.manageSpaces"), systemImage: "person.3") {
                     onManageSpaces()
                 }
 
                 Divider()
 
-                menuButton("Sign out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                menuButton(String(localized: "navigation.action.signOut"), systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
                     onSignOut()
                 }
             }

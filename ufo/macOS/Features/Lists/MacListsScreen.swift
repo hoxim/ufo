@@ -72,7 +72,7 @@ struct MacListsScreen: View {
             Task { await listStore?.refreshRemote() }
         }
         .safeAreaInset(edge: .bottom) {
-            FeatureBottomSearchBar(text: $searchText, prompt: "Search lists")
+            FeatureBottomSearchBar(text: $searchText, prompt: "lists.search.prompt")
         }
     }
 

@@ -40,7 +40,7 @@ final class BudgetStore {
         } catch {
             entries = []
             goals = []
-            lastErrorMessage = "Nie udało się wczytać budżetu lokalnie: \(error)"
+            lastErrorMessage = localizedErrorMessage("budget.error.loadLocal", error: error)
         }
     }
 
@@ -61,7 +61,7 @@ final class BudgetStore {
             lastErrorMessage = nil
         } catch {
             loadLocal(spaceId: spaceId)
-            lastErrorMessage = "Nie udało się odświeżyć budżetu: \(error)"
+            lastErrorMessage = localizedErrorMessage("budget.error.refresh", error: error)
         }
     }
 
@@ -87,7 +87,7 @@ final class BudgetStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się dodać wpisu budżetu: \(error)"
+            lastErrorMessage = localizedErrorMessage("budget.error.addEntry", error: error)
         }
     }
 
@@ -107,7 +107,7 @@ final class BudgetStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się dodać celu budżetowego: \(error)"
+            lastErrorMessage = localizedErrorMessage("budget.error.addGoal", error: error)
         }
     }
 
@@ -120,7 +120,7 @@ final class BudgetStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się zaktualizować celu: \(error)"
+            lastErrorMessage = localizedErrorMessage("budget.error.updateGoal", error: error)
         }
     }
 
@@ -133,7 +133,7 @@ final class BudgetStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się usunąć wpisu budżetu: \(error)"
+            lastErrorMessage = localizedErrorMessage("budget.error.deleteEntry", error: error)
         }
     }
 
@@ -157,7 +157,7 @@ final class BudgetStore {
             notifyHomeWidgetsDataDidChange()
             lastErrorMessage = nil
         } catch {
-            lastErrorMessage = "Nie udało się zsynchronizować budżetu: \(error)"
+            lastErrorMessage = localizedErrorMessage("budget.error.sync", error: error)
         }
     }
 

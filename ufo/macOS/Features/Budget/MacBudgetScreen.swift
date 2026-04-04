@@ -19,7 +19,7 @@ struct MacBudgetScreen: View {
     @State private var didAutoPresentAddEntry = false
     @State private var selectedKindFilter: MacBudgetKindFilter = .all
     @State private var selectedRangeFilter: MacBudgetRangeFilter = .month
-    @State private var selectedCategoryFilter = "All"
+    @State private var selectedCategoryFilter = String(localized: "budget.filter.option.all")
     @State private var searchText = ""
 
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
@@ -36,7 +36,7 @@ struct MacBudgetScreen: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Menu {
-                        Section("Period") {
+                        Section("budget.filter.section.period") {
                             ForEach(MacBudgetRangeFilter.allCases, id: \.self) { filter in
                                 Button {
                                     selectedRangeFilter = filter
@@ -46,7 +46,7 @@ struct MacBudgetScreen: View {
                             }
                         }
 
-                        Section("Type") {
+                        Section("budget.filter.section.type") {
                             ForEach(MacBudgetKindFilter.allCases, id: \.self) { filter in
                                 Button {
                                     selectedKindFilter = filter
@@ -56,11 +56,11 @@ struct MacBudgetScreen: View {
                             }
                         }
 
-                        Section("Category") {
+                        Section("budget.filter.section.category") {
                             Button {
-                                selectedCategoryFilter = "All"
+                                selectedCategoryFilter = String(localized: "budget.filter.option.all")
                             } label: {
-                                filterMenuLabel(title: "All", isSelected: selectedCategoryFilter == "All")
+                                filterMenuLabel(title: String(localized: "budget.filter.option.all"), isSelected: selectedCategoryFilter == String(localized: "budget.filter.option.all"))
                             }
 
                             ForEach(availableCategories, id: \.self) { category in
@@ -75,7 +75,7 @@ struct MacBudgetScreen: View {
                         if hasActiveFilters {
                             Divider()
 
-                            Button("Reset Filters") {
+                            Button("budget.filter.action.reset") {
                                 resetFilters()
                             }
                         }
@@ -154,7 +154,7 @@ struct MacBudgetScreen: View {
             Task { await budgetStore?.refreshRemote() }
         }
         .safeAreaInset(edge: .bottom) {
-            FeatureBottomSearchBar(text: $searchText, prompt: "Search budget")
+            FeatureBottomSearchBar(text: $searchText, prompt: "budget.search.prompt")
         }
     }
 
@@ -233,7 +233,7 @@ struct MacBudgetScreen: View {
         if selectedKindFilter != .all {
             values = values.filter { $0.kind == selectedKindFilter.rawValue }
         }
-        if selectedCategoryFilter != "All" {
+        if selectedCategoryFilter != String(localized: "budget.filter.option.all") {
             values = values.filter { $0.category == selectedCategoryFilter }
         }
         let query = normalizedSearchQuery
@@ -310,7 +310,7 @@ struct MacBudgetScreen: View {
     }
 
     private var hasActiveFilters: Bool {
-        selectedKindFilter != .all || selectedRangeFilter != .month || selectedCategoryFilter != "All"
+        selectedKindFilter != .all || selectedRangeFilter != .month || selectedCategoryFilter != String(localized: "budget.filter.option.all")
     }
 
     private var filteredGoals: [BudgetGoal] {
@@ -327,7 +327,7 @@ struct MacBudgetScreen: View {
     private func resetFilters() {
         selectedKindFilter = .all
         selectedRangeFilter = .month
-        selectedCategoryFilter = "All"
+        selectedCategoryFilter = String(localized: "budget.filter.option.all")
     }
 
     @ViewBuilder

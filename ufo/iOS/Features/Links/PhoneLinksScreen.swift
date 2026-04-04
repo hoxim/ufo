@@ -123,7 +123,7 @@ private struct LinkDetailView: View {
                 LabeledContent("Child", value: link.childId.uuidString)
                 LabeledContent("Updated", value: link.updatedAt.formatted(date: .abbreviated, time: .shortened))
             }
-            .navigationTitle("Link")
+            .navigationTitle("links.detail.title")
             .modalInlineTitleDisplayMode()
             .toolbar {
                 ModalCloseToolbarItem { dismiss() }

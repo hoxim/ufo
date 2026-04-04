@@ -30,7 +30,7 @@ struct PadSpaceCard: View {
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Label("Info", systemImage: "info.circle")
+                        Label("spaces.card.info", systemImage: "info.circle")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
 
@@ -41,7 +41,7 @@ struct PadSpaceCard: View {
                                 tint: .secondary
                             )
                             compactMetaPill(
-                                title: role == "admin" ? "Właściciel" : "Gość",
+                                title: role == "admin" ? String(localized: "spaces.role.owner") : String(localized: "spaces.role.guest"),
                                 icon: role == "admin" ? "crown.fill" : "person.fill",
                                 tint: role == "admin" ? .blue : .secondary
                             )
@@ -72,7 +72,7 @@ struct PadSpaceCard: View {
                         .disabled(!space.allowsInvitations)
 
                         Button(action: onEdit) {
-                            Label("Edytuj grupę", systemImage: "pencil")
+                            Label("spaces.action.edit", systemImage: "pencil")
                         }
                     }
 

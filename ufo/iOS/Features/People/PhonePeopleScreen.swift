@@ -37,16 +37,7 @@ struct PhonePeopleScreen: View {
     }
 
     private var peopleNavigationTitle: String {
-        if displayMode == .crew {
-            if let selectedSpace {
-                return "Crew in \(selectedSpace.name)"
-            }
-            return "Crew"
-        }
-        if let selectedSpace {
-            return "People in \(selectedSpace.name)"
-        }
-        return "People"
+        localizedPeopleNavigationTitle(isCrew: displayMode == .crew, spaceName: selectedSpace?.name)
     }
 
     var body: some View {
@@ -60,7 +51,7 @@ struct PhonePeopleScreen: View {
             }
 
             if displayMode == .hub {
-                Section("Tools") {
+                Section("people.section.tools") {
                     NavigationLink {
                         PhoneMessagesScreen()
                     } label: {
@@ -70,13 +61,13 @@ struct PhonePeopleScreen: View {
                     NavigationLink {
                         PhoneLocationsScreen()
                     } label: {
-                        Label("Places", systemImage: "map")
+                        Label("people.hub.action.locations", systemImage: "map")
                     }
 
                     NavigationLink {
                         PhoneRolesScreen()
                     } label: {
-                        Label("Roles", systemImage: "lock.shield")
+                        Label("navigation.item.roles", systemImage: "lock.shield")
                     }
                 }
             }
@@ -85,9 +76,9 @@ struct PhonePeopleScreen: View {
                 if let selectedSpace {
                     if sortedMembers.isEmpty {
                         ContentUnavailableView(
-                            "Brak członków",
+                            "people.empty.members.title",
                             systemImage: "person.2.slash",
-                            description: Text("Nie udało się jeszcze wczytać osób dla grupy \(selectedSpace.name).")
+                            description: Text(localizedPeopleEmptyMembersDescription(spaceName: selectedSpace.name))
                         )
                         .frame(maxWidth: .infinity, minHeight: 180)
                     } else {
@@ -97,9 +88,9 @@ struct PhonePeopleScreen: View {
                     }
                 } else {
                     ContentUnavailableView(
-                        "Wybierz grupę",
+                        "spaces.selector.choose",
                         systemImage: "person.3.sequence",
-                        description: Text("Najpierw wybierz grupę, żeby zobaczyć osoby i przypisać im role.")
+                        description: Text("people.empty.noSpace")
                     )
                     .frame(maxWidth: .infinity, minHeight: 180)
                 }
@@ -117,10 +108,7 @@ struct PhonePeopleScreen: View {
     }
 
     private var memberSectionTitle: String {
-        if let selectedSpace {
-            return displayMode == .crew ? "Crew in \(selectedSpace.name)" : "People in \(selectedSpace.name)"
-        }
-        return displayMode == .crew ? "Crew" : "Członkowie"
+        localizedPeopleMemberSectionTitle(isCrew: displayMode == .crew, spaceName: selectedSpace?.name)
     }
 
     @ViewBuilder
@@ -143,7 +131,7 @@ struct PhonePeopleScreen: View {
                         .font(.body.weight(.medium))
 
                     if authStore.currentUser?.id == member.id {
-                        Text("Ty")
+                        Text("people.member.you")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 6)
@@ -173,7 +161,7 @@ struct PhonePeopleScreen: View {
 
     @ViewBuilder
     private func roleAssignmentActions(for member: SpaceMemberRecipient, in selectedSpace: Space) -> some View {
-        Section("Role systemowe") {
+        Section("roles.section.system") {
             ForEach(SpaceBuiltInRole.allCases) { role in
                 let isProtected = isProtectedSelfRoleChange(for: member, newRoleKey: role.rawValue)
 
@@ -192,7 +180,7 @@ struct PhonePeopleScreen: View {
         }
 
         if !customRoles.isEmpty {
-            Section("Role własne") {
+            Section("roles.section.custom") {
                 ForEach(customRoles) { role in
                     let isProtected = isProtectedSelfRoleChange(for: member, newRoleKey: role.roleKey)
 
@@ -212,7 +200,7 @@ struct PhonePeopleScreen: View {
 
         if authStore.currentUser?.id == member.id {
             Section {
-                Text("Nie możesz obniżyć własnej roli, jeśli stracisz możliwość zarządzania grupą albo rolami.")
+                Text(localizedRoleSelfProtectionWarning())
             }
         }
     }
@@ -277,7 +265,7 @@ struct PhonePeopleScreen: View {
         guard member.role != roleKey else { return }
 
         if isProtectedSelfRoleChange(for: member, newRoleKey: roleKey) {
-            lastErrorMessage = "Nie możesz obniżyć własnej roli tak, aby stracić zarządzanie grupą albo rolami."
+            lastErrorMessage = String(localized: "roles.warning.selfDowngradeDenied")
             return
         }
 

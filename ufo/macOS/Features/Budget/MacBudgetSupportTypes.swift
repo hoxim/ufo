@@ -10,9 +10,9 @@ enum MacBudgetKindFilter: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .all: return "All"
-        case .income: return "Income"
-        case .expense: return "Expense"
+        case .all: return String(localized: "budget.filter.option.all")
+        case .income: return String(localized: "budget.shared.kind.income")
+        case .expense: return String(localized: "budget.shared.kind.expense")
         }
     }
 }
@@ -25,10 +25,10 @@ enum MacBudgetRangeFilter: CaseIterable {
 
     var title: String {
         switch self {
-        case .month: return "Month"
+        case .month: return String(localized: "budget.filter.range.month")
         case .threeMonths: return "3M"
-        case .year: return "Year"
-        case .all: return "All"
+        case .year: return String(localized: "budget.filter.range.year")
+        case .all: return String(localized: "budget.filter.option.all")
         }
     }
 
@@ -54,9 +54,9 @@ enum MacBudgetRecurringInterval: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .weekly: return "Weekly"
-        case .monthly: return "Monthly"
-        case .yearly: return "Yearly"
+        case .weekly: return String(localized: "budget.recurring.weekly")
+        case .monthly: return String(localized: "budget.recurring.monthly")
+        case .yearly: return String(localized: "budget.recurring.yearly")
         }
     }
 }
@@ -76,17 +76,17 @@ enum MacBudgetPresetCategory: CaseIterable {
 
     var title: String {
         switch self {
-        case .home: return "Home"
-        case .food: return "Food"
-        case .subscriptions: return "Subscriptions"
-        case .transport: return "Transport"
-        case .health: return "Health"
-        case .education: return "Education"
-        case .kids: return "Kids"
-        case .entertainment: return "Entertainment"
-        case .travel: return "Travel"
-        case .pets: return "Pets"
-        case .other: return "Other"
+        case .home: return String(localized: "budget.category.home")
+        case .food: return String(localized: "budget.category.food")
+        case .subscriptions: return String(localized: "budget.view.section.subscriptions")
+        case .transport: return String(localized: "budget.category.transport")
+        case .health: return String(localized: "budget.category.health")
+        case .education: return String(localized: "budget.category.education")
+        case .kids: return String(localized: "budget.category.kids")
+        case .entertainment: return String(localized: "budget.category.entertainment")
+        case .travel: return String(localized: "budget.category.travel")
+        case .pets: return String(localized: "budget.category.pets")
+        case .other: return String(localized: "budget.filter.option.other")
         }
     }
 }
@@ -100,11 +100,11 @@ enum MacBudgetPresetIncomeCategory: CaseIterable {
 
     var title: String {
         switch self {
-        case .salary: return "Salary"
-        case .freelance: return "Freelance"
-        case .refund: return "Refund"
-        case .gift: return "Gift"
-        case .other: return "Other"
+        case .salary: return String(localized: "budget.income.salary")
+        case .freelance: return String(localized: "budget.income.freelance")
+        case .refund: return String(localized: "budget.income.refund")
+        case .gift: return String(localized: "budget.income.gift")
+        case .other: return String(localized: "budget.filter.option.other")
         }
     }
 }
@@ -128,18 +128,18 @@ struct MacBudgetCategorySummary: Identifiable {
 
     var subtitle: String {
         if limit != nil {
-            return "Spent vs limit"
+            return String(localized: "budget.summary.spentVsLimit")
         }
-        return "No limit set yet"
+        return String(localized: "budget.summary.noLimitSet")
     }
 
     var remainingText: String {
-        guard let limit else { return "No limit" }
+        guard let limit else { return String(localized: "budget.summary.noLimit") }
         let remaining = limit - spent
         if remaining >= 0 {
-            return "\(remaining.formatted(.currency(code: "PLN"))) left"
+            return String(format: String(localized: "budget.summary.left"), remaining.formatted(.currency(code: "PLN")))
         }
-        return "\((-remaining).formatted(.currency(code: "PLN"))) over"
+        return String(format: String(localized: "budget.summary.over"), (-remaining).formatted(.currency(code: "PLN")))
     }
 }
 

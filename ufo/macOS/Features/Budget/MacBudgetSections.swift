@@ -9,7 +9,7 @@ struct MacBudgetOverviewSection: View {
     let balance: Double
 
     var body: some View {
-        Section("Overview") {
+        Section("budget.view.section.overview") {
             LabeledContent("budget.view.summary.income", value: income.formatted(.currency(code: "PLN")))
             LabeledContent("budget.view.summary.expense", value: expense.formatted(.currency(code: "PLN")))
             LabeledContent("budget.view.summary.balance", value: balance.formatted(.currency(code: "PLN")))
@@ -21,7 +21,7 @@ struct MacBudgetCashFlowSection: View {
     let entries: [BudgetEntry]
 
     var body: some View {
-        Section("Cash Flow") {
+        Section("budget.view.section.cashFlow") {
             Chart {
                 ForEach(entries) { item in
                     LineMark(
@@ -54,15 +54,15 @@ struct MacBudgetCategoryBudgetsSection: View {
             .onDelete(perform: onDelete)
         } header: {
             HStack {
-                Text("Category Budgets")
+                Text("budget.view.section.categoryBudgets")
                 Spacer()
                 Button(action: onAddLimit) {
-                    Label("Add Limit", systemImage: "plus")
+                    Label("budget.view.action.addLimit", systemImage: "plus")
                 }
                 .buttonStyle(.borderless)
             }
         } footer: {
-            Text("Set monthly limits for categories like Home, Food or Subscriptions, and compare them with the current spend.")
+            Text("budget.view.description.categoryBudgets")
         }
     }
 }
@@ -90,7 +90,7 @@ private struct MacBudgetCategoryBudgetRow: View {
                 ProgressView(value: summary.progressValue)
                     .tint(summary.isOverLimit ? .red : .accentColor)
                 HStack {
-                    Text("Limit \(limit.formatted(.currency(code: "PLN")))")
+                    Text(String(format: String(localized: "budget.view.label.limit"), limit.formatted(.currency(code: "PLN"))))
                     Spacer()
                     Text(summary.remainingText)
                 }
@@ -115,15 +115,15 @@ struct MacBudgetCustomCategoriesSection: View {
             .onDelete(perform: onDelete)
         } header: {
             HStack {
-                Text("Custom Categories")
+                Text("budget.view.section.customCategories")
                 Spacer()
                 Button(action: onAddCategory) {
-                    Label("Add Category", systemImage: "plus")
+                    Label("budget.view.action.addCategory", systemImage: "plus")
                 }
                 .buttonStyle(.borderless)
             }
         } footer: {
-            Text("Custom categories are available in the transaction form and can also have their own monthly limits.")
+            Text("budget.view.description.customCategories")
         }
     }
 }
@@ -132,7 +132,7 @@ struct MacBudgetSubscriptionsSection: View {
     let entries: [BudgetEntry]
 
     var body: some View {
-        Section("Subscriptions") {
+        Section("budget.view.section.subscriptions") {
             ForEach(entries) { entry in
                 MacBudgetSubscriptionRow(entry: entry)
             }
@@ -148,7 +148,7 @@ private struct MacBudgetSubscriptionRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.title)
                     .font(.headline)
-                Text("\(entry.category) · \(entry.recurringInterval ?? "Recurring")")
+                Text("\(entry.category) · \(entry.recurringInterval ?? String(localized: "budget.view.subscription.recurring"))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -170,10 +170,10 @@ struct MacBudgetGoalsSection: View {
             }
         } header: {
             HStack {
-                Text("Goals")
+                Text("budget.view.section.goals")
                 Spacer()
                 Button(action: onAddGoal) {
-                    Label("Add Goal", systemImage: "plus")
+                    Label("budget.view.action.addGoal", systemImage: "plus")
                 }
                 .buttonStyle(.borderless)
             }
@@ -201,7 +201,7 @@ struct MacBudgetTransactionsSection: View {
     let onDelete: (IndexSet) -> Void
 
     var body: some View {
-        Section("Transactions") {
+        Section("budget.view.section.transactions") {
             ForEach(entries) { entry in
                 MacBudgetTransactionRow(entry: entry)
             }

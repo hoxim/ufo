@@ -12,19 +12,19 @@ struct PadDeviceSessionsScreen: View {
             devicesSection
             actionsSection
         }
-        .navigationTitle("Urządzenia")
+        .navigationTitle("settings.devices.title")
         .task {
             await deviceSessionStore.refreshDevices()
         }
     }
 
     private var pairingCodeSection: some View {
-        Section("Połącz urządzenie kodem") {
-            TextField("Kod z zegarka lub innego urządzenia", text: pairingCodeBinding)
+        Section("settings.devices.section.pairCode") {
+            TextField("settings.devices.field.code", text: pairingCodeBinding)
                 .textInputAutocapitalization(.never)
                 .keyboardType(.numberPad)
 
-            Button("Połącz urządzenie") {
+            Button("settings.devices.action.connect") {
                 Task {
                     await deviceSessionStore.approvePairingCode(deviceName: CurrentDeviceContext.make().deviceName)
                 }
@@ -34,9 +34,9 @@ struct PadDeviceSessionsScreen: View {
     }
 
     private var devicesSection: some View {
-        Section("Zalogowane urządzenia") {
+        Section("settings.devices.section.loggedIn") {
             if deviceSessionStore.devices.isEmpty {
-                Text("Brak aktywnych urządzeń do pokazania.")
+                Text("settings.devices.empty")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {
@@ -47,7 +47,7 @@ struct PadDeviceSessionsScreen: View {
                                 .font(.headline)
                             Spacer()
                             if device.sessionID == deviceSessionStore.currentSessionID {
-                                Text("To urządzenie")
+                                Text("settings.devices.current")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -57,16 +57,16 @@ struct PadDeviceSessionsScreen: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text("Ostatnia aktywność: \(device.lastSeenAt.formatted(date: .abbreviated, time: .shortened))")
+                        Text(String(format: String(localized: "settings.devices.lastActivity"), device.lastSeenAt.formatted(date: .abbreviated, time: .shortened)))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
 
                         if let revokedAt = device.revokedAt {
-                            Text("Zablokowane: \(revokedAt.formatted(date: .abbreviated, time: .shortened))")
+                            Text(String(format: String(localized: "settings.devices.revoked"), revokedAt.formatted(date: .abbreviated, time: .shortened)))
                                 .font(.footnote)
                                 .foregroundStyle(.red)
                         } else if device.sessionID != deviceSessionStore.currentSessionID {
-                            Button("Wyloguj to urządzenie", role: .destructive) {
+                            Button("settings.devices.action.revoke", role: .destructive) {
                                 Task { await deviceSessionStore.revokeDevice(device) }
                             }
                             .buttonStyle(.borderless)
@@ -79,16 +79,16 @@ struct PadDeviceSessionsScreen: View {
     }
 
     private var actionsSection: some View {
-        Section("Sesje") {
-            Button("Odśwież listę") {
+        Section("settings.devices.section.sessions") {
+            Button("settings.devices.action.refresh") {
                 Task { await deviceSessionStore.refreshDevices() }
             }
 
-            Button("Wyloguj z innych urządzeń", role: .destructive) {
+            Button("settings.devices.action.signOutOthers", role: .destructive) {
                 Task { await deviceSessionStore.signOutOtherDevices() }
             }
 
-            Button("Wyloguj wszędzie", role: .destructive) {
+            Button("settings.devices.action.signOutAll", role: .destructive) {
                 Task {
                     await deviceSessionStore.markAllDevicesRevoked()
                     await authStore.signOutEverywhere()

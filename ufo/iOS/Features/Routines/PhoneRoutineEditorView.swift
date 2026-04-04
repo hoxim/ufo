@@ -27,34 +27,34 @@ struct PhoneRoutineEditorView: View {
     var body: some View {
         AdaptiveFormContent {
             Form {
-                Section("Rutyna") {
-                    TextField("Nazwa rutyny", text: $title)
+                Section("routines.editor.section.routine") {
+                    TextField("routines.editor.field.title", text: $title)
                         .prominentFormTextInput()
                         .focused($isTitleFocused)
 
-                    Picker("Kategoria", selection: $category) {
+                    Picker("routines.editor.field.category", selection: $category) {
                         ForEach(RoutineCategory.allCases) { category in
                             Label(category.label, systemImage: category.iconName).tag(category)
                         }
                     }
 
-                    TextField("Dla kogo", text: $personName)
+                    TextField("routines.editor.field.person", text: $personName)
                         .prominentFormTextInput()
-                    TextField("Notatka", text: $notes, axis: .vertical)
+                    TextField("routines.editor.field.note", text: $notes, axis: .vertical)
                         .lineLimit(3...5)
                         .prominentFormTextInput()
                 }
 
-                Section("Czas") {
-                    DatePicker("Godzina startu", selection: $startTime, displayedComponents: .hourAndMinute)
-                    Stepper("Czas trwania: \(durationMinutes) min", value: $durationMinutes, in: 15...240, step: 15)
+                Section("routines.editor.section.time") {
+                    DatePicker("routines.editor.field.startTime", selection: $startTime, displayedComponents: .hourAndMinute)
+                    Stepper(String(format: String(localized: "routines.editor.field.durationValue"), durationMinutes), value: $durationMinutes, in: 15...240, step: 15)
                 }
 
-                Section("Dni tygodnia") {
+                Section("routines.editor.section.weekdays") {
                     weekdayPicker
                 }
             }
-            .navigationTitle("Nowa rutyna")
+            .navigationTitle("routines.editor.title.new")
             .modalInlineTitleDisplayMode()
             .toolbar {
                 ModalCloseToolbarItem {

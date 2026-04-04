@@ -13,7 +13,10 @@ enum WatchLog {
     }
 
     static func error(_ error: Error) {
-        logger.error("\(error.localizedDescription) | \(String(describing: error))")
+        let nsError = error as NSError
+        logger.error(
+            "localizedDescription=\(error.localizedDescription) | domain=\(nsError.domain) | code=\(nsError.code)"
+        )
     }
 
     static func error(_ message: String) {

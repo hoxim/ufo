@@ -127,9 +127,9 @@ enum PadBudgetWidgetRange: CaseIterable {
 
     var title: String {
         switch self {
-        case .today: "Today"
-        case .week: "Week"
-        case .month: "Month"
+        case .today: String(localized: "home.range.today")
+        case .week: String(localized: "home.range.week")
+        case .month: String(localized: "home.range.month")
         }
     }
 

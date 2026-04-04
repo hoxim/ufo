@@ -30,14 +30,14 @@ struct MacRoutineWeekView: View {
                     }
 
                     if dayRoutines.isEmpty {
-                        Text("Nic zaplanowanego")
+                        Text("routines.period.empty")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     } else {
                         HStack(spacing: 10) {
-                            weekPill(title: "Plan", value: "\(dayRoutines.count)", tint: .blue)
-                            weekPill(title: "Ukończone", value: "\(completedRoutineIds.count)", tint: .green)
-                            weekPill(title: "Wpisy", value: "\(dayLogs.count)", tint: .orange)
+                            weekPill(title: String(localized: "routines.summary.scheduled"), value: "\(dayRoutines.count)", tint: .blue)
+                            weekPill(title: String(localized: "routines.summary.completed"), value: "\(completedRoutineIds.count)", tint: .green)
+                            weekPill(title: String(localized: "routines.summary.logs"), value: "\(dayLogs.count)", tint: .orange)
                         }
 
                         ForEach(dayRoutines.prefix(3)) { routine in
@@ -65,7 +65,7 @@ struct MacRoutineWeekView: View {
                         }
 
                         if dayRoutines.count > 3 {
-                            Text("+ \(dayRoutines.count - 3) więcej")
+                            Text(String(format: String(localized: "routines.period.more"), dayRoutines.count - 3))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -112,9 +112,9 @@ struct MacRoutineMonthView: View {
 
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
-                monthLegend(title: "Zaplanowane", tint: .blue)
-                monthLegend(title: "Wykonane", tint: .green)
-                monthLegend(title: "Słabiej", tint: .orange)
+                monthLegend(title: String(localized: "routines.summary.scheduled"), tint: .blue)
+                monthLegend(title: String(localized: "routines.summary.done"), tint: .green)
+                monthLegend(title: String(localized: "routines.summary.partial"), tint: .orange)
             }
 
             LazyVGrid(columns: columns, spacing: 8) {

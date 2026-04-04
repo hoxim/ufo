@@ -154,7 +154,7 @@ struct MacSpacesScreen: View {
             Button {
                 spaceToEdit = space
             } label: {
-                Label("Edytuj grupę", systemImage: "pencil")
+                Label("spaces.action.edit", systemImage: "pencil")
             }
 
             Button(role: .destructive) {

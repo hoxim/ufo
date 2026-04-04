@@ -46,12 +46,12 @@ struct MacLocationsScreen: View {
                 }
 
                 if let nearbyPlace = nearbyCheckInPlace {
-                    Section("Nearby") {
+                    Section("locations.section.nearby") {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("You are close to \(nearbyPlace.name)")
+                            Text(String(format: String(localized: "locations.nearby.title"), nearbyPlace.name))
                                 .font(.headline)
 
-                            Text("The app detected that you are within the saved radius of this place. You can save a check-in right away.")
+                            Text("locations.nearby.description")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
@@ -62,7 +62,7 @@ struct MacLocationsScreen: View {
                                     ProgressView()
                                         .frame(maxWidth: .infinity)
                                 } else {
-                                    Text("Check in at \(nearbyPlace.name)")
+                                    Text(String(format: String(localized: "locations.nearby.action"), nearbyPlace.name))
                                         .lineLimit(1)
                                         .truncationMode(.tail)
                                         .multilineTextAlignment(.center)
@@ -77,7 +77,7 @@ struct MacLocationsScreen: View {
                     }
                 }
 
-                Section("Places") {
+                Section("locations.section.places") {
                     if let places = locationViewModel.locationStore?.savedPlaces, !places.isEmpty {
                         ForEach(places) { place in
                             HStack(alignment: .top, spacing: 12) {
@@ -89,19 +89,19 @@ struct MacLocationsScreen: View {
                                     Button {
                                         activeRelatedRoute = .place(place.id)
                                     } label: {
-                                        Label("Details", systemImage: "info.circle")
+                                        Label("locations.action.details", systemImage: "info.circle")
                                     }
 
                                     Button {
                                         editingPlace = place
                                     } label: {
-                                        Label("Edit", systemImage: "pencil")
+                                        Label("common.edit", systemImage: "pencil")
                                     }
 
                                     Button(role: .destructive) {
                                         placeToDelete = place
                                     } label: {
-                                        Label("Delete", systemImage: "trash")
+                                        Label("common.delete", systemImage: "trash")
                                     }
                                 } label: {
                                     Image(systemName: "ellipsis.circle")
@@ -118,30 +118,30 @@ struct MacLocationsScreen: View {
                                 Button(role: .destructive) {
                                     placeToDelete = place
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    Label("common.delete", systemImage: "trash")
                                 }
                             }
                             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                                 Button {
                                     editingPlace = place
                                 } label: {
-                                    Label("Edit", systemImage: "pencil")
+                                    Label("common.edit", systemImage: "pencil")
                                 }
                                 .tint(.blue)
                             }
                         }
                     } else {
                         ContentUnavailableView(
-                            "No places yet",
+                            "locations.empty.places.title",
                             systemImage: "mappin.slash",
-                            description: Text("Add places like home, school, work or dentist to reuse them across the app.")
+                            description: Text("locations.empty.places.description")
                         )
                     }
                 }
 
-                Section("Latest Family Locations") {
+                Section("locations.section.latestLocations") {
                     if latestPins().isEmpty {
-                        Text("No shared locations yet")
+                        Text("locations.empty.sharedLocations")
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(latestPins()) { ping in
@@ -155,12 +155,12 @@ struct MacLocationsScreen: View {
                     }
                 }
 
-                Section("Recent Check-Ins") {
+                Section("locations.section.checkIns") {
                     if let checkIns = locationViewModel.locationStore?.checkIns, !checkIns.isEmpty {
                         ForEach(checkIns.prefix(8)) { checkIn in
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(checkIn.userDisplayName)
-                                Text(checkIn.placeName ?? "Current location")
+                                Text(checkIn.placeName ?? String(localized: "locations.currentLocation"))
                                     .font(.subheadline)
                                 if let note = checkIn.note, !note.isEmpty {
                                     Text(note)
@@ -173,21 +173,21 @@ struct MacLocationsScreen: View {
                             }
                         }
                     } else {
-                        Text("No recent check-ins")
+                        Text("locations.empty.checkIns")
                             .foregroundStyle(.secondary)
                     }
                 }
         }
         .appPrimaryListChrome()
         .appScreenBackground()
-        .navigationTitle("Places")
+        .navigationTitle("locations.view.title")
         .hideTabBarIfSupported()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     isPresentingAddPlace = true
                 } label: {
-                    Label("Add Place", systemImage: "plus")
+                    Label("locations.action.addPlace", systemImage: "plus")
                 }
                 .disabled(spaceRepo.selectedSpace == nil)
             }
@@ -196,7 +196,7 @@ struct MacLocationsScreen: View {
                 Button {
                     isShowingSavedPlacesMap = true
                 } label: {
-                    Label("Map", systemImage: "map")
+                    Label("locations.action.map", systemImage: "map")
                 }
                 .disabled((locationViewModel.locationStore?.savedPlaces.isEmpty ?? true) && locationViewModel.currentLocation == nil)
             }
@@ -226,27 +226,27 @@ struct MacLocationsScreen: View {
             )
         }
         .navigationDestination(item: $activeRelatedRoute) { route in
-            RelatedContentDestinationView(route: route, originLabel: "Places")
+            RelatedContentDestinationView(route: route, originLabel: String(localized: "locations.view.title"))
         }
         .alert(
-            "Delete place?",
+            "locations.alert.delete.title",
             isPresented: Binding(
                 get: { placeToDelete != nil },
                 set: { if !$0 { placeToDelete = nil } }
             ),
             presenting: placeToDelete
         ) { place in
-            Button("Delete", role: .destructive) {
+            Button("common.delete", role: .destructive) {
                 Task {
                     await locationViewModel.locationStore?.deleteSavedPlace(place, actor: authRepo.currentUser?.id)
                     placeToDelete = nil
                 }
             }
-            Button("Cancel", role: .cancel) {
+            Button("common.cancel", role: .cancel) {
                 placeToDelete = nil
             }
         } message: { place in
-            Text("Place \(place.name) will be removed from the list.")
+            Text(String(format: String(localized: "locations.alert.delete.message"), place.name))
         }
         .task {
             Log.msg("MacLocationsScreen.task start selectedSpace=\(spaceRepo.selectedSpace?.id.uuidString ?? "nil")")

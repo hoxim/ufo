@@ -40,7 +40,7 @@ final class NoteStore {
         } catch {
             notes = []
             folders = []
-            lastErrorMessage = "Nie udało się wczytać notatek: \(error)"
+            lastErrorMessage = localizedErrorMessage("notes.error.load", error: error)
         }
     }
 
@@ -61,7 +61,7 @@ final class NoteStore {
             lastErrorMessage = nil
         } catch {
             loadLocal(spaceId: spaceId)
-            lastErrorMessage = "Nie udało się odświeżyć notatek: \(error)"
+            lastErrorMessage = localizedErrorMessage("notes.error.refresh", error: error)
         }
     }
 
@@ -109,7 +109,7 @@ final class NoteStore {
             await syncPending()
             return note
         } catch {
-            lastErrorMessage = "Nie udało się dodać notatki: \(error)"
+            lastErrorMessage = localizedErrorMessage("notes.error.add", error: error)
             return nil
         }
     }
@@ -159,7 +159,7 @@ final class NoteStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się zaktualizować notatki: \(error)"
+            lastErrorMessage = localizedErrorMessage("notes.error.update", error: error)
         }
     }
 
@@ -174,7 +174,7 @@ final class NoteStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się usunąć notatki: \(error)"
+            lastErrorMessage = localizedErrorMessage("notes.error.delete", error: error)
         }
     }
 
@@ -199,7 +199,7 @@ final class NoteStore {
             notifyHomeWidgetsDataDidChange()
             lastErrorMessage = nil
         } catch {
-            lastErrorMessage = "Nie udało się zsynchronizować notatek: \(error)"
+            lastErrorMessage = localizedErrorMessage("notes.error.sync", error: error)
         }
     }
 
@@ -211,7 +211,7 @@ final class NoteStore {
             folders = try repository.fetchFoldersLocal(spaceId: spaceId)
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się dodać folderu: \(error)"
+            lastErrorMessage = localizedErrorMessage("notes.error.addFolder", error: error)
         }
     }
 }

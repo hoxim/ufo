@@ -36,7 +36,7 @@ final class MessageStore {
             lastErrorMessage = nil
         } catch {
             messages = []
-            lastErrorMessage = "Nie udało się wczytać wiadomości: \(error)"
+            lastErrorMessage = localizedErrorMessage("messages.error.load", error: error)
         }
     }
 
@@ -56,7 +56,7 @@ final class MessageStore {
             lastErrorMessage = nil
         } catch {
             loadLocal(spaceId: spaceId)
-            lastErrorMessage = "Nie udało się odświeżyć wiadomości: \(error)"
+            lastErrorMessage = localizedErrorMessage("messages.error.refresh", error: error)
         }
     }
 
@@ -74,7 +74,7 @@ final class MessageStore {
             messages = try repository.fetchLocal(spaceId: spaceId)
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się wysłać wiadomości: \(error)"
+            lastErrorMessage = localizedErrorMessage("messages.error.send", error: error)
         }
     }
 
@@ -96,7 +96,7 @@ final class MessageStore {
             try modelContext.save()
             lastErrorMessage = nil
         } catch {
-            lastErrorMessage = "Nie udało się zsynchronizować wiadomości: \(error)"
+            lastErrorMessage = localizedErrorMessage("messages.error.sync", error: error)
         }
     }
 }

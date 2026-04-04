@@ -53,14 +53,14 @@ struct MacNotificationCenterScreen: View {
                             Button(role: .destructive) {
                                 notificationStore.delete(notification)
                             } label: {
-                                Label("Usuń", systemImage: "trash")
+                                Label("common.delete", systemImage: "trash")
                             }
 
                             if !notification.isRead {
                                 Button {
                                     notificationStore.markAsRead(notification)
                                 } label: {
-                                    Label("Przeczytane", systemImage: "checkmark")
+                                    Label("notifications.action.read", systemImage: "checkmark")
                                 }
                                 .tint(.green)
                             }
@@ -70,14 +70,14 @@ struct MacNotificationCenterScreen: View {
                                 Button {
                                     notificationStore.markAsRead(notification)
                                 } label: {
-                                    Label("Oznacz jako przeczytane", systemImage: "checkmark")
+                                    Label("notifications.action.markRead", systemImage: "checkmark")
                                 }
                             }
 
                             Button(role: .destructive) {
                                 notificationStore.delete(notification)
                             } label: {
-                                Label("Usuń", systemImage: "trash")
+                                Label("common.delete", systemImage: "trash")
                             }
                         }
                     }
@@ -86,12 +86,12 @@ struct MacNotificationCenterScreen: View {
         }
         .listStyle(.inset)
         .appScreenBackground()
-        .navigationTitle("Powiadomienia")
+        .navigationTitle("notifications.title")
         .inlineNavigationTitle()
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 if notificationStore.unreadCount > 0 {
-                    Button("Oznacz wszystkie") {
+                    Button("notifications.action.markAll") {
                         notificationStore.markAllAsRead()
                     }
                 }
@@ -100,7 +100,7 @@ struct MacNotificationCenterScreen: View {
                     Button {
                         Task { await notificationStore.requestPushAuthorization() }
                     } label: {
-                        Label("Włącz push", systemImage: "bell.badge")
+                        Label("notifications.action.enablePush", systemImage: "bell.badge")
                     }
                 }
             }
@@ -114,21 +114,21 @@ struct MacNotificationCenterScreen: View {
     private var headerSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Inbox powiadomień")
+                Text("notifications.header.title")
                     .font(.title3.weight(.bold))
 
-                Text("Tutaj trafiają alerty, przypomnienia i systemowe komunikaty z aktualnej grupy.")
+                Text("notifications.header.subtitle")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 12) {
                     NotificationSummaryChip(
-                        title: "Wszystkie",
+                        title: String(localized: "notifications.filter.all"),
                         value: notificationStore.notifications.count,
                         tint: .secondary
                     )
                     NotificationSummaryChip(
-                        title: "Nieprzeczytane",
+                        title: String(localized: "notifications.filter.unread"),
                         value: notificationStore.unreadCount,
                         tint: .accentColor
                     )
@@ -143,11 +143,11 @@ struct MacNotificationCenterScreen: View {
                                 .foregroundStyle(Color.accentColor)
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Włącz powiadomienia systemowe")
+                                Text("notifications.push.title")
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.primary)
 
-                                Text("Inbox działa bez tego, ale przypomnienia poza aplikacją będą wyłączone.")
+                                Text("notifications.push.subtitle")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -167,7 +167,7 @@ struct MacNotificationCenterScreen: View {
 
     private var filterSection: some View {
         Section {
-            Picker("Filtr", selection: $filter) {
+            Picker("notifications.filter.label", selection: $filter) {
                 ForEach(NotificationReadFilter.allCases) { filter in
                     Text(filter.title).tag(filter)
                 }
@@ -176,7 +176,7 @@ struct MacNotificationCenterScreen: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    filterChip(title: "Wszystkie", isSelected: selectedCategory == nil) {
+                    filterChip(title: String(localized: "notifications.filter.all"), isSelected: selectedCategory == nil) {
                         selectedCategory = nil
                     }
 
@@ -222,22 +222,22 @@ struct MacNotificationCenterScreen: View {
     private var emptyStateTitle: String {
         switch filter {
         case .all:
-            return "Brak powiadomień"
+            return String(localized: "notifications.empty.allTitle")
         case .unread:
-            return "Brak nieprzeczytanych"
+            return String(localized: "notifications.empty.unreadTitle")
         case .read:
-            return "Brak przeczytanych"
+            return String(localized: "notifications.empty.readTitle")
         }
     }
 
     private var emptyStateDescription: String {
         switch filter {
         case .all:
-            return "Gdy coś wydarzy się w aplikacji albo ustawisz przypomnienie, pojawi się tutaj."
+            return String(localized: "notifications.empty.allDescription")
         case .unread:
-            return "Wszystkie powiadomienia zostały już przeczytane."
+            return String(localized: "notifications.empty.unreadDescription")
         case .read:
-            return "Nie masz jeszcze przeczytanych powiadomień w tym widoku."
+            return String(localized: "notifications.empty.readDescription")
         }
     }
 }
@@ -252,11 +252,11 @@ private enum NotificationReadFilter: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .all:
-            return "Wszystkie"
+            return String(localized: "notifications.filter.all")
         case .unread:
-            return "Nieprzeczytane"
+            return String(localized: "notifications.filter.unread")
         case .read:
-            return "Przeczytane"
+            return String(localized: "notifications.filter.read")
         }
     }
 }
@@ -302,7 +302,7 @@ private struct NotificationRowView: View {
                     Text(notification.category.title)
                     Text(notification.createdAt.formatted(date: .abbreviated, time: .shortened))
                     if let scheduledAt = notification.scheduledAt {
-                        Text("Zaplanowano: \(scheduledAt.formatted(date: .omitted, time: .shortened))")
+                        Text(String(format: String(localized: "notifications.scheduledAt"), scheduledAt.formatted(date: .omitted, time: .shortened)))
                     }
                 }
                 .font(.caption)
@@ -319,7 +319,7 @@ private struct NotificationRowView: View {
                         Image(systemName: "checkmark")
                     }
                     .buttonStyle(.borderless)
-                    .help("Oznacz jako przeczytane")
+                    .help(String(localized: "notifications.action.markRead"))
                 }
 
                 Button(role: .destructive) {
@@ -328,7 +328,7 @@ private struct NotificationRowView: View {
                     Image(systemName: "trash")
                 }
                 .buttonStyle(.borderless)
-                .help("Usuń")
+                .help(String(localized: "common.delete"))
             }
             .foregroundStyle(.secondary)
         }

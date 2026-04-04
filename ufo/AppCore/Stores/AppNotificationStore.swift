@@ -32,8 +32,8 @@ final class AppNotificationStore {
 
         if notifications.isEmpty {
             addNotification(
-                title: "Centrum powiadomień gotowe",
-                body: "Tutaj zobaczysz alerty, systemowe komunikaty i przypomnienia.",
+                title: String(localized: "notifications.bootstrap.title"),
+                body: String(localized: "notifications.bootstrap.body"),
                 category: .system,
                 priority: .passive,
                 source: "bootstrap"
@@ -68,7 +68,7 @@ final class AppNotificationStore {
             lastErrorMessage = nil
         } catch {
             notifications = []
-            lastErrorMessage = "Nie udało się wczytać powiadomień: \(error.localizedDescription)"
+            lastErrorMessage = String(format: String(localized: "notifications.error.load"), error.localizedDescription)
         }
     }
 
@@ -152,27 +152,27 @@ final class AppNotificationStore {
                 #endif
 
                 addNotification(
-                    title: "Powiadomienia włączone",
-                    body: "Aplikacja może teraz wysyłać przypomnienia i ważne alerty także poza ekranem aplikacji.",
+                    title: String(localized: "notifications.toast.enabled.title"),
+                    body: String(localized: "notifications.toast.enabled.body"),
                     category: .system,
                     priority: .normal,
                     source: "push-permission",
                     toast: AppToast(
-                        title: "Powiadomienia włączone",
-                        message: "Przypomnienia będą mogły pojawiać się także poza aplikacją.",
+                        title: String(localized: "notifications.toast.enabled.title"),
+                        message: String(localized: "notifications.toast.enabled.message"),
                         style: .success
                     )
                 )
             } else {
                 showToast(
-                    title: "Powiadomienia wyłączone",
-                    message: "Możesz je włączyć później w ustawieniach systemu.",
+                    title: String(localized: "notifications.toast.disabled.title"),
+                    message: String(localized: "notifications.toast.disabled.message"),
                     style: .warning
                 )
             }
         } catch {
-            lastErrorMessage = "Nie udało się włączyć powiadomień: \(error.localizedDescription)"
-            showToast(title: "Błąd powiadomień", message: error.localizedDescription, style: .error)
+            lastErrorMessage = String(format: String(localized: "notifications.error.enable"), error.localizedDescription)
+            showToast(title: String(localized: "notifications.error.enableTitle"), message: error.localizedDescription, style: .error)
         }
     }
 
@@ -208,7 +208,7 @@ final class AppNotificationStore {
         UNUserNotificationCenter.current().add(request) { [weak self] error in
             guard let self, let error else { return }
             Task { @MainActor in
-                self.lastErrorMessage = "Nie udało się zaplanować przypomnienia: \(error.localizedDescription)"
+                self.lastErrorMessage = String(format: String(localized: "notifications.error.schedule"), error.localizedDescription)
             }
         }
     }
@@ -218,7 +218,7 @@ final class AppNotificationStore {
             try modelContext.save()
             lastErrorMessage = nil
         } catch {
-            lastErrorMessage = "Nie udało się zapisać powiadomienia: \(error.localizedDescription)"
+            lastErrorMessage = String(format: String(localized: "notifications.error.save"), error.localizedDescription)
         }
     }
 }

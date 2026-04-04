@@ -96,13 +96,13 @@ enum IncidentSeverity: String, CaseIterable, Identifiable {
     var localizedLabel: String {
         switch self {
         case .low:
-            return "Low"
+            return String(localized: "shared.priority.low")
         case .medium:
-            return "Medium"
+            return String(localized: "shared.priority.medium")
         case .high:
-            return "High"
+            return String(localized: "shared.priority.high")
         case .critical:
-            return "Critical"
+            return String(localized: "shared.priority.critical")
         }
     }
 }
@@ -117,11 +117,11 @@ enum IncidentStatus: String, CaseIterable, Identifiable {
     var localizedLabel: String {
         switch self {
         case .open:
-            return "Open"
+            return String(localized: "shared.status.open")
         case .inProgress:
-            return "In Progress"
+            return String(localized: "shared.status.inProgress")
         case .resolved:
-            return "Resolved"
+            return String(localized: "shared.status.resolved")
         }
     }
 }

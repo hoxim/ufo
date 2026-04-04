@@ -122,11 +122,11 @@ enum MissionPriority: String, CaseIterable, Identifiable {
     var localizedLabel: String {
         switch self {
         case .low:
-            return "Low"
+            return String(localized: "shared.priority.low")
         case .medium:
-            return "Medium"
+            return String(localized: "shared.priority.medium")
         case .high:
-            return "High"
+            return String(localized: "shared.priority.high")
         }
     }
 }

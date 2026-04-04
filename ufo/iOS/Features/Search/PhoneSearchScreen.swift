@@ -26,9 +26,9 @@ struct PhoneSearchScreen: View {
                     searchStartState
                 } else if resultSections.isEmpty {
                     ContentUnavailableView(
-                        "Brak wyników",
+                        "search.empty.title",
                         systemImage: "magnifyingglass",
-                        description: Text("Nie znaleziono nic dla „\(query)”. Spróbuj innego słowa albo zmień filtr.")
+                        description: Text(String(format: String(localized: "search.empty.description"), query))
                     )
                     .frame(maxWidth: .infinity)
                     .padding(.top, 32)
@@ -72,11 +72,11 @@ struct PhoneSearchScreen: View {
             .padding(.vertical, 24)
         }
         .appScreenBackground()
-        .navigationTitle("Szukaj")
+        .navigationTitle("search.title")
         .inlineNavigationTitle()
-        .searchable(text: $query, placement: .automatic, prompt: "Szukaj w notatkach, misjach, listach i miejscach")
+        .searchable(text: $query, placement: .automatic, prompt: "search.prompt")
         .navigationDestination(item: $selectedRoute) { route in
-            RelatedContentDestinationView(route: route, originLabel: "Wyniki wyszukiwania")
+            RelatedContentDestinationView(route: route, originLabel: String(localized: "search.results.title"))
         }
     }
 
@@ -139,7 +139,7 @@ struct PhoneSearchScreen: View {
             .map {
                 SearchResultItem(
                     route: .note($0.id),
-                    title: $0.title.isEmpty ? "Bez tytułu" : $0.title,
+                    title: $0.title.isEmpty ? String(localized: "search.result.untitled") : $0.title,
                     subtitle: subtitle(primary: $0.previewText, fallback: nil),
                     systemImage: "note.text",
                     tint: .blue
@@ -166,7 +166,7 @@ struct PhoneSearchScreen: View {
                     route: .list($0.id),
                     title: $0.name,
                     subtitle: subtitle(
-                        primary: matchedItem.map { "Element: \($0)" },
+                        primary: matchedItem.map { String(format: String(localized: "search.result.item"), $0) },
                         fallback: $0.savedPlaceName
                     ),
                     systemImage: $0.iconName ?? "checklist",
@@ -216,23 +216,23 @@ struct PhoneSearchScreen: View {
         var sections: [SearchSection] = []
 
         if selectedScope.matches(.missions), !filteredMissions.isEmpty {
-            sections.append(SearchSection(title: "Misje", results: filteredMissions))
+            sections.append(SearchSection(title: String(localized: "search.scope.missions"), results: filteredMissions))
         }
 
         if selectedScope.matches(.notes), !filteredNotes.isEmpty {
-            sections.append(SearchSection(title: "Notatki", results: filteredNotes))
+            sections.append(SearchSection(title: String(localized: "search.scope.notes"), results: filteredNotes))
         }
 
         if selectedScope.matches(.lists), !filteredLists.isEmpty {
-            sections.append(SearchSection(title: "Listy", results: filteredLists))
+            sections.append(SearchSection(title: String(localized: "search.scope.lists"), results: filteredLists))
         }
 
         if selectedScope.matches(.incidents), !filteredIncidents.isEmpty {
-            sections.append(SearchSection(title: "Incydenty", results: filteredIncidents))
+            sections.append(SearchSection(title: String(localized: "search.scope.incidents"), results: filteredIncidents))
         }
 
         if selectedScope.matches(.places), !filteredPlaces.isEmpty {
-            sections.append(SearchSection(title: "Miejsca", results: filteredPlaces))
+            sections.append(SearchSection(title: String(localized: "search.scope.places"), results: filteredPlaces))
         }
 
         return sections
@@ -240,10 +240,10 @@ struct PhoneSearchScreen: View {
 
     private var searchHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Globalne wyszukiwanie")
+            Text("search.start.title")
                 .font(.largeTitle.weight(.bold))
 
-            Text("Szukaj w aktualnej grupie. Lokalne wyszukiwanie w widokach takich jak Notatki czy Misje nadal działa osobno.")
+            Text("search.start.description")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -277,21 +277,21 @@ struct PhoneSearchScreen: View {
 
     private var searchStartState: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Przeszukuj wszystko z jednego miejsca")
+            Text("search.summary.title")
                 .font(.headline)
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 14)], spacing: 14) {
-                SearchSummaryCard(title: "Misje", count: visibleMissions.count, color: .orange)
-                SearchSummaryCard(title: "Notatki", count: visibleNotes.count, color: .blue)
-                SearchSummaryCard(title: "Listy", count: visibleLists.count, color: .pink)
-                SearchSummaryCard(title: "Incydenty", count: visibleIncidents.count, color: .red)
-                SearchSummaryCard(title: "Miejsca", count: visiblePlaces.count, color: .green)
+                SearchSummaryCard(title: String(localized: "search.scope.missions"), count: visibleMissions.count, color: .orange)
+                SearchSummaryCard(title: String(localized: "search.scope.notes"), count: visibleNotes.count, color: .blue)
+                SearchSummaryCard(title: String(localized: "search.scope.lists"), count: visibleLists.count, color: .pink)
+                SearchSummaryCard(title: String(localized: "search.scope.incidents"), count: visibleIncidents.count, color: .red)
+                SearchSummaryCard(title: String(localized: "search.scope.places"), count: visiblePlaces.count, color: .green)
             }
 
             ContentUnavailableView(
-                "Zacznij wpisywać",
+                "search.summary.emptyPrompt",
                 systemImage: "text.magnifyingglass",
-                description: Text("Możesz szukać globalnie albo od razu zawęzić wyniki filtrem, np. tylko do notatek lub misji.")
+                description: Text("search.summary.description")
             )
             .frame(maxWidth: .infinity)
             .padding(.top, 8)
@@ -342,17 +342,17 @@ private enum SearchScope: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .all:
-            return "Wszystko"
+            return String(localized: "search.scope.all")
         case .missions:
-            return "Misje"
+            return String(localized: "search.scope.missions")
         case .notes:
-            return "Notatki"
+            return String(localized: "search.scope.notes")
         case .lists:
-            return "Listy"
+            return String(localized: "search.scope.lists")
         case .incidents:
-            return "Incydenty"
+            return String(localized: "search.scope.incidents")
         case .places:
-            return "Miejsca"
+            return String(localized: "search.scope.places")
         }
     }
 
@@ -392,7 +392,7 @@ private struct SearchSummaryCard: View {
                 .font(.title.weight(.bold))
                 .foregroundStyle(color)
 
-            Text("Dostępne w tej grupie")
+            Text("search.summary.availability")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

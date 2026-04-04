@@ -210,7 +210,7 @@ enum DeviceSessionRepositoryError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidSessionIdentifier:
-            return "Nie udało się odczytać identyfikatora bieżącej sesji."
+            return String(localized: "deviceSessions.error.invalidSessionIdentifier")
         }
     }
 }

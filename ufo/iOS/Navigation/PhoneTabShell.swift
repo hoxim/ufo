@@ -17,7 +17,7 @@ struct PhoneTabShell: View {
             NavigationStack {
                 PhoneSearchScreen()
             }
-                .tabItem { Label("Szukaj", systemImage: "magnifyingglass") }
+                .tabItem { Label("main.tabs.search", systemImage: "magnifyingglass") }
                 .tag(TabItem.search)
 
             NavigationStack {

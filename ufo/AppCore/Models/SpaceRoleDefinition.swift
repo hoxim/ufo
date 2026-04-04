@@ -98,7 +98,7 @@ enum SpaceBuiltInRole: String, CaseIterable, Identifiable {
         case .admin:
             SpaceRoleDescriptor(
                 key: rawValue,
-                name: "Administrator",
+                name: String(localized: "roles.builtin.admin"),
                 permissions: SpaceRolePermissions(
                     canCreateItems: true,
                     canEditItems: true,
@@ -112,7 +112,7 @@ enum SpaceBuiltInRole: String, CaseIterable, Identifiable {
         case .member:
             SpaceRoleDescriptor(
                 key: rawValue,
-                name: "Edytor",
+                name: String(localized: "roles.builtin.member"),
                 permissions: SpaceRolePermissions(
                     canCreateItems: true,
                     canEditItems: true,
@@ -126,7 +126,7 @@ enum SpaceBuiltInRole: String, CaseIterable, Identifiable {
         case .contributor:
             SpaceRoleDescriptor(
                 key: rawValue,
-                name: "Współtwórca",
+                name: String(localized: "roles.builtin.contributor"),
                 permissions: SpaceRolePermissions(
                     canCreateItems: true,
                     canEditItems: false,
@@ -140,7 +140,7 @@ enum SpaceBuiltInRole: String, CaseIterable, Identifiable {
         case .viewer:
             SpaceRoleDescriptor(
                 key: rawValue,
-                name: "Podgląd",
+                name: String(localized: "roles.builtin.viewer"),
                 permissions: SpaceRolePermissions(
                     canCreateItems: false,
                     canEditItems: false,

@@ -47,7 +47,7 @@ final class SharedListStore {
         } catch {
             lists = []
             itemsByList = [:]
-            lastErrorMessage = "Nie udało się wczytać list: \(error)"
+            lastErrorMessage = localizedErrorMessage("lists.error.load", error: error)
             Log.error("SharedListStore.loadLocal failed for spaceId=\(spaceId.uuidString): \(error.localizedDescription)")
         }
     }
@@ -70,7 +70,7 @@ final class SharedListStore {
             Log.msg("SharedListStore.refreshRemote success spaceId=\(spaceId.uuidString)")
         } catch {
             loadLocal(spaceId: spaceId)
-            lastErrorMessage = "Nie udało się odświeżyć list: \(error)"
+            lastErrorMessage = localizedErrorMessage("lists.error.refresh", error: error)
             Log.error("SharedListStore.refreshRemote failed for spaceId=\(spaceId.uuidString): \(error.localizedDescription)")
         }
     }
@@ -103,7 +103,7 @@ final class SharedListStore {
             await syncPending()
             return list.id
         } catch {
-            lastErrorMessage = "Nie udało się dodać listy: \(error)"
+            lastErrorMessage = localizedErrorMessage("lists.error.addList", error: error)
             return nil
         }
     }
@@ -118,7 +118,7 @@ final class SharedListStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się dodać pozycji listy: \(error)"
+            lastErrorMessage = localizedErrorMessage("lists.error.addItem", error: error)
         }
     }
 
@@ -131,7 +131,7 @@ final class SharedListStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się usunąć listy: \(error)"
+            lastErrorMessage = localizedErrorMessage("lists.error.deleteList", error: error)
         }
     }
 
@@ -144,7 +144,7 @@ final class SharedListStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się zaktualizować pozycji listy: \(error)"
+            lastErrorMessage = localizedErrorMessage("lists.error.updateItem", error: error)
         }
     }
 
@@ -157,7 +157,7 @@ final class SharedListStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się usunąć pozycji listy: \(error)"
+            lastErrorMessage = localizedErrorMessage("lists.error.deleteItem", error: error)
         }
     }
 
@@ -182,7 +182,7 @@ final class SharedListStore {
             lastErrorMessage = nil
             Log.msg("SharedListStore.syncPending success spaceId=\(spaceId.uuidString)")
         } catch {
-            lastErrorMessage = "Nie udało się zsynchronizować list: \(error)"
+            lastErrorMessage = localizedErrorMessage("lists.error.sync", error: error)
             Log.error("SharedListStore.syncPending failed for spaceId=\(spaceId.uuidString): \(error.localizedDescription)")
         }
     }

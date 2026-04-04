@@ -11,8 +11,8 @@ struct MacSettingsScreen: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Plan aplikacji") {
-                    Picker("Wersja", selection: productTierBinding) {
+                Section("settings.section.appPlan") {
+                    Picker("settings.productTier.label", selection: productTierBinding) {
                         ForEach(AppProductTier.allCases) { tier in
                             Text(tier.title).tag(tier)
                         }
@@ -44,11 +44,11 @@ struct MacSettingsScreen: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Section("Urządzenia") {
+                Section("settings.section.devices") {
                     NavigationLink {
                         MacDeviceSessionsScreen()
                     } label: {
-                        Label("Zarządzaj urządzeniami", systemImage: "desktopcomputer.and.iphone")
+                        Label("settings.devices.manage", systemImage: "desktopcomputer.and.iphone")
                     }
                 }
             }

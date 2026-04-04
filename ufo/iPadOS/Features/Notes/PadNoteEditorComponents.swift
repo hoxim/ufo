@@ -23,7 +23,7 @@ struct PadNoteEditorHeaderSection: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            TextField("Tytuł", text: $title)
+            TextField("notes.editor.field.title", text: $title)
                 .font(.system(size: 30, weight: .medium, design: .rounded))
                 .textFieldStyle(.plain)
                 .focused($isTitleFocused)
@@ -37,14 +37,14 @@ struct PadNoteEditorHeaderSection: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     noteMetaBadge(
-                        title: isEditingExistingNote ? "Szkic notatki" : "Nowa notatka",
+                        title: String(localized: isEditingExistingNote ? "notes.editor.badge.draft" : "notes.editor.badge.new"),
                         systemImage: "square.and.pencil"
                     )
                     if isPinned {
-                        noteMetaBadge(title: "Przypięta", systemImage: "pin.fill")
+                        noteMetaBadge(title: String(localized: "notes.editor.badge.pinned"), systemImage: "pin.fill")
                     }
                     if hasRichText {
-                        noteMetaBadge(title: "Formatowanie aktywne", systemImage: "textformat")
+                        noteMetaBadge(title: String(localized: "notes.editor.badge.richTextActive"), systemImage: "textformat")
                     }
                 }
             }
@@ -69,11 +69,11 @@ struct PadNoteEditorContentSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(isPreviewMode ? "Podgląd" : "Treść")
+                Text(isPreviewMode ? String(localized: "notes.editor.section.preview") : String(localized: "notes.editor.field.content"))
                     .font(.headline)
                 Spacer()
                 if isPreviewMode {
-                    Label("Tryb tylko do odczytu", systemImage: "eye")
+                    Label("notes.editor.badge.readOnly", systemImage: "eye")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
@@ -90,7 +90,7 @@ struct PadNoteEditorContentSection: View {
                 } else {
                     ZStack(alignment: .topLeading) {
                         if richText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            Text("Zacznij pisać...")
+                            Text("notes.editor.placeholder.startWriting")
                                 .font(.title3.weight(.medium))
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 16)
@@ -138,33 +138,33 @@ struct PadNoteEditorMetadataSection: View {
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
             VStack(alignment: .leading, spacing: 16) {
-                metadataCard(title: "Organizacja", systemImage: "folder") {
+                metadataCard(title: String(localized: "notes.editor.section.organization"), systemImage: "folder") {
                     VStack(spacing: 14) {
                         SelectionMenuRow(
-                            title: "Folder",
+                            title: String(localized: "notes.editor.field.folder"),
                             value: folderTitle(for: selectedFolderId),
                             isPlaceholder: selectedFolderId == nil
                         ) {
-                            Button("Bez folderu") { selectedFolderId = nil }
+                            Button(String(localized: "notes.editor.action.noFolder")) { selectedFolderId = nil }
                             ForEach(folders) { folder in
                                 Button(folder.name) { selectedFolderId = folder.id }
                             }
                         }
 
-                        Toggle("Przypnij notatkę", isOn: $isPinned)
+                        Toggle("notes.editor.field.pin", isOn: $isPinned)
 
                         metadataTextField(
-                            title: "Tagi",
-                            placeholder: "Dom, praca, ważne",
+                            title: String(localized: "notes.editor.field.tags"),
+                            placeholder: String(localized: "notes.editor.placeholder.tags"),
                             text: $tagsText
                         )
                     }
                 }
 
-                metadataCard(title: "Linki i miejsce", systemImage: "link") {
+                metadataCard(title: String(localized: "notes.editor.section.linksAndPlace"), systemImage: "link") {
                     VStack(spacing: 14) {
                         metadataTextField(
-                            title: "Link",
+                            title: String(localized: "notes.editor.field.linkUrl"),
                             placeholder: "https://...",
                             text: $attachedLinkURL,
                             disableAutocorrection: true,
@@ -172,44 +172,44 @@ struct PadNoteEditorMetadataSection: View {
                         )
 
                         SelectionMenuRow(
-                            title: "Zapisane miejsce",
+                            title: String(localized: "notes.editor.field.savedPlace"),
                             value: savedPlaceTitle(for: savedPlaceId),
                             isPlaceholder: savedPlaceId == nil
                         ) {
-                            Button("Bez miejsca") { savedPlaceId = nil }
+                            Button(String(localized: "notes.editor.action.noPlace")) { savedPlaceId = nil }
                             ForEach(savedPlaces) { place in
                                 Button(place.name) { savedPlaceId = place.id }
                             }
                             Divider()
-                            Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
+                            Button(String(localized: "notes.editor.action.addPlace")) { isPresentingAddPlace = true }
                         }
                     }
                 }
 
-                metadataCard(title: "Powiązania", systemImage: "point.3.connected.trianglepath.dotted") {
+                metadataCard(title: String(localized: "notes.editor.section.relationships"), systemImage: "point.3.connected.trianglepath.dotted") {
                     VStack(spacing: 14) {
                         SelectionMenuRow(
-                            title: "Typ powiązania",
-                            value: linkedEntityType?.localizedLabel ?? "Bez powiązania",
+                            title: String(localized: "notes.editor.field.relationshipType"),
+                            value: linkedEntityType?.localizedLabel ?? String(localized: "notes.editor.action.noRelation"),
                             isPlaceholder: linkedEntityType == nil
                         ) {
-                            Button("Bez powiązania") { linkedEntityType = nil }
+                            Button(String(localized: "notes.editor.action.noRelation")) { linkedEntityType = nil }
                             ForEach(NoteLinkedEntityType.allCases) { type in
                                 Button(type.localizedLabel) { linkedEntityType = type }
                             }
                         }
 
                         SelectionMenuRow(
-                            title: "Incydent",
+                            title: String(localized: "notes.editor.field.incident"),
                             value: incidentTitle(for: selectedIncidentId),
                             isPlaceholder: selectedIncidentId == nil
                         ) {
-                            Button("Bez incydentu") { selectedIncidentId = nil }
+                            Button(String(localized: "notes.editor.action.noIncident")) { selectedIncidentId = nil }
                             ForEach(incidents) { incident in
                                 Button(incident.title) { selectedIncidentId = incident.id }
                             }
                             Divider()
-                            Button("Dodaj nowy incydent") { isPresentingAddIncident = true }
+                            Button(String(localized: "notes.editor.action.addIncident")) { isPresentingAddIncident = true }
                         }
 
                         if let linkedEntityType {
@@ -218,26 +218,26 @@ struct PadNoteEditorMetadataSection: View {
                                 value: linkedEntityDisplayValue(for: linkedEntityType, id: linkedEntityId),
                                 isPlaceholder: linkedEntityId == nil
                             ) {
-                                Button("Brak powiązania") { linkedEntityId = nil }
+                                Button(String(localized: "notes.editor.action.noRelation")) { linkedEntityId = nil }
                                 switch linkedEntityType {
                                 case .mission:
                                     ForEach(missions) { mission in
                                         Button(mission.title) { linkedEntityId = mission.id }
                                     }
                                     Divider()
-                                    Button("Dodaj nową misję") { isPresentingAddMission = true }
+                                    Button(String(localized: "notes.editor.action.addMission")) { isPresentingAddMission = true }
                                 case .incident:
                                     ForEach(incidents) { incident in
                                         Button(incident.title) { linkedEntityId = incident.id }
                                     }
                                     Divider()
-                                    Button("Dodaj nowy incydent") { isPresentingAddIncident = true }
+                                    Button(String(localized: "notes.editor.action.addIncident")) { isPresentingAddIncident = true }
                                 case .place:
                                     ForEach(savedPlaces) { place in
                                         Button(place.name) { linkedEntityId = place.id }
                                     }
                                     Divider()
-                                    Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
+                                    Button(String(localized: "notes.editor.action.addPlace")) { isPresentingAddPlace = true }
                                 case .person:
                                     ForEach(people) { person in
                                         Button(person.effectiveDisplayName ?? person.email) { linkedEntityId = person.id }
@@ -247,11 +247,11 @@ struct PadNoteEditorMetadataSection: View {
                         }
 
                         SelectionMenuRow(
-                            title: "Lokalizacja",
+                            title: String(localized: "notes.editor.field.location"),
                             value: locationTitle(for: selectedLocationId),
                             isPlaceholder: selectedLocationId == nil
                         ) {
-                            Button("Bez lokalizacji") { selectedLocationId = nil }
+                            Button(String(localized: "notes.editor.action.noLocation")) { selectedLocationId = nil }
                             ForEach(locations) { location in
                                 Button("\(location.userDisplayName) · \(location.recordedAt.formatted(date: .abbreviated, time: .shortened))") {
                                     selectedLocationId = location.id
@@ -267,9 +267,9 @@ struct PadNoteEditorMetadataSection: View {
                 Image(systemName: "slider.horizontal.3")
                     .foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Szczegóły notatki")
+                    Text("notes.editor.details.title")
                         .font(.headline)
-                    Text(isExpanded ? "Mniej opcji" : "Folder, linki, powiązania i lokalizacja")
+                    Text(isExpanded ? String(localized: "notes.editor.details.collapse") : String(localized: "notes.editor.details.expand"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -322,20 +322,20 @@ struct PadNoteEditorMetadataSection: View {
     }
 
     private func folderTitle(for id: UUID?) -> String {
-        folders.first(where: { $0.id == id })?.name ?? "Bez folderu"
+        folders.first(where: { $0.id == id })?.name ?? String(localized: "notes.editor.action.noFolder")
     }
 
     private func savedPlaceTitle(for id: UUID?) -> String {
-        savedPlaces.first(where: { $0.id == id })?.name ?? "Bez miejsca"
+        savedPlaces.first(where: { $0.id == id })?.name ?? String(localized: "notes.editor.action.noPlace")
     }
 
     private func incidentTitle(for id: UUID?) -> String {
-        incidents.first(where: { $0.id == id })?.title ?? "Bez incydentu"
+        incidents.first(where: { $0.id == id })?.title ?? String(localized: "notes.editor.action.noIncident")
     }
 
     private func locationTitle(for id: UUID?) -> String {
         guard let id, let location = locations.first(where: { $0.id == id }) else {
-            return "Bez lokalizacji"
+            return String(localized: "notes.editor.action.noLocation")
         }
         return "\(location.userDisplayName) · \(location.recordedAt.formatted(date: .abbreviated, time: .shortened))"
     }
@@ -343,29 +343,29 @@ struct PadNoteEditorMetadataSection: View {
     private func linkedEntityPickerTitle(for type: NoteLinkedEntityType) -> String {
         switch type {
         case .mission:
-            return "Misja"
+            return String(localized: "notes.editor.related.mission")
         case .incident:
-            return "Incydent"
+            return String(localized: "notes.editor.related.incident")
         case .place:
-            return "Miejsce"
+            return String(localized: "notes.editor.related.place")
         case .person:
-            return "Osoba"
+            return String(localized: "notes.editor.related.person")
         }
     }
 
     private func linkedEntityDisplayValue(for type: NoteLinkedEntityType, id: UUID?) -> String {
-        guard let id else { return "Brak powiązania" }
+        guard let id else { return String(localized: "notes.editor.action.noRelation") }
         switch type {
         case .mission:
-            return missions.first(where: { $0.id == id })?.title ?? "Nieznana misja"
+            return missions.first(where: { $0.id == id })?.title ?? String(localized: "notes.editor.related.unknownMission")
         case .incident:
-            return incidents.first(where: { $0.id == id })?.title ?? "Nieznany incydent"
+            return incidents.first(where: { $0.id == id })?.title ?? String(localized: "notes.editor.related.unknownIncident")
         case .place:
-            return savedPlaces.first(where: { $0.id == id })?.name ?? "Nieznane miejsce"
+            return savedPlaces.first(where: { $0.id == id })?.name ?? String(localized: "notes.editor.related.unknownPlace")
         case .person:
             return people.first(where: { $0.id == id })?.effectiveDisplayName
                 ?? people.first(where: { $0.id == id })?.email
-                ?? "Nieznana osoba"
+                ?? String(localized: "notes.editor.related.unknownPerson")
         }
     }
 }
@@ -383,14 +383,14 @@ struct PadNoteEditorFormattingBar: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                formatButton("Nagłówek", systemImage: "textformat.size.larger", action: onHeading)
-                formatButton("Pogrub", systemImage: "bold", action: onBold)
-                formatButton("Lista", systemImage: "list.bullet", action: onBullet)
-                formatButton("Checklista", systemImage: "checklist", action: onChecklist)
-                formatButton("Cytat", systemImage: "text.quote", action: onQuote)
-                formatButton("Kod", systemImage: "chevron.left.forwardslash.chevron.right", action: onCode)
+                formatButton(String(localized: "notes.editor.format.heading"), systemImage: "textformat.size.larger", action: onHeading)
+                formatButton(String(localized: "notes.editor.format.bold"), systemImage: "bold", action: onBold)
+                formatButton(String(localized: "notes.editor.format.list"), systemImage: "list.bullet", action: onBullet)
+                formatButton(String(localized: "notes.editor.format.checklist"), systemImage: "checklist", action: onChecklist)
+                formatButton(String(localized: "notes.editor.format.quote"), systemImage: "text.quote", action: onQuote)
+                formatButton(String(localized: "notes.editor.format.code"), systemImage: "chevron.left.forwardslash.chevron.right", action: onCode)
                 formatButton(
-                    isPreviewMode ? "Edytuj" : "Podgląd",
+                    isPreviewMode ? String(localized: "notes.editor.format.edit") : String(localized: "notes.editor.format.preview"),
                     systemImage: isPreviewMode ? "pencil" : "eye",
                     action: onTogglePreview
                 )

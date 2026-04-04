@@ -9,25 +9,25 @@ struct WatchSignInView: View {
 
         var id: String { rawValue }
 
-        var title: String {
+        var titleKey: String {
             switch self {
             case .phone:
-                return "Zaloguj przez iPhone'a"
+                return "watch.auth.method.phone.title"
             case .code:
-                return "Zaloguj kodem lub QR"
+                return "watch.auth.method.code.title"
             case .credentials:
-                return "Zaloguj loginem i hasłem"
+                return "watch.auth.method.credentials.title"
             }
         }
 
-        var subtitle: String {
+        var subtitleKey: String {
             switch self {
             case .phone:
-                return "Najszybsza opcja. Zatwierdzasz logowanie w UFO na sparowanym iPhonie."
+                return "watch.auth.method.phone.subtitle"
             case .code:
-                return "Wygeneruj kod na zegarku i zatwierdź go na iPhonie, iPadzie albo Macu."
+                return "watch.auth.method.code.subtitle"
             case .credentials:
-                return "Wpisz dane konta bezpośrednio na zegarku."
+                return "watch.auth.method.credentials.subtitle"
             }
         }
 
@@ -46,10 +46,10 @@ struct WatchSignInView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text("UFO Watch")
+                Text("watch.auth.heading")
                     .font(.headline)
 
-                Text("Najwygodniej połączyć zegarek z już zalogowanym iPhonem.")
+                Text("watch.auth.intro")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
@@ -58,8 +58,8 @@ struct WatchSignInView: View {
                         destination(for: method)
                     } label: {
                         WatchSignInMethodCard(
-                            title: method.title,
-                            subtitle: method.subtitle,
+                            titleKey: method.titleKey,
+                            subtitleKey: method.subtitleKey,
                             icon: method.icon
                         )
                     }
@@ -68,7 +68,7 @@ struct WatchSignInView: View {
             }
             .padding()
         }
-        .navigationTitle("Logowanie")
+        .navigationTitle("watch.auth.title")
     }
 
     @ViewBuilder
@@ -90,7 +90,7 @@ private struct WatchPhoneSignInScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Użyj tej opcji, jeśli UFO jest już zalogowane na sparowanym iPhonie. Otwórz aplikację UFO na telefonie, a potem zatwierdź prośbę w sekcji Urządzenia.")
+                Text("watch.auth.phone.description")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
@@ -99,7 +99,7 @@ private struct WatchPhoneSignInScreen: View {
                         await model.connectToPhone()
                     }
                 } label: {
-                    Label("Poproś iPhone'a o logowanie", systemImage: "iphone.gen3.radiowaves.left.and.right")
+                    Label("watch.auth.phone.action", systemImage: "iphone.gen3.radiowaves.left.and.right")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(model.isAwaitingPhoneApproval || model.isAwaitingCodeApproval)
@@ -107,7 +107,7 @@ private struct WatchPhoneSignInScreen: View {
                 if model.isAwaitingPhoneApproval {
                     VStack(alignment: .leading, spacing: 6) {
                         ProgressView()
-                        Text("Otwórz UFO na iPhonie i zatwierdź prośbę o połączenie.")
+                        Text("watch.auth.phone.pending")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -121,7 +121,7 @@ private struct WatchPhoneSignInScreen: View {
             }
             .padding()
         }
-        .navigationTitle("Przez iPhone'a")
+        .navigationTitle("watch.auth.phone.navigationTitle")
     }
 }
 
@@ -131,7 +131,7 @@ private struct WatchCodeSignInScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Wygeneruj jednorazowy kod lub QR na zegarku, a potem zatwierdź logowanie w sekcji Urządzenia na iPhonie, iPadzie albo Macu.")
+                Text("watch.auth.code.description")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
@@ -148,7 +148,10 @@ private struct WatchCodeSignInScreen: View {
                         .font(.title3.monospacedDigit().bold())
 
                     if let expiresAt = model.pairingCodeExpiresAt {
-                        Text("Ważny do \(expiresAt.formatted(date: .omitted, time: .shortened))")
+                        Text(String(
+                            format: String(localized: "watch.auth.code.expiresAt"),
+                            expiresAt.formatted(date: .omitted, time: .shortened)
+                        ))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -157,7 +160,7 @@ private struct WatchCodeSignInScreen: View {
                 if model.isAwaitingCodeApproval {
                     ProgressView()
 
-                    Button("Anuluj") {
+                    Button("common.cancel") {
                         model.cancelCodePairing()
                     }
                     .buttonStyle(.bordered)
@@ -167,7 +170,7 @@ private struct WatchCodeSignInScreen: View {
                             await model.startCodePairing()
                         }
                     } label: {
-                        Label("Wygeneruj kod i QR", systemImage: "qrcode")
+                        Label("watch.auth.code.action", systemImage: "qrcode")
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(model.isAwaitingPhoneApproval)
@@ -181,7 +184,7 @@ private struct WatchCodeSignInScreen: View {
             }
             .padding()
         }
-        .navigationTitle("Kod lub QR")
+        .navigationTitle("watch.auth.code.navigationTitle")
     }
 }
 
@@ -194,22 +197,22 @@ private struct WatchCredentialsSignInScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Ta opcja nie wymaga iPhone'a ani kodu. Wpisz dane konta bezpośrednio na zegarku.")
+                Text("watch.auth.credentials.description")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
-                TextField("Email", text: $email)
+                TextField("auth.login.email", text: $email)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
 
-                SecureField("Hasło", text: $password)
+                SecureField("auth.login.password", text: $password)
 
                 Button {
                     Task {
                         await model.signIn(email: email, password: password)
                     }
                 } label: {
-                    Label("Zaloguj", systemImage: "person.crop.circle.badge.checkmark")
+                    Label("auth.login.button", systemImage: "person.crop.circle.badge.checkmark")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(email.isEmpty || password.isEmpty || model.isAwaitingPhoneApproval || model.isAwaitingCodeApproval)
@@ -222,13 +225,13 @@ private struct WatchCredentialsSignInScreen: View {
             }
             .padding()
         }
-        .navigationTitle("Login i hasło")
+        .navigationTitle("watch.auth.credentials.navigationTitle")
     }
 }
 
 private struct WatchSignInMethodCard: View {
-    let title: String
-    let subtitle: String
+    let titleKey: String
+    let subtitleKey: String
     let icon: String
 
     var body: some View {
@@ -240,11 +243,11 @@ private struct WatchSignInMethodCard: View {
                     .frame(width: 22)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
+                    Text(titleKey)
                         .font(.headline)
                         .multilineTextAlignment(.leading)
 
-                    Text(subtitle)
+                    Text(subtitleKey)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.leading)

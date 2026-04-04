@@ -113,13 +113,13 @@ enum NoteLinkedEntityType: String, CaseIterable, Identifiable {
     var localizedLabel: String {
         switch self {
         case .mission:
-            return "Mission"
+            return String(localized: "relatedContent.type.mission")
         case .incident:
-            return "Incident"
+            return String(localized: "relatedContent.type.incident")
         case .place:
-            return "Place"
+            return String(localized: "relatedContent.type.place")
         case .person:
-            return "Person"
+            return String(localized: "relatedContent.type.person")
         }
     }
 }

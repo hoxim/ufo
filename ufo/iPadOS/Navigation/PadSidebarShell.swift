@@ -21,31 +21,31 @@ private enum PadSidebarItem: String, Hashable, CaseIterable {
     var title: String {
         switch self {
         case .search:
-            return "Szukaj"
+            return String(localized: "main.tabs.search")
         case .home:
-            return "Home"
+            return String(localized: "main.tabs.home")
         case .missions:
-            return "Missions"
+            return String(localized: "navigation.item.missions")
         case .notes:
-            return "Notes"
+            return String(localized: "navigation.item.notes")
         case .lists:
-            return "Lists"
+            return String(localized: "navigation.item.lists")
         case .incidents:
-            return "Incidents"
+            return String(localized: "navigation.item.incidents")
         case .routines:
-            return "Routines"
+            return String(localized: "navigation.item.routines")
         case .budget:
-            return "Budget"
+            return String(localized: "main.tabs.budget")
         case .messages:
-            return "Messages"
+            return String(localized: "navigation.item.messages")
         case .places:
-            return "Places"
+            return String(localized: "navigation.item.places")
         case .roles:
-            return "Roles"
+            return String(localized: "navigation.item.roles")
         case .crew:
-            return "Crew"
+            return String(localized: "navigation.item.crew")
         case .spacesManage:
-            return "Manage"
+            return String(localized: "navigation.item.manage")
         }
     }
 
@@ -135,11 +135,11 @@ struct PadSidebarShell: View {
                         sidebarRow(.search)
                     }
 
-                    Section("Browse") {
+                    Section("navigation.section.browse") {
                         sidebarRow(.home)
                     }
 
-                    Section("Workspace") {
+                    Section("navigation.section.workspace") {
                         sidebarRow(.missions)
                         sidebarRow(.notes)
                         sidebarRow(.lists)
@@ -148,14 +148,14 @@ struct PadSidebarShell: View {
                         sidebarRow(.budget)
                     }
 
-                    Section("People") {
+                    Section("navigation.section.people") {
                         sidebarRow(.messages)
                         sidebarRow(.places)
                         sidebarRow(.roles)
                         sidebarRow(.crew)
                     }
 
-                    Section("Spaces") {
+                    Section("navigation.section.spaces") {
                         sidebarRow(.spacesManage)
                     }
                 }
@@ -264,7 +264,7 @@ struct PadSidebarShell: View {
                 Button {
                     presentedSheet = .profile
                 } label: {
-                    Label("Profil", systemImage: "person.crop.circle")
+                    Label("navigation.action.profile", systemImage: "person.crop.circle")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -272,7 +272,7 @@ struct PadSidebarShell: View {
                 Button {
                     presentedSheet = .settings
                 } label: {
-                    Label("Ustawienia", systemImage: "gearshape")
+                    Label("navigation.action.settings", systemImage: "gearshape")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -311,7 +311,7 @@ struct PadSidebarShell: View {
             } label: {
                 HStack {
                     Image(systemName: "person.3.fill")
-                    Text(spaceRepository.selectedSpace?.name ?? "Wybierz grupę")
+                    Text(spaceRepository.selectedSpace?.name ?? String(localized: "spaces.selector.choose"))
                         .lineLimit(1)
                     Spacer()
                     Image(systemName: "chevron.up.chevron.down")

@@ -16,7 +16,7 @@ struct PhonePairingQRScannerSheet: View {
                 if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
                     PhoneQRCodeScannerView { scannedString in
                         guard let payload = DevicePairingQRCodePayload(qrString: scannedString) else {
-                            errorMessage = "To nie jest prawidłowy kod QR parowania UFO."
+                            errorMessage = String(localized: "settings.devices.scanner.invalid")
                             return
                         }
 
@@ -24,17 +24,17 @@ struct PhonePairingQRScannerSheet: View {
                     }
                 } else {
                     ContentUnavailableView(
-                        "Skaner niedostępny",
+                        "settings.devices.scanner.unavailableTitle",
                         systemImage: "camera.viewfinder",
-                        description: Text("To urządzenie nie obsługuje skanowania QR z użyciem kamery.")
+                        description: Text("settings.devices.scanner.unavailableDescription")
                     )
                 }
             }
-            .navigationTitle("Skanuj QR")
+            .navigationTitle("settings.devices.scanner.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Zamknij") {
+                    Button("settings.devices.scanner.close") {
                         onCancel()
                     }
                 }

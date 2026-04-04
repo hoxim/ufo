@@ -68,52 +68,52 @@ struct PhoneAddIncidentView: View {
                 TextField("incidents.editor.field.description", text: $details)
                     .prominentFormTextInput()
                 DatePicker("incidents.editor.field.date", selection: $date)
-                SelectionMenuRow(title: "Priorytet", value: severity.localizedLabel) {
+                SelectionMenuRow(title: String(localized: "incidents.editor.field.severity"), value: severity.localizedLabel) {
                     ForEach(IncidentSeverity.allCases) { value in
                         Button(value.localizedLabel) { severity = value }
                     }
                 }
-                SelectionMenuRow(title: "Status", value: status.localizedLabel) {
+                SelectionMenuRow(title: String(localized: "incidents.editor.field.status"), value: status.localizedLabel) {
                     ForEach(IncidentStatus.allCases) { value in
                         Button(value.localizedLabel) { status = value }
                     }
                 }
-                SelectionMenuRow(title: "Przypisany", value: selectedAssigneeTitle, isPlaceholder: assigneeId == nil) {
-                    Button("Nieprzypisane") { assigneeId = nil }
+                SelectionMenuRow(title: String(localized: "incidents.editor.field.assignee"), value: selectedAssigneeTitle, isPlaceholder: assigneeId == nil) {
+                    Button(String(localized: "incidents.editor.option.unassigned")) { assigneeId = nil }
                     if let currentUser = userId {
                         Button(currentUser.uuidString.prefix(8).description) { assigneeId = currentUser }
                     }
                 }
-                TextField("Koszt", text: $costText)
+                TextField("incidents.editor.field.cost", text: $costText)
                     .prominentFormTextInput()
                     .decimalPadKeyboardIfSupported()
-                Section("Powiązane") {
-                    SelectionMenuRow(title: "Misja", value: selectedMissionTitle, isPlaceholder: relatedMissionId == nil) {
+                Section("incidents.editor.section.related") {
+                    SelectionMenuRow(title: String(localized: "incidents.editor.field.mission"), value: selectedMissionTitle, isPlaceholder: relatedMissionId == nil) {
                         Button(String(localized: "common.none")) { relatedMissionId = nil }
                         ForEach(resolvedAvailableMissions) { mission in
                             Button(mission.title) { relatedMissionId = mission.id }
                         }
                         Divider()
-                        Button("Dodaj nową misję") { isPresentingAddMission = true }
+                        Button(String(localized: "incidents.editor.action.addMission")) { isPresentingAddMission = true }
                     }
-                    SelectionMenuRow(title: "Lista", value: selectedListTitle, isPlaceholder: relatedListId == nil) {
+                    SelectionMenuRow(title: String(localized: "incidents.editor.field.list"), value: selectedListTitle, isPlaceholder: relatedListId == nil) {
                         Button(String(localized: "common.none")) { relatedListId = nil }
                         ForEach(resolvedAvailableLists) { list in
                             Button(list.name) { relatedListId = list.id }
                         }
                         Divider()
-                        Button("Dodaj nową listę") { isPresentingAddList = true }
+                        Button(String(localized: "incidents.editor.action.addList")) { isPresentingAddList = true }
                     }
-                    SelectionMenuRow(title: "Miejsce", value: selectedPlaceTitle, isPlaceholder: relatedPlaceId == nil) {
+                    SelectionMenuRow(title: String(localized: "incidents.editor.field.place"), value: selectedPlaceTitle, isPlaceholder: relatedPlaceId == nil) {
                         Button(String(localized: "common.none")) { relatedPlaceId = nil }
                         ForEach(resolvedAvailablePlaces) { place in
                             Button(place.name) { relatedPlaceId = place.id }
                         }
                         Divider()
-                        Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
+                        Button(String(localized: "incidents.editor.action.addPlace")) { isPresentingAddPlace = true }
                     }
                 }
-                DisclosureGroup("Styl", isExpanded: $showStylePicker) {
+                DisclosureGroup("incidents.editor.section.style", isExpanded: $showStylePicker) {
                     OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 }
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
@@ -148,7 +148,7 @@ struct PhoneAddIncidentView: View {
                 }
             }
             .sheet(isPresented: $isPresentingAddPlace) {
-                QuickAddPlaceSheet(originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "incident draft" : title) { place in
+                QuickAddPlaceSheet(originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(localized: "incidents.editor.originDraft") : title) { place in
                     relatedPlaceId = place.id
                 }
             }
@@ -156,7 +156,7 @@ struct PhoneAddIncidentView: View {
                 QuickCreateMissionSheet(
                     initialSavedPlaceId: relatedPlaceId,
                     initialRelatedListId: relatedListId,
-                    originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "incident draft" : title
+                    originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(localized: "incidents.editor.originDraft") : title
                 ) { missionId in
                     relatedMissionId = missionId
                 }
@@ -164,7 +164,7 @@ struct PhoneAddIncidentView: View {
             .sheet(isPresented: $isPresentingAddList) {
                 QuickCreateLinkedListSheet(
                     initialSavedPlaceId: relatedPlaceId,
-                    originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "incident draft" : title
+                    originLabel: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(localized: "incidents.editor.originDraft") : title
                 ) { listId in
                     relatedListId = listId
                 }
@@ -248,7 +248,7 @@ struct PhoneAddIncidentView: View {
     }
 
     private var selectedAssigneeTitle: String {
-        assigneeId.map { String($0.uuidString.prefix(8)) } ?? "Nieprzypisane"
+        assigneeId.map { String($0.uuidString.prefix(8)) } ?? String(localized: "incidents.editor.option.unassigned")
     }
 }
 

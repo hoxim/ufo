@@ -68,15 +68,15 @@ enum AppNotificationCategory: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .system:
-            return "System"
+            return String(localized: "notifications.category.system")
         case .info:
-            return "Info"
+            return String(localized: "notifications.category.info")
         case .alert:
-            return "Alert"
+            return String(localized: "notifications.category.alert")
         case .actionRequired:
-            return "Action"
+            return String(localized: "notifications.category.actionRequired")
         case .critical:
-            return "Critical"
+            return String(localized: "notifications.category.critical")
         }
     }
 

@@ -17,10 +17,10 @@ enum PhoneSavedPlaceInputMethod: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .address: return "Address"
-        case .currentLocation: return "Current"
-        case .coordinates: return "Coords"
-        case .mapCenter: return "Map"
+        case .address: return String(localized: "locations.input.address")
+        case .currentLocation: return String(localized: "locations.input.current")
+        case .coordinates: return String(localized: "locations.input.coordinates")
+        case .mapCenter: return String(localized: "locations.input.map")
         }
     }
 
@@ -36,22 +36,22 @@ enum PhoneSavedPlaceInputMethod: String, CaseIterable, Identifiable {
     var helperText: String {
         switch self {
         case .address:
-            return "Wpisz adres albo nazwę miejsca i potwierdź pierwszy znaleziony punkt."
+            return String(localized: "locations.input.help.address")
         case .currentLocation:
-            return "Pobierz bieżącą lokalizację telefonu i użyj jej jako miejsca."
+            return String(localized: "locations.input.help.current")
         case .coordinates:
-            return "Wpisz ręcznie szerokość i długość geograficzną, a potem zatwierdź punkt."
+            return String(localized: "locations.input.help.coordinates")
         case .mapCenter:
-            return "Przesuń mapę tak, żeby znacznik na środku wskazywał dokładne miejsce."
+            return String(localized: "locations.input.help.map")
         }
     }
 
     var selectionTitle: String {
         switch self {
-        case .address: return "Wybrano z adresu"
-        case .currentLocation: return "Wybrano z bieżącej lokalizacji"
-        case .coordinates: return "Wybrano z koordynatów"
-        case .mapCenter: return "Wybrano z mapy"
+        case .address: return String(localized: "locations.input.selected.address")
+        case .currentLocation: return String(localized: "locations.input.selected.current")
+        case .coordinates: return String(localized: "locations.input.selected.coordinates")
+        case .mapCenter: return String(localized: "locations.input.selected.map")
         }
     }
 }
@@ -126,19 +126,19 @@ struct PhoneAddSavedPlaceSheet: View {
                         OpenedFromBadge(title: originLabel)
                     }
                 }
-                Section("Place") {
-                    TextField("Title", text: $title)
-                    TextField("Description", text: $description, axis: .vertical)
+                Section("locations.editor.section.place") {
+                    TextField("locations.editor.field.title", text: $title)
+                    TextField("locations.editor.field.description", text: $description, axis: .vertical)
                         .lineLimit(2...4)
-                    Picker("Category", selection: $category) {
+                    Picker("locations.editor.field.category", selection: $category) {
                         ForEach(SavedPlaceCategory.allCases) { category in
                             Text(category.title).tag(category)
                         }
                     }
                 }
 
-                Section("Location") {
-                    Picker("Input method", selection: $method) {
+                Section("locations.editor.section.location") {
+                    Picker("locations.editor.field.inputMethod", selection: $method) {
                         ForEach(PhoneSavedPlaceInputMethod.allCases) { method in
                             Text(method.title).tag(method)
                         }
@@ -156,7 +156,7 @@ struct PhoneAddSavedPlaceSheet: View {
                     }
 
                     if method == .address {
-                        TextField("Search address or place", text: $addressQuery, axis: .vertical)
+                        TextField("locations.editor.field.searchAddress", text: $addressQuery, axis: .vertical)
                             .lineLimit(1...3)
                             .searchSubmitLabelIfSupported()
                             .onSubmit {
@@ -169,7 +169,7 @@ struct PhoneAddSavedPlaceSheet: View {
                             if activeSourceAction == .address {
                                 ProgressView()
                             } else {
-                                Label("Use found address", systemImage: "magnifyingglass")
+                                Label("locations.editor.action.useFoundAddress", systemImage: "magnifyingglass")
                             }
                         }
                         .disabled(addressQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || activeSourceAction != nil)
@@ -182,23 +182,23 @@ struct PhoneAddSavedPlaceSheet: View {
                             if activeSourceAction == .currentLocation {
                                 ProgressView()
                             } else {
-                                Label("Use current location", systemImage: "location.fill")
+                                Label("locations.editor.action.useCurrentLocation", systemImage: "location.fill")
                             }
                         }
                         .disabled(activeSourceAction != nil)
 
                         if isWaitingForCurrentLocation {
-                            Text("Waiting for a fresh GPS location...")
+                            Text("locations.editor.waitingCurrentLocation")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                     }
 
                     if method == .coordinates {
-                        TextField("Latitude", text: $latitudeText)
+                        TextField("locations.view.field.latitude", text: $latitudeText)
                             .decimalPadKeyboardIfSupported()
 
-                        TextField("Longitude", text: $longitudeText)
+                        TextField("locations.view.field.longitude", text: $longitudeText)
                             .decimalPadKeyboardIfSupported()
 
                         Button {
@@ -207,7 +207,7 @@ struct PhoneAddSavedPlaceSheet: View {
                             if activeSourceAction == .coordinates {
                                 ProgressView()
                             } else {
-                                Label("Use coordinates", systemImage: "number")
+                                Label("locations.editor.action.useCoordinates", systemImage: "number")
                             }
                         }
                         .disabled(activeSourceAction != nil)
@@ -227,7 +227,7 @@ struct PhoneAddSavedPlaceSheet: View {
                             if activeSourceAction == .mapCenter {
                                 ProgressView()
                             } else {
-                                Label("Use visible map center", systemImage: "scope")
+                                Label("locations.editor.action.useMapCenter", systemImage: "scope")
                             }
                         }
                         .disabled(activeSourceAction != nil)
@@ -235,7 +235,7 @@ struct PhoneAddSavedPlaceSheet: View {
                 }
 
                 if let selectedCoordinate, let selectedSource {
-                    Section("Selected location") {
+                    Section("locations.editor.section.selected") {
                         PhoneLocationSelectionSummary(
                             method: selectedSource,
                             address: address,
@@ -244,13 +244,13 @@ struct PhoneAddSavedPlaceSheet: View {
                     }
                 }
 
-                Section("Style") {
-                    DisclosureGroup("Customize icon", isExpanded: $showStylePicker) {
+                Section("locations.editor.section.style") {
+                    DisclosureGroup("locations.editor.action.customizeIcon", isExpanded: $showStylePicker) {
                         OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                     }
                 }
             }
-            .navigationTitle(placeToEdit == nil ? "Add Place" : "Edit Place")
+            .navigationTitle(placeToEdit == nil ? "locations.editor.title.new" : "locations.editor.title.edit")
             .modalInlineTitleDisplayMode()
             .toolbar {
                 ModalCloseToolbarItem {
@@ -456,7 +456,7 @@ struct PhoneAddSavedPlaceSheet: View {
                 actor: actorId
             )
         } else {
-            Log.msg("PhoneAddSavedPlaceSheet.save creating title=\(cleanTitle) method=\(method.rawValue) lat=\(selectedCoordinate.latitude) lon=\(selectedCoordinate.longitude) selectedSpace=\(viewModel.locationStore?.currentSpaceId?.uuidString ?? "nil")")
+            Log.msg("PhoneAddSavedPlaceSheet.save creating title=\(cleanTitle) method=\(method.rawValue) selectedSpace=\(viewModel.locationStore?.currentSpaceId?.uuidString ?? "nil")")
             savedPlace = await viewModel.locationStore?.addSavedPlace(
                 name: cleanTitle,
                 description: trimmedDescription.isEmpty ? nil : trimmedDescription,

@@ -135,7 +135,7 @@ final class AuthRepository: AuthRepositoryProtocol {
         isBusy = true
         defer { isBusy = false }
         
-        Log.msg("Starting sign in flow for: \(email)")
+        Log.msg("Starting sign in flow.")
         
         do {
             // 1. Authenticate with Supabase Auth
@@ -178,7 +178,7 @@ final class AuthRepository: AuthRepositoryProtocol {
         }
         let supabaseProvider = provider.supabaseProvider
 
-        Log.msg("Starting OAuth sign in flow for: \(provider). redirectURL=\(redirectURL.absoluteString)")
+        Log.msg("Starting OAuth sign in flow for provider=\(provider).")
 
         do {
             let authorizeURL = try client.auth.getOAuthSignInURL(
@@ -240,7 +240,7 @@ final class AuthRepository: AuthRepositoryProtocol {
                     return
                 }
 
-                Log.msg("OAuth callback received: \(callbackURL.absoluteString)")
+                Log.msg("OAuth callback received.")
                 continuation.resume(returning: callbackURL)
             }
 
@@ -756,15 +756,15 @@ enum AuthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notAuthenticated:
-            return "Użytkownik nie jest zalogowany."
+            return String(localized: "auth.error.notAuthenticated")
         case .avatarTooLarge:
-            return "Avatar jest za duży. Maksymalny rozmiar to 1 MB."
+            return String(localized: "auth.error.avatarTooLarge")
         case .oauthInvalidRedirectConfiguration:
-            return "Błędna konfiguracja redirect URL dla OAuth."
+            return String(localized: "auth.error.oauthInvalidRedirectConfiguration")
         case .oauthMissingCallbackURL:
-            return "Brak callback URL po zakończeniu logowania OAuth."
+            return String(localized: "auth.error.oauthMissingCallbackURL")
         case .oauthSessionStartFailed:
-            return "Nie udało się uruchomić sesji logowania OAuth."
+            return String(localized: "auth.error.oauthSessionStartFailed")
         }
     }
 }

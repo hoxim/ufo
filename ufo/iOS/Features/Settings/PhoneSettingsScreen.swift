@@ -12,8 +12,8 @@ struct PhoneSettingsScreen: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Plan aplikacji") {
-                    Picker("Wersja", selection: productTierBinding) {
+                Section("settings.section.appPlan") {
+                    Picker("settings.productTier.label", selection: productTierBinding) {
                         ForEach(AppProductTier.allCases) { tier in
                             Text(tier.title).tag(tier)
                         }
@@ -45,15 +45,15 @@ struct PhoneSettingsScreen: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Section("Apple Watch") {
+                Section("settings.section.devices") {
                     NavigationLink {
                         PhoneDeviceSessionsScreen()
                     } label: {
-                        Label("Zarządzaj urządzeniami", systemImage: "desktopcomputer.and.iphone")
+                        Label("settings.devices.manage", systemImage: "desktopcomputer.and.iphone")
                     }
 
                     if watchSessionBridge.supportsWatchPairing, watchSessionBridge.pendingApproval != nil {
-                        Text("Masz oczekującą prośbę z Apple Watch. Otwórz ekran zarządzania urządzeniami, aby ją zatwierdzić.")
+                        Text("settings.devices.watch.pendingSettingsHint")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }

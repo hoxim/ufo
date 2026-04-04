@@ -55,7 +55,7 @@ struct PadRoutinesScreen: View {
                     .padding()
                 }
                 .appScreenBackground()
-                .navigationTitle("Rutyny")
+                .navigationTitle("navigation.item.routines")
                 .hideTabBarIfSupported()
                 .toolbar {
                     ToolbarItemGroup(placement: .platformTopBarTrailing) {
@@ -93,13 +93,13 @@ struct PadRoutinesScreen: View {
                     loadData()
                 }
                 .safeAreaInset(edge: .bottom) {
-                    FeatureBottomSearchBar(text: $searchText, prompt: "Szukaj rutyn")
+                    FeatureBottomSearchBar(text: $searchText, prompt: "routines.search.prompt")
                 }
             } else {
                 ContentUnavailableView(
-                    "Wybierz grupę",
+                    "spaces.selector.choose",
                     systemImage: "person.3.sequence",
-                    description: Text("Najpierw wybierz grupę, żeby zobaczyć plan rutyn.")
+                    description: Text("routines.empty.noSpace")
                 )
             }
         }
@@ -119,7 +119,7 @@ struct PadRoutinesScreen: View {
 
     private var rangePicker: some View {
         HStack(spacing: 12) {
-            Text("Zakres")
+            Text("routines.range")
                 .font(.headline)
 
             HStack(spacing: 6) {

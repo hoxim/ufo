@@ -38,7 +38,7 @@ final class MissionStore {
             lastErrorMessage = nil
         } catch {
             missions = []
-            lastErrorMessage = "Nie udało się wczytać lokalnych Missions: \(error)"
+            lastErrorMessage = localizedErrorMessage("missions.error.loadLocal", error: error)
         }
     }
 
@@ -58,7 +58,7 @@ final class MissionStore {
             lastErrorMessage = nil
         } catch {
             loadLocal(spaceId: spaceId)
-            lastErrorMessage = "Nie udało się odświeżyć Missions z serwera: \(error)"
+            lastErrorMessage = localizedErrorMessage("missions.error.refresh", error: error)
         }
     }
 
@@ -113,7 +113,7 @@ final class MissionStore {
             await syncPending()
             return mission
         } catch {
-            lastErrorMessage = "Nie udało się dodać Mission: \(error)"
+            lastErrorMessage = localizedErrorMessage("missions.error.add", error: error)
             return nil
         }
     }
@@ -179,7 +179,7 @@ final class MissionStore {
             await syncPending()
             return true
         } catch {
-            lastErrorMessage = "Nie udało się zaktualizować Mission: \(error)"
+            lastErrorMessage = localizedErrorMessage("missions.error.update", error: error)
             return false
         }
     }
@@ -199,7 +199,7 @@ final class MissionStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się usunąć Mission: \(error)"
+            lastErrorMessage = localizedErrorMessage("missions.error.delete", error: error)
         }
     }
 
@@ -222,7 +222,7 @@ final class MissionStore {
             notifyHomeWidgetsDataDidChange()
             lastErrorMessage = nil
         } catch {
-            lastErrorMessage = "Nie udało się zsynchronizować Missions: \(error)"
+            lastErrorMessage = localizedErrorMessage("missions.error.sync", error: error)
         }
     }
 

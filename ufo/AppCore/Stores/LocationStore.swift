@@ -47,7 +47,7 @@ final class LocationStore {
             pings = []
             savedPlaces = []
             checkIns = []
-            lastErrorMessage = "Nie udało się wczytać lokalizacji: \(error)"
+            lastErrorMessage = localizedErrorMessage("locations.error.load", error: error)
             Log.error("LocationStore.loadLocal failed for spaceId=\(spaceId.uuidString): \(error.localizedDescription)")
         }
     }
@@ -72,7 +72,7 @@ final class LocationStore {
             Log.msg("LocationStore.refreshRemote success spaceId=\(spaceId.uuidString) savedPlaces=\(savedPlaces.count)")
         } catch {
             loadLocal(spaceId: spaceId)
-            lastErrorMessage = "Nie udało się odświeżyć lokalizacji: \(error)"
+            lastErrorMessage = localizedErrorMessage("locations.error.refresh", error: error)
             Log.error("LocationStore.refreshRemote failed for spaceId=\(spaceId.uuidString): \(error.localizedDescription)")
         }
     }
@@ -95,7 +95,7 @@ final class LocationStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się dodać lokalizacji: \(error)"
+            lastErrorMessage = localizedErrorMessage("locations.error.addPing", error: error)
         }
     }
 
@@ -113,11 +113,11 @@ final class LocationStore {
         actor: UUID?
     ) async -> SavedPlace? {
         guard let spaceId = currentSpaceId else {
-            lastErrorMessage = "Nie wybrano space do zapisania miejsca."
+            lastErrorMessage = String(localized: "locations.error.noSelectedSpaceForPlace")
             Log.error("LocationStore.addSavedPlace aborted because currentSpaceId is nil. name=\(name)")
             return nil
         }
-        Log.msg("LocationStore.addSavedPlace start spaceId=\(spaceId.uuidString) name=\(name) lat=\(latitude) lon=\(longitude) actor=\(actor?.uuidString ?? "nil")")
+        Log.msg("LocationStore.addSavedPlace start spaceId=\(spaceId.uuidString) name=\(name) actor=\(actor?.uuidString ?? "nil")")
         do {
             let created = try repository.createSavedPlaceLocal(
                 spaceId: spaceId,
@@ -139,7 +139,7 @@ final class LocationStore {
             await syncPending()
             return created
         } catch {
-            lastErrorMessage = "Nie udało się dodać miejsca: \(error)"
+            lastErrorMessage = localizedErrorMessage("locations.error.addPlace", error: error)
             Log.error("LocationStore.addSavedPlace failed for spaceId=\(spaceId.uuidString) name=\(name): \(error.localizedDescription)")
             return nil
         }
@@ -160,7 +160,7 @@ final class LocationStore {
         actor: UUID?
     ) async -> SavedPlace? {
         guard let spaceId = currentSpaceId else {
-            lastErrorMessage = "Nie wybrano space do zapisania miejsca."
+            lastErrorMessage = String(localized: "locations.error.noSelectedSpaceForPlace")
             return nil
         }
 
@@ -184,14 +184,14 @@ final class LocationStore {
             await syncPending()
             return place
         } catch {
-            lastErrorMessage = "Nie udało się zaktualizować miejsca: \(error)"
+            lastErrorMessage = localizedErrorMessage("locations.error.updatePlace", error: error)
             return nil
         }
     }
 
     func deleteSavedPlace(_ place: SavedPlace, actor: UUID?) async {
         guard let spaceId = currentSpaceId else {
-            lastErrorMessage = "Nie wybrano space do zapisania miejsca."
+            lastErrorMessage = String(localized: "locations.error.noSelectedSpaceForPlace")
             return
         }
 
@@ -202,7 +202,7 @@ final class LocationStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się usunąć miejsca: \(error)"
+            lastErrorMessage = localizedErrorMessage("locations.error.deletePlace", error: error)
         }
     }
 
@@ -234,7 +234,7 @@ final class LocationStore {
             await syncPending()
             return checkIn
         } catch {
-            lastErrorMessage = "Nie udało się dodać check-in: \(error)"
+            lastErrorMessage = localizedErrorMessage("locations.error.addCheckIn", error: error)
             return nil
         }
     }
@@ -262,7 +262,7 @@ final class LocationStore {
             lastErrorMessage = nil
             Log.msg("LocationStore.syncPending success spaceId=\(spaceId.uuidString) savedPlaces=\(savedPlaces.count)")
         } catch {
-            lastErrorMessage = "Nie udało się zsynchronizować lokalizacji: \(error)"
+            lastErrorMessage = localizedErrorMessage("locations.error.sync", error: error)
             Log.error("LocationStore.syncPending failed for spaceId=\(spaceId.uuidString): \(error.localizedDescription)")
         }
     }

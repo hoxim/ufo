@@ -25,12 +25,12 @@ struct PhoneSpaceCard: View {
                         Text(space.name)
                             .font(.title3.weight(.bold))
                         if isSelected {
-                            statusBadge(title: "Aktywna grupa", tint: .green)
+                            statusBadge(title: String(localized: "spaces.card.active"), tint: .green)
                         }
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Label("Info", systemImage: "info.circle")
+                        Label("spaces.card.info", systemImage: "info.circle")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
 
@@ -41,7 +41,7 @@ struct PhoneSpaceCard: View {
                                 tint: .secondary
                             )
                             compactMetaPill(
-                                title: role == "admin" ? "Właściciel" : "Gość",
+                                title: role == "admin" ? String(localized: "spaces.card.role.owner") : String(localized: "spaces.card.role.guest"),
                                 icon: role == "admin" ? "crown.fill" : "person.fill",
                                 tint: role == "admin" ? .blue : .secondary
                             )
@@ -58,26 +58,26 @@ struct PhoneSpaceCard: View {
 
                 Menu {
                     Button(action: onSelect) {
-                        Label("Ustaw jako aktywną", systemImage: "checkmark.circle")
+                        Label("spaces.card.action.select", systemImage: "checkmark.circle")
                     }
 
                     Button(action: onToggleExpanded) {
-                        Label(isExpanded ? "Zwiń kartę" : "Rozwiń kartę", systemImage: isExpanded ? "chevron.up" : "chevron.down")
+                        Label(isExpanded ? String(localized: "spaces.card.action.collapse") : String(localized: "spaces.card.action.expand"), systemImage: isExpanded ? "chevron.up" : "chevron.down")
                     }
 
                     if role == "admin" {
                         Button(action: onInvite) {
-                            Label("Zaproś osobę", systemImage: "person.badge.plus")
+                            Label("spaces.card.action.invite", systemImage: "person.badge.plus")
                         }
                         .disabled(!space.allowsInvitations)
 
                         Button(action: onEdit) {
-                            Label("Edytuj grupę", systemImage: "pencil")
+                            Label("spaces.card.action.edit", systemImage: "pencil")
                         }
                     }
 
                     Button(role: .destructive, action: onDeleteOrLeave) {
-                        Label(role == "admin" ? "Usuń grupę" : "Opuść grupę", systemImage: "trash")
+                        Label(role == "admin" ? String(localized: "spaces.card.action.delete") : String(localized: "spaces.card.action.leave"), systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -88,12 +88,12 @@ struct PhoneSpaceCard: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Członkowie")
+                Text("spaces.card.members")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
 
                 if members.isEmpty {
-                    Text("Nie udało się jeszcze pobrać członków tej grupy.")
+                    Text("spaces.card.membersUnavailable")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
@@ -106,7 +106,7 @@ struct PhoneSpaceCard: View {
                         Spacer(minLength: 8)
 
                         Button(action: onToggleExpanded) {
-                            Label(isExpanded ? "Zwiń" : "Pokaż", systemImage: isExpanded ? "chevron.up" : "chevron.down")
+                            Label(isExpanded ? String(localized: "spaces.card.action.hide") : String(localized: "spaces.card.action.show"), systemImage: isExpanded ? "chevron.up" : "chevron.down")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                         }
@@ -120,7 +120,7 @@ struct PhoneSpaceCard: View {
                     .overlay(Color.separatorAdaptive)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Osoby w grupie")
+                    Text("spaces.card.memberList")
                         .font(.subheadline.weight(.semibold))
 
                     ForEach(members) { member in
@@ -153,26 +153,19 @@ struct PhoneSpaceCard: View {
     }
 
     private var memberCountLabel: String {
-        switch members.count {
-        case 1:
-            return "1 osoba"
-        case 2...4:
-            return "\(members.count) osoby"
-        default:
-            return "\(members.count) osób"
-        }
+        String(format: String(localized: "spaces.card.memberCount"), members.count)
     }
 
     private var spaceTypeLabel: String {
         switch space.type {
         case .shared:
-            return "Wspólna"
+            return String(localized: "spaces.type.shared")
         case .family:
-            return "Rodzinna"
+            return String(localized: "spaces.type.family")
         case .work:
-            return "Praca"
+            return String(localized: "spaces.type.work")
         case .private, .personal:
-            return "Prywatna"
+            return String(localized: "spaces.type.private")
         }
     }
 
@@ -289,9 +282,9 @@ struct PhoneSpaceMemberRow: View {
     private var memberRoleLabel: String {
         switch member.role {
         case "admin":
-            return "Admin"
+            return String(localized: "spaces.member.role.admin")
         case "member":
-            return "Członek"
+            return String(localized: "spaces.member.role.member")
         default:
             return member.role.capitalized
         }

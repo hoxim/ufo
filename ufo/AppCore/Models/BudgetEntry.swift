@@ -68,8 +68,8 @@ enum BudgetEntryKind: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .income: return "Income"
-        case .expense: return "Expense"
+        case .income: return String(localized: "budget.shared.kind.income")
+        case .expense: return String(localized: "budget.shared.kind.expense")
         }
     }
 }

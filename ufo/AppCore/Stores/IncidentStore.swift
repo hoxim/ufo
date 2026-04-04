@@ -38,7 +38,7 @@ final class IncidentStore {
             lastErrorMessage = nil
         } catch {
             incidents = []
-            lastErrorMessage = "Nie udało się wczytać lokalnych Incidents: \(error)"
+            lastErrorMessage = localizedErrorMessage("incidents.error.loadLocal", error: error)
         }
     }
 
@@ -58,7 +58,7 @@ final class IncidentStore {
             lastErrorMessage = nil
         } catch {
             loadLocal(spaceId: spaceId)
-            lastErrorMessage = "Nie udało się odświeżyć Incidents z serwera: \(error)"
+            lastErrorMessage = localizedErrorMessage("incidents.error.refresh", error: error)
         }
     }
 
@@ -109,7 +109,7 @@ final class IncidentStore {
             await syncPending()
             return incident
         } catch {
-            lastErrorMessage = "Nie udało się dodać Incident: \(error)"
+            lastErrorMessage = localizedErrorMessage("incidents.error.add", error: error)
             return nil
         }
     }
@@ -168,7 +168,7 @@ final class IncidentStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się zaktualizować Incident: \(error)"
+            lastErrorMessage = localizedErrorMessage("incidents.error.update", error: error)
         }
     }
 
@@ -182,7 +182,7 @@ final class IncidentStore {
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się usunąć Incident: \(error)"
+            lastErrorMessage = localizedErrorMessage("incidents.error.delete", error: error)
         }
     }
 
@@ -205,7 +205,7 @@ final class IncidentStore {
             notifyHomeWidgetsDataDidChange()
             lastErrorMessage = nil
         } catch {
-            lastErrorMessage = "Nie udało się zsynchronizować Incidents: \(error)"
+            lastErrorMessage = localizedErrorMessage("incidents.error.sync", error: error)
         }
     }
 

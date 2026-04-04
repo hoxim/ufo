@@ -34,24 +34,11 @@ struct Log{
 
     private static func detailedError(_ error: Error) -> String {
         let nsError = error as NSError
-        var lines: [String] = []
-        lines.append("localizedDescription=\(error.localizedDescription)")
-        lines.append("type=\(String(describing: type(of: error)))")
-        lines.append("domain=\(nsError.domain)")
-        lines.append("code=\(nsError.code)")
-        lines.append("debug=\(String(describing: error))")
-
-        let mirror = Mirror(reflecting: error)
-        if !mirror.children.isEmpty {
-            let reflected = mirror.children.compactMap { child -> String? in
-                guard let label = child.label else { return nil }
-                return "\(label)=\(String(describing: child.value))"
-            }
-            if !reflected.isEmpty {
-                lines.append("reflected={\(reflected.joined(separator: ", "))}")
-            }
-        }
-
-        return lines.joined(separator: " | ")
+        return [
+            "localizedDescription=\(error.localizedDescription)",
+            "type=\(String(describing: type(of: error)))",
+            "domain=\(nsError.domain)",
+            "code=\(nsError.code)"
+        ].joined(separator: " | ")
     }
 }

@@ -70,9 +70,9 @@ enum SpaceType: String, Codable, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .private, .personal:
-            return "Private"
+            return String(localized: "spaces.type.private")
         case .shared, .family, .work:
-            return "Shared"
+            return String(localized: "spaces.type.shared")
         }
     }
 }

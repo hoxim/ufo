@@ -7,8 +7,8 @@ struct WatchFeatureMenuView: View {
     var body: some View {
         List {
             if !model.spaces.isEmpty {
-                Section("Space") {
-                    Picker("Aktywny space", selection: selectedSpaceBinding) {
+                Section("watch.feature.menu.spaceSection") {
+                    Picker("watch.feature.menu.spacePicker", selection: selectedSpaceBinding) {
                         ForEach(model.spaces) { space in
                             Text(space.name).tag(space.id)
                         }
@@ -16,14 +16,14 @@ struct WatchFeatureMenuView: View {
                 }
             }
 
-            Section("Features") {
+            Section("watch.feature.menu.featuresSection") {
                 ForEach(WatchFeatureMenuItem.allCases) { item in
                     NavigationLink {
                         destination(for: item)
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
-                            Label(item.title, systemImage: item.systemImage)
-                            Text(item.subtitle)
+                            Label(item.titleKey, systemImage: item.systemImage)
+                            Text(item.subtitleKey)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -32,7 +32,7 @@ struct WatchFeatureMenuView: View {
             }
 
             if let currentUserEmail = model.currentUserEmail {
-                Section("Konto") {
+                Section("watch.feature.menu.accountSection") {
                     VStack(alignment: .leading, spacing: 2) {
                         if let currentUserName = model.currentUserName, !currentUserName.isEmpty {
                             Text(currentUserName)
@@ -42,7 +42,7 @@ struct WatchFeatureMenuView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Button("Wyloguj", role: .destructive) {
+                    Button("watch.feature.menu.signOut", role: .destructive) {
                         Task {
                             await model.signOut()
                         }
@@ -50,7 +50,7 @@ struct WatchFeatureMenuView: View {
                 }
             }
         }
-        .navigationTitle("UFO")
+        .navigationTitle("watch.feature.menu.title")
     }
 
     private var selectedSpaceBinding: Binding<UUID> {
@@ -63,6 +63,16 @@ struct WatchFeatureMenuView: View {
     @ViewBuilder
     private func destination(for item: WatchFeatureMenuItem) -> some View {
         switch item {
+        case .notes:
+            WatchNotesFeatureView()
+        case .routines:
+            WatchRoutinesFeatureView()
+        case .locations:
+            WatchLocationsFeatureView()
+        case .people:
+            WatchPeopleFeatureView()
+        case .notifications:
+            WatchNotificationsFeatureView()
         case .incidents:
             WatchIncidentsFeatureView()
         case .lists:

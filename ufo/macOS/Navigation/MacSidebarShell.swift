@@ -21,31 +21,31 @@ private enum MacSidebarItem: String, Hashable, CaseIterable {
     var title: String {
         switch self {
         case .search:
-            return "Szukaj"
+            return String(localized: "main.tabs.search")
         case .home:
-            return "Home"
+            return String(localized: "main.tabs.home")
         case .missions:
-            return "Missions"
+            return String(localized: "navigation.item.missions")
         case .notes:
-            return "Notes"
+            return String(localized: "navigation.item.notes")
         case .lists:
-            return "Lists"
+            return String(localized: "navigation.item.lists")
         case .incidents:
-            return "Incidents"
+            return String(localized: "navigation.item.incidents")
         case .routines:
-            return "Routines"
+            return String(localized: "navigation.item.routines")
         case .budget:
-            return "Budget"
+            return String(localized: "main.tabs.budget")
         case .messages:
-            return "Messages"
+            return String(localized: "navigation.item.messages")
         case .places:
-            return "Places"
+            return String(localized: "navigation.item.places")
         case .roles:
-            return "Roles"
+            return String(localized: "navigation.item.roles")
         case .crew:
-            return "Crew"
+            return String(localized: "navigation.item.crew")
         case .spacesManage:
-            return "Manage"
+            return String(localized: "navigation.item.manage")
         }
     }
 
@@ -128,11 +128,11 @@ struct MacSidebarShell: View {
                         sidebarRow(.search)
                     }
 
-                    Section("Browse") {
+                    Section("navigation.section.browse") {
                         sidebarRow(.home)
                     }
 
-                    Section("Workspace") {
+                    Section("navigation.section.workspace") {
                         sidebarRow(.missions)
                         sidebarRow(.notes)
                         sidebarRow(.lists)
@@ -141,14 +141,14 @@ struct MacSidebarShell: View {
                         sidebarRow(.budget)
                     }
 
-                    Section("People") {
+                    Section("navigation.section.people") {
                         sidebarRow(.messages)
                         sidebarRow(.places)
                         sidebarRow(.roles)
                         sidebarRow(.crew)
                     }
 
-                    Section("Spaces") {
+                    Section("navigation.section.spaces") {
                         sidebarRow(.spacesManage)
                     }
                 }
@@ -231,7 +231,7 @@ struct MacSidebarShell: View {
                 if let selectedSpace = spaceRepository.selectedSpace {
                     MacActiveSpaceMenuButton(space: selectedSpace)
                 } else {
-                    Label("Wybierz grupę", systemImage: "person.3.fill")
+                    Label("spaces.selector.choose", systemImage: "person.3.fill")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -34,13 +34,13 @@ struct PadRoutineDayTimeline: View {
 
             if routines.isEmpty {
                 ContentUnavailableView(
-                    "Brak rutyn",
+                    "routines.timeline.empty.title",
                     systemImage: "clock.arrow.circlepath",
-                    description: Text("Dodaj pierwszy stały rytm dnia, np. drzemkę, lek albo trening.")
+                    description: Text("routines.timeline.empty.description")
                 )
                 .frame(maxWidth: .infinity, minHeight: 320)
                 .overlay(alignment: .bottom) {
-                    Button("Dodaj rutynę", action: onAdd)
+                    Button("routines.action.add", action: onAdd)
                         .buttonStyle(.borderedProminent)
                 }
             } else {
@@ -132,9 +132,9 @@ private struct RoutineProgressSummary: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            summaryPill(title: "Zaplanowane", value: "\(scheduledCount)", tint: .blue)
-            summaryPill(title: "Ukończone", value: "\(completedCount)", tint: .green)
-            summaryPill(title: "Wpisy", value: "\(logCount)", tint: .orange)
+            summaryPill(title: String(localized: "routines.summary.scheduled"), value: "\(scheduledCount)", tint: .blue)
+            summaryPill(title: String(localized: "routines.summary.completed"), value: "\(completedCount)", tint: .green)
+            summaryPill(title: String(localized: "routines.summary.logs"), value: "\(logCount)", tint: .orange)
         }
     }
 
@@ -197,7 +197,7 @@ private struct RoutineTimelineCard: View {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     if let lastLog {
-                        Text("Ostatni wpis: \(lastLog.loggedAt.formatted(.dateTime.hour().minute()))")
+                        Text(String(format: String(localized: "routines.timeline.lastLog"), lastLog.loggedAt.formatted(.dateTime.hour().minute())))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.green)
                     } else {
@@ -207,7 +207,7 @@ private struct RoutineTimelineCard: View {
                     }
 
                     if logs.count > 1 {
-                        Text("Łącznie wpisów: \(logs.count)")
+                        Text(String(format: String(localized: "routines.timeline.totalLogs"), logs.count))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
@@ -236,13 +236,13 @@ private struct RoutineTimelineCard: View {
 
     private var statusText: String {
         if Calendar.current.isDateInToday(selectedDate) {
-            return "Do zrobienia dzisiaj"
+            return String(localized: "routines.timeline.status.today")
         }
-        return "Brak wpisu dla tego dnia"
+        return String(localized: "routines.timeline.status.none")
     }
 
     private var logButtonTitle: String {
-        logs.isEmpty ? "Zaloguj" : "Dodaj wpis"
+        logs.isEmpty ? String(localized: "routines.action.log") : String(localized: "routines.action.addLog")
     }
 }
 

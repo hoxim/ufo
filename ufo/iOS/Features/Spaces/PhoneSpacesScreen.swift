@@ -35,9 +35,9 @@ struct PhoneSpacesScreen: View {
 
                         if filteredMemberships(from: user.memberships).isEmpty {
                             ContentUnavailableView(
-                                "Brak pasujących grup",
+                                "spaces.list.empty.filteredTitle",
                                 systemImage: "person.3.sequence",
-                                description: Text("Spróbuj zmienić filtr albo frazę wyszukiwania.")
+                                description: Text("spaces.list.empty.filteredBody")
                             )
                             .frame(maxWidth: .infinity, minHeight: 240)
                             .padding(.top, 20)
@@ -84,8 +84,8 @@ struct PhoneSpacesScreen: View {
             }
         }
         .appScreenBackground()
-        .navigationTitle("Grupy")
-        .searchable(text: $searchText, prompt: "Szukaj grupy lub kodu")
+        .navigationTitle("spaces.list.title")
+        .searchable(text: $searchText, prompt: "spaces.list.searchPrompt")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -140,33 +140,33 @@ struct PhoneSpacesScreen: View {
                 spaceRepo.selectedSpace = space
             }
         } label: {
-            Label("Wybierz tę grupę", systemImage: "checkmark.circle")
+            Label("spaces.card.action.select", systemImage: "checkmark.circle")
         }
 
         if role == "admin" {
             Button {
                 spaceToInvite = space
             } label: {
-                Label("Zaproś osobę", systemImage: "person.badge.plus")
+                Label("spaces.card.action.invite", systemImage: "person.badge.plus")
             }
             .disabled(!space.allowsInvitations)
 
             Button {
                 spaceToEdit = space
             } label: {
-                Label("Edytuj grupę", systemImage: "pencil")
+                Label("spaces.card.action.edit", systemImage: "pencil")
             }
 
             Button(role: .destructive) {
                 pendingAction = .delete(space, role)
             } label: {
-                Label("Usuń grupę", systemImage: "trash")
+                Label("spaces.card.action.delete", systemImage: "trash")
             }
         } else {
             Button(role: .destructive) {
                 pendingAction = .leave(space, role)
             } label: {
-                Label("Opuść grupę", systemImage: "rectangle.portrait.and.arrow.right")
+                Label("spaces.card.action.leave", systemImage: "rectangle.portrait.and.arrow.right")
             }
         }
     }
@@ -188,7 +188,7 @@ struct PhoneSpacesScreen: View {
 
     private var filterBar: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Wybierz przestrzeń, z której aplikacja ma pobierać dane.")
+            Text("spaces.list.guidance")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 

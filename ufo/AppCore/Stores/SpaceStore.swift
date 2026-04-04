@@ -32,7 +32,7 @@ final class SpaceStore {
                 selectedSpace = spaces.first
             }
         } catch {
-            lastErrorMessage = "Nie udało się wczytać lokalnych Space: \(error)"
+            lastErrorMessage = localizedErrorMessage("spaces.error.loadLocal", error: error)
             spaces = []
         }
     }
@@ -61,7 +61,7 @@ final class SpaceStore {
             selectedSpace = spaceRepository.selectedSpace
             lastErrorMessage = nil
         } catch {
-            lastErrorMessage = "Nie udało się pobrać Space z serwera: \(error)"
+            lastErrorMessage = localizedErrorMessage("spaces.error.refresh", error: error)
             loadLocal()
         }
     }
@@ -74,7 +74,7 @@ final class SpaceStore {
             try await spaceRepository.createSpace(name: name, type: type)
             await refreshFromRemote()
         } catch {
-            lastErrorMessage = "Nie udało się utworzyć Space: \(error)"
+            lastErrorMessage = localizedErrorMessage("spaces.error.create", error: error)
         }
     }
 
@@ -86,7 +86,7 @@ final class SpaceStore {
             try await spaceRepository.joinSpace(inviteCode: inviteCode)
             await refreshFromRemote()
         } catch {
-            lastErrorMessage = "Nie udało się dołączyć do Space: \(error)"
+            lastErrorMessage = localizedErrorMessage("spaces.error.join", error: error)
         }
     }
 
@@ -106,7 +106,7 @@ final class SpaceStore {
                 spaceRepository.selectedSpace = selectedSpace
             }
         } catch {
-            lastErrorMessage = "Nie udało się opuścić Space: \(error)"
+            lastErrorMessage = localizedErrorMessage("spaces.error.leave", error: error)
         }
     }
 

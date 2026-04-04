@@ -11,12 +11,12 @@ struct WatchListsFeatureView: View {
     var body: some View {
         List {
             if isLoading {
-                ProgressView()
+                ProgressView("lists.view.loading")
             } else if let errorMessage {
                 Text(errorMessage)
                     .foregroundStyle(.red)
             } else if lists.isEmpty {
-                Text("Brak list w tym space.")
+                Text("watch.lists.empty")
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(lists) { list in
@@ -25,7 +25,7 @@ struct WatchListsFeatureView: View {
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(list.name)
-                            Text(list.type.capitalized)
+                            Text(watchLocalizedListType(list.type))
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -33,7 +33,7 @@ struct WatchListsFeatureView: View {
                 }
             }
         }
-        .navigationTitle("Lists")
+        .navigationTitle("lists.view.title")
         .task(id: model.selectedSpaceID) {
             await loadLists()
         }
@@ -48,7 +48,7 @@ struct WatchListsFeatureView: View {
             errorMessage = nil
         } catch {
             lists = []
-            errorMessage = "Nie udało się wczytać list."
+            errorMessage = String(localized: "watch.lists.error.load")
         }
     }
 }

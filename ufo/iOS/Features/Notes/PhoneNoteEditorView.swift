@@ -109,7 +109,7 @@ struct PhoneNoteEditorView: View {
             }
             .frame(maxWidth: .infinity, alignment: .center)
             .background(Color.clear)
-            .navigationTitle(note == nil ? "Nowa notatka" : "Edytuj notatkę")
+            .navigationTitle(note == nil ? String(localized: "notes.editor.title.new") : String(localized: "notes.editor.title.edit"))
             .modalInlineTitleDisplayMode()
             .navigationBarBackButtonHidden(true)
             .toolbar {

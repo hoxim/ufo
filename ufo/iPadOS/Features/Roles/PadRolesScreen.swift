@@ -40,9 +40,9 @@ struct PadRolesScreen: View {
 
             if selectedSpace == nil {
                 ContentUnavailableView(
-                    "Wybierz grupę",
+                    "spaces.selector.choose",
                     systemImage: "person.3.sequence",
-                    description: Text("Najpierw wybierz grupę, żeby zobaczyć role i nimi zarządzać.")
+                    description: Text("roles.empty.noSpace")
                 )
                 .frame(maxWidth: .infinity, minHeight: 220)
                 .listRowBackground(Color.clear)
@@ -60,25 +60,25 @@ struct PadRolesScreen: View {
                     }
                 } header: {
                     HStack {
-                        Text("Role")
+                        Text("navigation.item.roles")
                         Spacer()
                         if canManageRoles {
                             Button {
                                 isShowingRoleCreator = true
                             } label: {
-                                Label("Nowa rola", systemImage: "plus")
+                                Label("roles.action.new", systemImage: "plus")
                             }
                             .buttonStyle(.borderless)
                         }
                     }
                 } footer: {
-                    Text("Role systemowe są gotowe od razu. Role własne możesz dopasować do swojej rodziny albo zespołu, np. Kid, Gość albo Opiekun.")
+                    Text("roles.footer.description")
                 }
             }
         }
         .appPrimaryListChrome()
         .appScreenBackground()
-        .navigationTitle("Roles")
+        .navigationTitle("navigation.item.roles")
         .task {
             await refreshData()
         }
@@ -102,21 +102,21 @@ struct PadRolesScreen: View {
             }
         }
         .alert(
-            "Usunąć rolę?",
+            "roles.alert.delete.title",
             isPresented: Binding(
                 get: { roleToDelete != nil },
                 set: { if !$0 { roleToDelete = nil } }
             ),
             presenting: roleToDelete
         ) { role in
-            Button("Usuń", role: .destructive) {
+            Button("common.delete", role: .destructive) {
                 deleteRole(role)
             }
-            Button("Anuluj", role: .cancel) {
+            Button("common.cancel", role: .cancel) {
                 roleToDelete = nil
             }
         } message: { role in
-            Text("Rola \(role.name) zostanie usunięta tylko z tego urządzenia. Jeśli jest przypisana komuś w grupie, najpierw zmień tę osobę na inną rolę.")
+            Text(String(format: String(localized: "roles.alert.delete.message"), role.name))
         }
     }
 
@@ -128,7 +128,7 @@ struct PadRolesScreen: View {
                     .font(.headline)
 
                 if role.isBuiltIn {
-                    Text("Systemowa")
+                    Text("roles.badge.system")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 8)
@@ -139,7 +139,7 @@ struct PadRolesScreen: View {
                 Spacer()
 
                 if isInUse {
-                    Text("Używana")
+                    Text("roles.badge.inUse")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -152,12 +152,12 @@ struct PadRolesScreen: View {
             if canManageRoles, !role.isBuiltIn,
                let customRole = customRoles.first(where: { $0.roleKey == role.key }) {
                 HStack(spacing: 12) {
-                    Button("Edytuj") {
+                    Button("common.edit") {
                         editingRole = customRole
                     }
                     .buttonStyle(.borderless)
 
-                    Button("Usuń", role: .destructive) {
+                    Button("common.delete", role: .destructive) {
                         roleToDelete = customRole
                     }
                     .buttonStyle(.borderless)
@@ -170,16 +170,7 @@ struct PadRolesScreen: View {
     }
 
     private func permissionSummary(for permissions: SpaceRolePermissions) -> String {
-        var values: [String] = ["podgląd"]
-
-        if permissions.canCreateItems { values.append("dodawanie") }
-        if permissions.canEditItems { values.append("edycja") }
-        if permissions.canDeleteItems { values.append("usuwanie") }
-        if permissions.canInviteMembers { values.append("zapraszanie") }
-        if permissions.canManageGroupSettings { values.append("ustawienia grupy") }
-        if permissions.canManageRoles { values.append("zarządzanie rolami") }
-
-        return values.joined(separator: " • ")
+        localizedRolePermissionSummary(permissions)
     }
 
     private func refreshData() async {
@@ -280,20 +271,20 @@ struct PadRoleEditorScreen: View {
 
     var body: some View {
         Form {
-            Section("Rola") {
-                TextField("Np. Kid, Gość, Opiekun", text: $name)
+            Section("roles.editor.section.role") {
+                TextField("roles.editor.placeholder.name", text: $name)
             }
 
-            Section("Uprawnienia") {
-                Toggle("Może dodawać", isOn: $canCreateItems)
-                Toggle("Może edytować", isOn: $canEditItems)
-                Toggle("Może usuwać", isOn: $canDeleteItems)
-                Toggle("Może zapraszać osoby", isOn: $canInviteMembers)
-                Toggle("Może zmieniać ustawienia grupy", isOn: $canManageGroupSettings)
-                Toggle("Może zarządzać rolami", isOn: $canManageRoles)
+            Section("roles.editor.section.permissions") {
+                Toggle("roles.editor.permission.create", isOn: $canCreateItems)
+                Toggle("roles.editor.permission.edit", isOn: $canEditItems)
+                Toggle("roles.editor.permission.delete", isOn: $canDeleteItems)
+                Toggle("roles.editor.permission.invite", isOn: $canInviteMembers)
+                Toggle("roles.editor.permission.manageGroup", isOn: $canManageGroupSettings)
+                Toggle("roles.editor.permission.manageRoles", isOn: $canManageRoles)
             }
         }
-        .navigationTitle(role == nil ? "Nowa rola" : "Edytuj rolę")
+        .navigationTitle(role == nil ? "roles.editor.title.new" : "roles.editor.title.edit")
         .modalInlineTitleDisplayMode()
         .toolbar {
             ModalCloseToolbarItem {

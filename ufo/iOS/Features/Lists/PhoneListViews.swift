@@ -53,20 +53,20 @@ struct PhoneAddListView: View {
                 TextField("lists.editor.field.name", text: $name)
                     .prominentFormTextInput()
                     .focused($isNameFocused)
-                SelectionMenuRow(title: "Typ", value: selectedType.rawValue.capitalized) {
+                SelectionMenuRow(title: String(localized: "lists.editor.field.type"), value: selectedType.localizedLabel) {
                     ForEach(SharedListType.allCases) { type in
-                        Button(type.rawValue.capitalized) { selectedType = type }
+                        Button(type.localizedLabel) { selectedType = type }
                     }
                 }
-                SelectionMenuRow(title: "Miejsce", value: selectedPlaceTitle, isPlaceholder: savedPlaceId == nil) {
-                    Button("Brak miejsca") { savedPlaceId = nil }
+                SelectionMenuRow(title: String(localized: "lists.editor.field.place"), value: selectedPlaceTitle, isPlaceholder: savedPlaceId == nil) {
+                    Button(String(localized: "lists.editor.action.noPlace")) { savedPlaceId = nil }
                     ForEach(resolvedAvailablePlaces) { place in
                         Button(place.name) { savedPlaceId = place.id }
                     }
                     Divider()
-                    Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
+                    Button(String(localized: "lists.editor.action.addPlace")) { isPresentingAddPlace = true }
                 }
-                DisclosureGroup("Styl", isExpanded: $showStylePicker) {
+                DisclosureGroup("lists.editor.section.style", isExpanded: $showStylePicker) {
                     OperationStylePicker(iconName: $selectedIconName, colorHex: $selectedIconColorHex)
                 }
             }
@@ -133,7 +133,7 @@ struct PhoneAddListView: View {
     }
 
     private var selectedPlaceTitle: String {
-        resolvedAvailablePlaces.first(where: { $0.id == savedPlaceId })?.name ?? "Brak miejsca"
+        resolvedAvailablePlaces.first(where: { $0.id == savedPlaceId })?.name ?? String(localized: "lists.editor.action.noPlace")
     }
 }
 

@@ -10,32 +10,32 @@ struct MacTodaySummaryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             MacHomeWidgetSectionHeader(
-                title: "Family Hub",
+                title: String(localized: "home.card.today.title"),
                 icon: "person.3.sequence.fill"
             )
 
-            Text("Quick snapshot of today across missions, notes, incidents and saved places.")
+            Text("home.card.today.description")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 12) {
-                summaryPill(title: "Due missions", value: "\(widget.dueTodayCount)", tint: .orange)
-                summaryPill(title: "Recurring", value: "\(widget.recurringMissionCount)", tint: .blue)
-                summaryPill(title: "Pinned notes", value: "\(widget.pinnedNotesCount)", tint: .pink)
+                summaryPill(title: String(localized: "home.card.today.dueMissions"), value: "\(widget.dueTodayCount)", tint: .orange)
+                summaryPill(title: String(localized: "home.card.today.recurring"), value: "\(widget.recurringMissionCount)", tint: .blue)
+                summaryPill(title: String(localized: "home.card.today.pinnedNotes"), value: "\(widget.pinnedNotesCount)", tint: .pink)
             }
 
             HStack(spacing: 12) {
-                summaryPill(title: "Open incidents", value: "\(widget.openIncidentsCount)", tint: .red)
-                summaryPill(title: "Critical alerts", value: "\(widget.criticalIncidentsCount)", tint: .red.opacity(0.8))
-                summaryPill(title: "Saved places", value: "\(widget.savedPlacesCount)", tint: .green)
+                summaryPill(title: String(localized: "home.card.today.openIncidents"), value: "\(widget.openIncidentsCount)", tint: .red)
+                summaryPill(title: String(localized: "home.card.today.criticalAlerts"), value: "\(widget.criticalIncidentsCount)", tint: .red.opacity(0.8))
+                summaryPill(title: String(localized: "home.card.today.savedPlaces"), value: "\(widget.savedPlacesCount)", tint: .green)
             }
 
             if let recentCheckInText = widget.recentCheckInText {
-                Label("Last check-in: \(recentCheckInText)", systemImage: "location.circle.fill")
+                Label(String(format: String(localized: "home.card.today.lastCheckIn"), recentCheckInText), systemImage: "location.circle.fill")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text("No recent check-ins")
+                Text("home.card.today.noCheckIns")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -91,7 +91,7 @@ struct MacHomeBudgetCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             MacHomeWidgetSectionHeader(
-                title: "Budget",
+                title: String(localized: "home.card.budget.title"),
                 icon: "dollarsign.circle",
                 onOpen: onOpen
             )
@@ -116,7 +116,7 @@ struct MacHomeBudgetCard: View {
 
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Balance")
+                    Text("home.card.budget.balance")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text(balance.formatted(.currency(code: "PLN")))
@@ -125,7 +125,7 @@ struct MacHomeBudgetCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Income")
+                    Text("home.card.budget.income")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text(income.formatted(.currency(code: "PLN")))
@@ -134,7 +134,7 @@ struct MacHomeBudgetCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Expense")
+                    Text("home.card.budget.expense")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text(expense.formatted(.currency(code: "PLN")))
@@ -144,7 +144,7 @@ struct MacHomeBudgetCard: View {
             }
 
             if filteredEntries.isEmpty {
-                Text("No entries in selected period")
+                Text("home.card.budget.empty")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {

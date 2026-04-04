@@ -35,6 +35,10 @@ final class WatchAppModel {
         spaces.first(where: { $0.id == selectedSpaceID })
     }
 
+    var selectedSpaceName: String {
+        selectedSpace?.name ?? String(localized: "watch.feature.menu.spacePicker")
+    }
+
     func bootstrap() async {
         WatchLog.msg("Watch bootstrap started")
         state = .checkingSession
@@ -86,7 +90,7 @@ final class WatchAppModel {
     }
 
     func signIn(email: String, password: String) async {
-        WatchLog.msg("Watch signIn started email=\(email)")
+        WatchLog.msg("Watch signIn started")
         state = .checkingSession
         errorMessage = nil
 
@@ -98,7 +102,7 @@ final class WatchAppModel {
         } catch {
             WatchLog.error(error)
             state = .signedOut
-            errorMessage = "Nie udało się zalogować. Sprawdź dane konta."
+            errorMessage = String(localized: "watch.auth.credentials.error")
         }
     }
 
@@ -115,7 +119,7 @@ final class WatchAppModel {
         do {
             let request = try await service.createPairingRequest()
             guard activePairingAttemptID == pairingAttemptID else { return }
-            WatchLog.msg("Watch pairing request created id=\(request.requestID.uuidString) code=\(request.shortCode)")
+            WatchLog.msg("Watch pairing request created id=\(request.requestID.uuidString)")
             pairingCode = request.shortCode
             pairingCodeExpiresAt = request.expiresAt
             pairingQRCodePayload = DevicePairingQRCodePayload(
@@ -240,6 +244,72 @@ final class WatchAppModel {
         return try await service.fetchIncidents(spaceId: spaceID)
     }
 
+    func fetchNotes() async throws -> [WatchNoteSummary] {
+        guard let spaceID = selectedSpaceID else { return [] }
+        return try await service.fetchNotes(spaceId: spaceID)
+    }
+
+    func createNote(title: String, content: String) async throws -> WatchNoteSummary {
+        guard let spaceID = selectedSpaceID else { throw WatchAppModelFlowError.missingSelectedSpace }
+        return try await service.createNote(spaceId: spaceID, title: title, content: content)
+    }
+
+    func updateNote(_ note: WatchNoteSummary, title: String, content: String) async throws -> WatchNoteSummary {
+        try await service.updateNote(note, title: title, content: content)
+    }
+
+    func deleteNote(_ note: WatchNoteSummary) async throws {
+        try await service.deleteNote(note)
+    }
+
+    func fetchRoutines() async throws -> [WatchRoutineSummary] {
+        guard let spaceID = selectedSpaceID else { return [] }
+        return try await service.fetchRoutines(spaceId: spaceID)
+    }
+
+    func logRoutine(_ routine: WatchRoutineSummary, note: String?) async throws {
+        guard let spaceID = selectedSpaceID else { throw WatchAppModelFlowError.missingSelectedSpace }
+        try await service.logRoutine(routineID: routine.id, spaceID: spaceID, note: note)
+    }
+
+    func fetchSavedPlaces() async throws -> [WatchSavedPlaceSummary] {
+        guard let spaceID = selectedSpaceID else { return [] }
+        return try await service.fetchSavedPlaces(spaceId: spaceID)
+    }
+
+    func fetchPeople() async throws -> [WatchPersonSummary] {
+        guard let spaceID = selectedSpaceID else { return [] }
+        return try await service.fetchPeople(spaceId: spaceID)
+    }
+
+    func fetchMission(id: UUID) async throws -> WatchMissionDetail {
+        try await service.fetchMission(id: id)
+    }
+
+    func setMissionCompleted(_ mission: WatchMissionDetail, isCompleted: Bool) async throws {
+        try await service.setMissionCompleted(id: mission.id, isCompleted: isCompleted, version: mission.version)
+    }
+
+    func fetchIncident(id: UUID) async throws -> WatchIncidentDetail {
+        try await service.fetchIncident(id: id)
+    }
+
+    func updateIncidentStatus(_ incident: WatchIncidentDetail, status: String) async throws {
+        try await service.updateIncidentStatus(id: incident.id, status: status, version: incident.version)
+    }
+
+    func addListItem(listID: UUID, title: String, position: Int) async throws {
+        try await service.addListItem(listID: listID, title: title, position: position)
+    }
+
+    func toggleListItem(_ item: WatchSharedListItemSummary) async throws {
+        try await service.toggleListItem(item)
+    }
+
+    func deleteListItem(_ item: WatchSharedListItemSummary) async throws {
+        try await service.deleteListItem(item)
+    }
+
     private func loadWorkspace(userId: UUID, fallbackEmail: String?) async throws {
         WatchLog.msg("Watch loadWorkspace started user=\(userId.uuidString)")
         state = .loadingWorkspace
@@ -274,7 +344,18 @@ enum WatchAppModelError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .pairingCodeExpired:
-            return "Kod połączenia wygasł. Wygeneruj nowy kod i spróbuj ponownie."
+            return String(localized: "watch.auth.code.error.expired")
+        }
+    }
+}
+
+enum WatchAppModelFlowError: LocalizedError {
+    case missingSelectedSpace
+
+    var errorDescription: String? {
+        switch self {
+        case .missingSelectedSpace:
+            return String(localized: "watch.common.error.selectSpace")
         }
     }
 }

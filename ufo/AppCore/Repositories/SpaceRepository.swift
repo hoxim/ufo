@@ -308,7 +308,7 @@ final class SpaceRepository {
             throw AuthError.notAuthenticated
         }
         
-        Log.msg("Joining space with code: \(inviteCode)")
+        Log.msg("Joining space by invite code.")
         
         // 1. Find space by code
         let space: SpaceRecord = try await client
@@ -464,7 +464,7 @@ final class SpaceRepository {
             throw SpaceError.invitationsBlockedForPrivateSpace
         }
         
-        Log.msg("Sending invitation to: \(email)")
+        Log.msg("Creating invitation for a new member.")
         
         struct NewInvitation: Encodable {
             let space_id: UUID
@@ -498,7 +498,7 @@ final class SpaceRepository {
             throw SpaceError.invitationsBlockedForPrivateSpace
         }
         
-        Log.msg("🛸 Initiating transmission to: \(email)")
+        Log.msg("Creating member invitation.")
         
         let uniqueCode = String(UUID().uuidString.prefix(8)).uppercased()
         
@@ -533,7 +533,7 @@ enum SpaceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invitationsBlockedForPrivateSpace:
-            return "Do Space typu Private nie można wysyłać zaproszeń. Utwórz Space typu Shared."
+            return String(localized: "spaces.error.invitationsBlockedForPrivateSpace")
         }
     }
 }

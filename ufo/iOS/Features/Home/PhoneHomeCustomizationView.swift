@@ -19,12 +19,12 @@ struct PhoneHomeCustomizationView: View {
         NavigationStack {
             List {
                 Section {
-                    Text("Dodaj, ukryj i ustaw kolejność widgetów ekranu głównego. Przeciągnij uchwyt po prawej, żeby zmienić kolejność.")
+                    Text("home.customization.description")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
-                Section("Widgets") {
+                Section("home.customization.section.widgets") {
                     ForEach($appPreferences.homeWidgets) { $preference in
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 12) {
@@ -41,11 +41,11 @@ struct PhoneHomeCustomizationView: View {
                                         .foregroundStyle(preference.isVisible ? .red : .green)
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(preference.isVisible ? "Hide widget" : "Show widget")
+                                .accessibilityLabel(preference.isVisible ? "home.customization.action.hideWidget" : "home.customization.action.showWidget")
                             }
 
                             if preference.kind.supportedSpans.count > 1 {
-                                Picker("Size", selection: $preference.span) {
+                                Picker("home.customization.field.size", selection: $preference.span) {
                                     ForEach(preference.kind.supportedSpans) { span in
                                         Text(span.title).tag(span)
                                     }
@@ -61,10 +61,10 @@ struct PhoneHomeCustomizationView: View {
                 }
             }
             .modifier(HomeCustomizationEditModeModifier(isActive: keepsEditModeActive))
-            .navigationTitle("Customize Home")
+            .navigationTitle("home.customization.title")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
+                    Button("home.customization.action.done") {
                         dismiss()
                     }
                 }

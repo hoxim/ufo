@@ -117,51 +117,51 @@ enum SavedPlaceCategory: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .home:
-            return "Home"
+            return String(localized: "locations.category.home")
         case .school:
-            return "School"
+            return String(localized: "locations.category.school")
         case .work:
-            return "Work"
+            return String(localized: "locations.category.work")
         case .doctor:
-            return "Doctor"
+            return String(localized: "locations.category.doctor")
         case .activity:
-            return "Activity"
+            return String(localized: "locations.category.activity")
         case .other:
-            return "Other"
+            return String(localized: "locations.category.other")
         }
     }
 
     var proximityPromptTitle: String {
         switch self {
         case .home:
-            return "Blisko domu"
+            return String(localized: "locations.proximity.home")
         case .school:
-            return "Blisko szkoły"
+            return String(localized: "locations.proximity.school")
         case .work:
-            return "Blisko pracy"
+            return String(localized: "locations.proximity.work")
         case .doctor:
-            return "Blisko wizyty"
+            return String(localized: "locations.proximity.doctor")
         case .activity:
-            return "Blisko aktywności"
+            return String(localized: "locations.proximity.activity")
         case .other:
-            return "Blisko zapisanego miejsca"
+            return String(localized: "locations.proximity.other")
         }
     }
 
     var arrivalMessagePrefix: String {
         switch self {
         case .home:
-            return "dotarł(a) do domu"
+            return String(localized: "locations.arrival.home")
         case .school:
-            return "dotarł(a) do szkoły"
+            return String(localized: "locations.arrival.school")
         case .work:
-            return "dotarł(a) do pracy"
+            return String(localized: "locations.arrival.work")
         case .doctor:
-            return "dotarł(a) na wizytę"
+            return String(localized: "locations.arrival.doctor")
         case .activity:
-            return "dotarł(a) na aktywność"
+            return String(localized: "locations.arrival.activity")
         case .other:
-            return "zrobił(a) check-in"
+            return String(localized: "locations.arrival.other")
         }
     }
 }

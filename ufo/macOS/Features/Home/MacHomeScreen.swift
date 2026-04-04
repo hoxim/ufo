@@ -36,7 +36,7 @@ struct MacHomeScreen: View {
                             Image(systemName: "slider.horizontal.3")
                                 .font(.subheadline.weight(.semibold))
 
-                            Text("Edit Home")
+                            Text("home.screen.action.edit")
                                 .font(.subheadline.weight(.semibold))
                         }
                         .foregroundStyle(.primary)
@@ -45,7 +45,7 @@ struct MacHomeScreen: View {
                         .background(.thinMaterial, in: Capsule())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Customize Home")
+                    .accessibilityLabel("home.screen.accessibility.customize")
                 }
 
                 ForEach(widgetRows) { row in
@@ -76,7 +76,7 @@ struct MacHomeScreen: View {
             .padding(.bottom, 28)
         }
         .appScreenBackground()
-        .navigationTitle("Home")
+        .navigationTitle("home.hub.title")
         .navigationDestination(item: $activeRoute) { route in
             destination(for: route)
         }
@@ -88,7 +88,7 @@ struct MacHomeScreen: View {
                     MacNotificationBellButton(unreadCount: notificationStore.unreadCount)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Open inbox")
+                .accessibilityLabel("home.screen.accessibility.notifications")
             }
         }
         .task {
@@ -218,7 +218,7 @@ struct MacHomeScreen: View {
                 openIncidentsCount: allIncidents.filter { $0.resolvedStatus != IncidentStatus.resolved.rawValue }.count,
                 criticalIncidentsCount: allIncidents.filter { $0.resolvedSeverity == IncidentSeverity.critical.rawValue }.count,
                 savedPlacesCount: savedPlaces.count,
-                recentCheckInText: checkIns.first.map { "\($0.userDisplayName) · \($0.placeName ?? "Current")" },
+                recentCheckInText: checkIns.first.map { "\($0.userDisplayName) · \($0.placeName ?? String(localized: "home.location.current"))" },
                 routinesCount: todayRoutines.count,
                 completedTodayRoutinesCount: completedTodayRoutineIds.count,
                 nextRoutineText: nextRoutine.map { "\($0.title) · \(String(format: "%02d:%02d", $0.startMinuteOfDay / 60, $0.startMinuteOfDay % 60))" },
@@ -282,7 +282,7 @@ struct MacHomeScreen: View {
             }
         case .routines:
             metricWidgetButton(route: .routines) {
-                MacHomeMetricCard(sectionTitle: "Routines", sectionIcon: "clock.arrow.circlepath", title: "Plan today", value: widget.routinesProgressText, subtitle: widget.nextRoutineText ?? "No routines scheduled", tint: .green, span: preference.span)
+                MacHomeMetricCard(sectionTitle: String(localized: "navigation.item.routines"), sectionIcon: "clock.arrow.circlepath", title: String(localized: "home.routines.title"), value: widget.routinesProgressText, subtitle: widget.nextRoutineText ?? String(localized: "home.routines.empty"), tint: .green, span: preference.span)
             }
         case .summary:
             MacTodaySummaryCard(widget: widget)

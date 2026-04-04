@@ -12,11 +12,11 @@ enum PhoneSpaceFilter: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .all:
-            return "Wszystkie"
+            return String(localized: "spaces.filter.all")
         case .shared:
-            return "Wspólne"
+            return String(localized: "spaces.filter.shared")
         case .private:
-            return "Prywatne"
+            return String(localized: "spaces.filter.private")
         }
     }
 }
@@ -35,27 +35,27 @@ enum PhoneSpacePendingAction: Identifiable {
     var title: String {
         switch self {
         case .delete(let space, _):
-            return "Usunąć grupę \(space.name)?"
+            return String(format: String(localized: "spaces.pending.delete.title"), space.name)
         case .leave(let space, _):
-            return "Opuścić grupę \(space.name)?"
+            return String(format: String(localized: "spaces.pending.leave.title"), space.name)
         }
     }
 
     var message: String {
         switch self {
         case .delete:
-            return "Ta operacja usunie całą przestrzeń dla wszystkich członków."
+            return String(localized: "spaces.pending.delete.message")
         case .leave:
-            return "Po opuszczeniu grupy stracisz dostęp do jej danych, dopóki ktoś nie zaprosi Cię ponownie."
+            return String(localized: "spaces.pending.leave.message")
         }
     }
 
     var confirmTitle: String {
         switch self {
         case .delete:
-            return "Usuń"
+            return String(localized: "spaces.pending.delete.confirm")
         case .leave:
-            return "Opuść"
+            return String(localized: "spaces.pending.leave.confirm")
         }
     }
 }

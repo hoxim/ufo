@@ -53,7 +53,7 @@ struct PhoneSavedPlacesMapView: View {
                     .frame(maxHeight: 260)
                 }
             }
-            .navigationTitle("Places Map")
+            .navigationTitle("locations.map.title")
             .modalInlineTitleDisplayMode()
             .toolbar {
                 ModalCloseToolbarItem { dismiss() }
@@ -187,7 +187,7 @@ struct PhoneLocationsMapCard: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 if currentLocation != nil {
-                    Label("Current location available", systemImage: "location.fill")
+                    Label("locations.map.currentAvailable", systemImage: "location.fill")
                         .font(.caption)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
@@ -289,7 +289,7 @@ struct PhoneLocationPickerMap: View {
             }
 
             VStack {
-                Text("Środek mapy")
+                Text("locations.map.center")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.primary)
                     .padding(.horizontal, 10)

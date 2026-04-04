@@ -40,6 +40,7 @@ struct WatchSharedListItemSummary: Identifiable, Hashable {
     let title: String
     let isCompleted: Bool
     let position: Int
+    let version: Int
 }
 
 struct WatchMissionSummary: Identifiable, Hashable {
@@ -51,12 +52,82 @@ struct WatchMissionSummary: Identifiable, Hashable {
     let updatedAt: Date?
 }
 
+struct WatchMissionDetail: Identifiable, Hashable {
+    let id: UUID
+    let title: String
+    let description: String
+    let priority: String
+    let isCompleted: Bool
+    let difficulty: Int
+    let dueDate: Date?
+    let savedPlaceName: String?
+    let updatedAt: Date?
+    let version: Int
+}
+
 struct WatchIncidentSummary: Identifiable, Hashable {
     let id: UUID
     let title: String
     let severity: String
     let status: String
     let updatedAt: Date?
+}
+
+struct WatchIncidentDetail: Identifiable, Hashable {
+    let id: UUID
+    let title: String
+    let description: String?
+    let severity: String
+    let status: String
+    let occurrenceDate: Date
+    let updatedAt: Date?
+    let version: Int
+}
+
+struct WatchNoteSummary: Identifiable, Hashable {
+    let id: UUID
+    let title: String
+    let content: String
+    let isPinned: Bool
+    let updatedAt: Date?
+    let version: Int
+}
+
+struct WatchRoutineSummary: Identifiable, Hashable {
+    let id: UUID
+    let title: String
+    let category: String
+    let personName: String?
+    let notes: String?
+    let startMinuteOfDay: Int
+    let durationMinutes: Int
+    let activeWeekdaysRaw: String
+    let updatedAt: Date?
+
+    var activeWeekdays: [Int] {
+        activeWeekdaysRaw
+            .split(separator: ",")
+            .compactMap { Int($0) }
+            .filter { (1...7).contains($0) }
+    }
+}
+
+struct WatchSavedPlaceSummary: Identifiable, Hashable {
+    let id: UUID
+    let name: String
+    let description: String?
+    let category: String?
+    let address: String?
+    let latitude: Double
+    let longitude: Double
+    let radiusMeters: Double
+}
+
+struct WatchPersonSummary: Identifiable, Hashable {
+    let id: UUID
+    let displayName: String
+    let email: String
+    let role: String
 }
 
 struct WatchWorkspaceContext {
@@ -140,7 +211,7 @@ final class WatchSupabaseService {
     func fetchListItems(listId: UUID) async throws -> [WatchSharedListItemSummary] {
         let records: [WatchSharedListItemRecord] = try await client
             .from("shared_list_items")
-            .select("id, title, is_completed, position")
+            .select("id, title, is_completed, position, version")
             .eq("list_id", value: listId)
             .is("deleted_at", value: nil)
             .order("position", ascending: true)
@@ -152,7 +223,8 @@ final class WatchSupabaseService {
                 id: $0.id,
                 title: $0.title,
                 isCompleted: $0.isCompleted,
-                position: $0.position
+                position: $0.position,
+                version: $0.version
             )
         }
     }
@@ -198,6 +270,341 @@ final class WatchSupabaseService {
                 updatedAt: $0.lastUpdatedAt
             )
         }
+    }
+
+    func fetchNotes(spaceId: UUID) async throws -> [WatchNoteSummary] {
+        let records: [WatchNoteRecord] = try await client
+            .from("notes")
+            .select("id, title, content, is_pinned, updated_at, version")
+            .eq("space_id", value: spaceId)
+            .is("deleted_at", value: nil)
+            .order("is_pinned", ascending: false)
+            .order("updated_at", ascending: false)
+            .execute()
+            .value
+
+        return records.map {
+            WatchNoteSummary(
+                id: $0.id,
+                title: $0.title,
+                content: $0.content,
+                isPinned: $0.isPinned,
+                updatedAt: $0.updatedAt,
+                version: $0.version
+            )
+        }
+    }
+
+    func createNote(spaceId: UUID, title: String, content: String) async throws -> WatchNoteSummary {
+        let actorID = try await currentUserID()
+        let now = Date()
+        let noteID = UUID()
+
+        let record: WatchNoteRecord = try await client
+            .from("notes")
+            .insert(
+                WatchNoteInsertPayload(
+                    id: noteID,
+                    space_id: spaceId,
+                    title: title,
+                    content: content,
+                    created_by: actorID,
+                    updated_by: actorID,
+                    updated_at: now,
+                    version: 1
+                )
+            )
+            .select("id, title, content, is_pinned, updated_at, version")
+            .single()
+            .execute()
+            .value
+
+        return WatchNoteSummary(
+            id: record.id,
+            title: record.title,
+            content: record.content,
+            isPinned: record.isPinned,
+            updatedAt: record.updatedAt,
+            version: record.version
+        )
+    }
+
+    func updateNote(_ note: WatchNoteSummary, title: String, content: String) async throws -> WatchNoteSummary {
+        let actorID = try await currentUserID()
+        let now = Date()
+
+        let record: WatchNoteRecord = try await client
+            .from("notes")
+            .update(
+                WatchNoteUpdatePayload(
+                    title: title,
+                    content: content,
+                    updated_by: actorID,
+                    updated_at: now,
+                    version: note.version + 1
+                )
+            )
+            .eq("id", value: note.id)
+            .select("id, title, content, is_pinned, updated_at, version")
+            .single()
+            .execute()
+            .value
+
+        return WatchNoteSummary(
+            id: record.id,
+            title: record.title,
+            content: record.content,
+            isPinned: record.isPinned,
+            updatedAt: record.updatedAt,
+            version: record.version
+        )
+    }
+
+    func deleteNote(_ note: WatchNoteSummary) async throws {
+        let actorID = try await currentUserID()
+        let now = Date()
+
+        try await client
+            .from("notes")
+            .update(
+                WatchSoftDeletePayload(
+                    updated_by: actorID,
+                    updated_at: now,
+                    version: note.version + 1,
+                    deleted_at: now
+                )
+            )
+            .eq("id", value: note.id)
+            .execute()
+    }
+
+    func fetchRoutines(spaceId: UUID) async throws -> [WatchRoutineSummary] {
+        let records: [WatchRoutineRecord] = try await client
+            .from("routines")
+            .select("id, title, category, person_name, notes, start_minute_of_day, duration_minutes, active_weekdays, updated_at")
+            .eq("space_id", value: spaceId)
+            .is("deleted_at", value: nil)
+            .order("start_minute_of_day", ascending: true)
+            .execute()
+            .value
+
+        return records.map {
+            WatchRoutineSummary(
+                id: $0.id,
+                title: $0.title,
+                category: $0.category,
+                personName: $0.personName,
+                notes: $0.notes,
+                startMinuteOfDay: $0.startMinuteOfDay,
+                durationMinutes: $0.durationMinutes,
+                activeWeekdaysRaw: $0.activeWeekdaysRaw,
+                updatedAt: $0.updatedAt
+            )
+        }
+    }
+
+    func logRoutine(routineID: UUID, spaceID: UUID, note: String?) async throws {
+        let actorID = try await currentUserID()
+        let now = Date()
+
+        try await client
+            .from("routine_logs")
+            .insert(
+                WatchRoutineLogInsertPayload(
+                    id: UUID(),
+                    routine_id: routineID,
+                    space_id: spaceID,
+                    logged_at: now,
+                    note: sanitizedOptionalText(note),
+                    created_by: actorID,
+                    updated_at: now,
+                    version: 1
+                )
+            )
+            .execute()
+    }
+
+    func fetchSavedPlaces(spaceId: UUID) async throws -> [WatchSavedPlaceSummary] {
+        let records: [WatchSavedPlaceRecord] = try await client
+            .from("saved_places")
+            .select("id, name, description, category, address, latitude, longitude, radius_meters")
+            .eq("space_id", value: spaceId)
+            .is("deleted_at", value: nil)
+            .order("name", ascending: true)
+            .execute()
+            .value
+
+        return records.map {
+            WatchSavedPlaceSummary(
+                id: $0.id,
+                name: $0.name,
+                description: $0.description,
+                category: $0.category,
+                address: $0.address,
+                latitude: $0.latitude,
+                longitude: $0.longitude,
+                radiusMeters: $0.radiusMeters
+            )
+        }
+    }
+
+    func fetchPeople(spaceId: UUID) async throws -> [WatchPersonSummary] {
+        let records: [WatchSpaceMemberProfileRecord] = try await client
+            .from("space_members")
+            .select("user_id, role, profiles(email, full_name)")
+            .eq("space_id", value: spaceId)
+            .execute()
+            .value
+
+        return records
+            .map {
+                WatchPersonSummary(
+                    id: $0.userId,
+                    displayName: $0.profile?.fullName?.nonEmpty ?? $0.profile?.email ?? String(localized: "watch.people.unknown"),
+                    email: $0.profile?.email ?? "",
+                    role: $0.role
+                )
+            }
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+    }
+
+    func fetchMission(id: UUID) async throws -> WatchMissionDetail {
+        let record: WatchMissionDetailRecord = try await client
+            .from("missions")
+            .select("id, title, description, priority, is_completed, difficulty, due_date, saved_place_name, last_updated_at, version")
+            .eq("id", value: id)
+            .single()
+            .execute()
+            .value
+
+        return WatchMissionDetail(
+            id: record.id,
+            title: record.title,
+            description: record.description,
+            priority: record.priority,
+            isCompleted: record.isCompleted,
+            difficulty: record.difficulty,
+            dueDate: record.dueDate,
+            savedPlaceName: record.savedPlaceName,
+            updatedAt: record.lastUpdatedAt,
+            version: record.version
+        )
+    }
+
+    func setMissionCompleted(id: UUID, isCompleted: Bool, version: Int) async throws {
+        let actorID = try await currentUserID()
+        let now = Date()
+
+        try await client
+            .from("missions")
+            .update(
+                WatchMissionCompletionPayload(
+                    is_completed: isCompleted,
+                    updated_by: actorID,
+                    updated_at: now,
+                    last_updated_at: now,
+                    version: version + 1
+                )
+            )
+            .eq("id", value: id)
+            .execute()
+    }
+
+    func fetchIncident(id: UUID) async throws -> WatchIncidentDetail {
+        let record: WatchIncidentDetailRecord = try await client
+            .from("incidents")
+            .select("id, title, description, severity, status, occurrence_date, last_updated_at, version")
+            .eq("id", value: id)
+            .single()
+            .execute()
+            .value
+
+        return WatchIncidentDetail(
+            id: record.id,
+            title: record.title,
+            description: record.description,
+            severity: record.severity,
+            status: record.status,
+            occurrenceDate: record.occurrenceDate,
+            updatedAt: record.lastUpdatedAt,
+            version: record.version
+        )
+    }
+
+    func updateIncidentStatus(id: UUID, status: String, version: Int) async throws {
+        let actorID = try await currentUserID()
+        let now = Date()
+
+        try await client
+            .from("incidents")
+            .update(
+                WatchIncidentStatusPayload(
+                    status: status,
+                    updated_by: actorID,
+                    updated_at: now,
+                    last_updated_at: now,
+                    version: version + 1
+                )
+            )
+            .eq("id", value: id)
+            .execute()
+    }
+
+    func addListItem(listID: UUID, title: String, position: Int) async throws {
+        let actorID = try await currentUserID()
+        let now = Date()
+
+        try await client
+            .from("shared_list_items")
+            .insert(
+                WatchSharedListItemInsertPayload(
+                    id: UUID(),
+                    list_id: listID,
+                    title: title,
+                    is_completed: false,
+                    position: position,
+                    updated_at: now,
+                    version: 1,
+                    updated_by: actorID
+                )
+            )
+            .execute()
+    }
+
+    func toggleListItem(_ item: WatchSharedListItemSummary) async throws {
+        let actorID = try await currentUserID()
+        let now = Date()
+
+        try await client
+            .from("shared_list_items")
+            .update(
+                WatchSharedListItemUpdatePayload(
+                    is_completed: !item.isCompleted,
+                    updated_at: now,
+                    version: item.version + 1,
+                    updated_by: actorID
+                )
+            )
+            .eq("id", value: item.id)
+            .execute()
+    }
+
+    func deleteListItem(_ item: WatchSharedListItemSummary) async throws {
+        let actorID = try await currentUserID()
+        let now = Date()
+
+        try await client
+            .from("shared_list_items")
+            .update(
+                WatchSoftDeletePayload(
+                    updated_by: actorID,
+                    updated_at: now,
+                    version: item.version + 1,
+                    deleted_at: now
+                )
+            )
+            .eq("id", value: item.id)
+            .execute()
     }
 
     func registerCurrentDevice(authMethod: String, approvedVia: String?) async throws {
@@ -290,6 +697,18 @@ final class WatchSupabaseService {
         return error
     }
 
+    private func currentUserID() async throws -> UUID {
+        let session = try await client.auth.session
+        return session.user.id
+    }
+
+    private func sanitizedOptionalText(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
+    }
+
     private static func extractSessionID(fromAccessToken accessToken: String) -> UUID? {
         let segments = accessToken.split(separator: ".")
         guard segments.count == 3 else { return nil }
@@ -374,9 +793,10 @@ private struct WatchSharedListItemRecord: Decodable {
     let title: String
     let isCompleted: Bool
     let position: Int
+    let version: Int
 
     enum CodingKeys: String, CodingKey {
-        case id, title, position
+        case id, title, position, version
         case isCompleted = "is_completed"
     }
 }
@@ -408,6 +828,189 @@ private struct WatchIncidentRecord: Decodable {
         case id, title, severity, status
         case lastUpdatedAt = "last_updated_at"
     }
+}
+
+private struct WatchNoteRecord: Decodable {
+    let id: UUID
+    let title: String
+    let content: String
+    let isPinned: Bool
+    let updatedAt: Date?
+    let version: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, content, version
+        case isPinned = "is_pinned"
+        case updatedAt = "updated_at"
+    }
+}
+
+private struct WatchRoutineRecord: Decodable {
+    let id: UUID
+    let title: String
+    let category: String
+    let personName: String?
+    let notes: String?
+    let startMinuteOfDay: Int
+    let durationMinutes: Int
+    let activeWeekdaysRaw: String
+    let updatedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, category, notes
+        case personName = "person_name"
+        case startMinuteOfDay = "start_minute_of_day"
+        case durationMinutes = "duration_minutes"
+        case activeWeekdaysRaw = "active_weekdays"
+        case updatedAt = "updated_at"
+    }
+}
+
+private struct WatchSavedPlaceRecord: Decodable {
+    let id: UUID
+    let name: String
+    let description: String?
+    let category: String?
+    let address: String?
+    let latitude: Double
+    let longitude: Double
+    let radiusMeters: Double
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, description, category, address, latitude, longitude
+        case radiusMeters = "radius_meters"
+    }
+}
+
+private struct WatchSpaceMemberProfileRecord: Decodable {
+    let userId: UUID
+    let role: String
+    let profile: WatchPersonProfileRecord?
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case role
+        case profile = "profiles"
+    }
+}
+
+private struct WatchPersonProfileRecord: Decodable {
+    let email: String?
+    let fullName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case email
+        case fullName = "full_name"
+    }
+}
+
+private struct WatchMissionDetailRecord: Decodable {
+    let id: UUID
+    let title: String
+    let description: String
+    let priority: String
+    let isCompleted: Bool
+    let difficulty: Int
+    let dueDate: Date?
+    let savedPlaceName: String?
+    let lastUpdatedAt: Date?
+    let version: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, description, priority, difficulty, version
+        case isCompleted = "is_completed"
+        case dueDate = "due_date"
+        case savedPlaceName = "saved_place_name"
+        case lastUpdatedAt = "last_updated_at"
+    }
+}
+
+private struct WatchIncidentDetailRecord: Decodable {
+    let id: UUID
+    let title: String
+    let description: String?
+    let severity: String
+    let status: String
+    let occurrenceDate: Date
+    let lastUpdatedAt: Date?
+    let version: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, description, severity, status, version
+        case occurrenceDate = "occurrence_date"
+        case lastUpdatedAt = "last_updated_at"
+    }
+}
+
+private struct WatchNoteInsertPayload: Encodable {
+    let id: UUID
+    let space_id: UUID
+    let title: String
+    let content: String
+    let created_by: UUID?
+    let updated_by: UUID?
+    let updated_at: Date
+    let version: Int
+}
+
+private struct WatchNoteUpdatePayload: Encodable {
+    let title: String
+    let content: String
+    let updated_by: UUID?
+    let updated_at: Date
+    let version: Int
+}
+
+private struct WatchRoutineLogInsertPayload: Encodable {
+    let id: UUID
+    let routine_id: UUID
+    let space_id: UUID
+    let logged_at: Date
+    let note: String?
+    let created_by: UUID?
+    let updated_at: Date
+    let version: Int
+}
+
+private struct WatchMissionCompletionPayload: Encodable {
+    let is_completed: Bool
+    let updated_by: UUID?
+    let updated_at: Date
+    let last_updated_at: Date
+    let version: Int
+}
+
+private struct WatchIncidentStatusPayload: Encodable {
+    let status: String
+    let updated_by: UUID?
+    let updated_at: Date
+    let last_updated_at: Date
+    let version: Int
+}
+
+private struct WatchSharedListItemInsertPayload: Encodable {
+    let id: UUID
+    let list_id: UUID
+    let title: String
+    let is_completed: Bool
+    let position: Int
+    let updated_at: Date
+    let version: Int
+    let updated_by: UUID?
+}
+
+private struct WatchSharedListItemUpdatePayload: Encodable {
+    let is_completed: Bool
+    let updated_at: Date
+    let version: Int
+    let updated_by: UUID?
+}
+
+private struct WatchSoftDeletePayload: Encodable {
+    let updated_by: UUID?
+    let updated_at: Date
+    let version: Int
+    let deleted_at: Date
 }
 
 private struct WatchPairingRequestRecord: Decodable {
@@ -447,10 +1050,17 @@ enum WatchSupabaseServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidSessionIdentifier:
-            return "Nie udało się odczytać identyfikatora sesji zegarka."
+            return String(localized: "watch.auth.error.invalidSession")
         case .pairingBackendUnavailable:
-            return "Logowanie kodem lub QR nie jest jeszcze poprawnie skonfigurowane na serwerze. Użyj iPhone'a albo loginu i hasła."
+            return String(localized: "watch.auth.code.error.backendUnavailable")
         }
+    }
+}
+
+private extension String {
+    var nonEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 

@@ -38,7 +38,7 @@ struct PhoneAddBudgetEntryView: View {
                 }
                 .onChange(of: kind) { _, newValue in
                     if !categoryOptions(for: newValue).contains(category) {
-                        category = categoryOptions(for: newValue).first ?? "Other"
+                        category = categoryOptions(for: newValue).first ?? String(localized: "budget.filter.option.other")
                     }
                 }
                 TextField("budget.entry.field.amount", text: $amountText)
@@ -49,24 +49,24 @@ struct PhoneAddBudgetEntryView: View {
                         Text(option).tag(option)
                     }
                 }
-                TextField("Custom category", text: $customCategoryName)
+                TextField("budget.entry.field.customCategory", text: $customCategoryName)
                     .prominentFormTextInput()
-                Toggle("Recurring transaction", isOn: $isRecurring)
+                Toggle("budget.entry.field.recurring", isOn: $isRecurring)
                 if isRecurring {
-                    Picker("Interval", selection: $recurringInterval) {
+                    Picker("budget.entry.field.interval", selection: $recurringInterval) {
                         ForEach(PhoneBudgetRecurringInterval.allCases, id: \.self) { interval in
                             Text(interval.title).tag(interval)
                         }
                     }
                 }
-                DisclosureGroup("Style", isExpanded: $showStylePicker) {
+                DisclosureGroup("budget.entry.field.style", isExpanded: $showStylePicker) {
                     OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                 }
                 TextField("budget.entry.field.notes", text: $notes)
                     .prominentFormTextInput()
                 DatePicker("budget.entry.field.date", selection: $date, displayedComponents: [.date])
             }
-            .navigationTitle("Add Transaction")
+            .navigationTitle("budget.entry.title.new")
             .modalInlineTitleDisplayMode()
             .toolbar {
                 ModalCloseToolbarItem {
@@ -138,18 +138,18 @@ struct PhoneAddBudgetGoalView: View {
     var body: some View {
         AdaptiveFormContent {
             Form {
-                TextField("Goal", text: $title)
+                TextField("budget.goal.field.title", text: $title)
                     .prominentFormTextInput()
                     .focused($isTitleFocused)
-                TextField("Target amount", text: $targetText)
+                TextField("budget.goal.field.targetAmount", text: $targetText)
                     .prominentFormTextInput()
                     .decimalPadKeyboardIfSupported()
-                TextField("Saved so far", text: $currentText)
+                TextField("budget.goal.field.currentAmount", text: $currentText)
                     .prominentFormTextInput()
                     .decimalPadKeyboardIfSupported()
-                DatePicker("Due date", selection: $dueDate, displayedComponents: [.date])
+                DatePicker("budget.goal.field.dueDate", selection: $dueDate, displayedComponents: [.date])
             }
-            .navigationTitle("Add Goal")
+            .navigationTitle("budget.goal.title.new")
             .modalInlineTitleDisplayMode()
             .toolbar {
                 ModalCloseToolbarItem {
@@ -221,20 +221,20 @@ struct PhoneAddCategoryBudgetView: View {
     var body: some View {
         AdaptiveFormContent {
             Form {
-                Picker("Category", selection: $selectedCategory) {
+                Picker("budget.category.field.category", selection: $selectedCategory) {
                     ForEach(existingCategories, id: \.self) { category in
                         Text(category).tag(category)
                     }
                 }
 
-                TextField("New custom category", text: $customCategory)
+                TextField("budget.category.field.newCustom", text: $customCategory)
                     .prominentFormTextInput()
 
-                TextField("Monthly limit", text: $amountText)
+                TextField("budget.category.field.monthlyLimit", text: $amountText)
                     .prominentFormTextInput()
                     .decimalPadKeyboardIfSupported()
             }
-            .navigationTitle(initialCategory == nil ? "Category Limit" : "Edit Limit")
+            .navigationTitle(initialCategory == nil ? "budget.category.title.new" : "budget.category.title.edit")
             .modalInlineTitleDisplayMode()
             .toolbar {
                 ModalCloseToolbarItem {
@@ -274,10 +274,10 @@ struct PhoneAddCustomBudgetCategoryView: View {
     var body: some View {
         AdaptiveFormContent {
             Form {
-                TextField("Category name", text: $value)
+                TextField("budget.customCategory.field.name", text: $value)
                     .prominentFormTextInput()
             }
-            .navigationTitle("New Category")
+            .navigationTitle("budget.customCategory.title.new")
             .modalInlineTitleDisplayMode()
             .toolbar {
                 ModalCloseToolbarItem {

@@ -36,7 +36,7 @@ final class LinkStore {
             lastErrorMessage = nil
         } catch {
             links = []
-            lastErrorMessage = "Nie udało się wczytać linków lokalnie: \(error)"
+            lastErrorMessage = localizedErrorMessage("links.error.loadLocal", error: error)
         }
     }
 
@@ -56,7 +56,7 @@ final class LinkStore {
             lastErrorMessage = nil
         } catch {
             loadLocal(scopeId: scopeId)
-            lastErrorMessage = "Nie udało się odświeżyć linków: \(error)"
+            lastErrorMessage = localizedErrorMessage("links.error.refresh", error: error)
         }
     }
 
@@ -69,7 +69,7 @@ final class LinkStore {
             links = try repository.fetchAllLocal(scopeId: scopeId)
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się dodać linku: \(error)"
+            lastErrorMessage = localizedErrorMessage("links.error.add", error: error)
         }
     }
 
@@ -82,7 +82,7 @@ final class LinkStore {
             links = try repository.fetchAllLocal(scopeId: scopeId)
             await syncPending()
         } catch {
-            lastErrorMessage = "Nie udało się usunąć linku: \(error)"
+            lastErrorMessage = localizedErrorMessage("links.error.delete", error: error)
         }
     }
 
@@ -104,7 +104,7 @@ final class LinkStore {
             try modelContext.save()
             lastErrorMessage = nil
         } catch {
-            lastErrorMessage = "Nie udało się zsynchronizować linków: \(error)"
+            lastErrorMessage = localizedErrorMessage("links.error.sync", error: error)
         }
     }
 }

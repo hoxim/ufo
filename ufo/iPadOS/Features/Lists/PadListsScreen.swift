@@ -119,7 +119,7 @@ struct PadListsScreen: View {
                 }
             }
             .appPrimaryListChrome()
-            .searchable(text: $searchText, prompt: "Search lists")
+            .searchable(text: $searchText, prompt: "lists.search.prompt")
             .refreshable {
                 await refreshLists()
             }

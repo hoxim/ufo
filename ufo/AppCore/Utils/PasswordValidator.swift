@@ -18,12 +18,12 @@ enum PasswordError: Error, LocalizedError {
     // Friendly messages for the UI
     var errorDescription: String? {
         switch self {
-        case .empty: return "Password cannot be empty."
-        case .mismatch: return "Passwords do not match."
-        case .tooShort(let min): return "Password must be at least \(min) characters long."
-        case .missingUppercase: return "Add at least one uppercase letter."
-        case .missingNumber: return "Add at least one number."
-        case .missingSpecialCharacter: return "Add at least one special character."
+        case .empty: return String(localized: "password.error.empty")
+        case .mismatch: return String(localized: "password.error.mismatch")
+        case .tooShort(let min): return String(format: String(localized: "password.error.tooShort"), min)
+        case .missingUppercase: return String(localized: "password.error.missingUppercase")
+        case .missingNumber: return String(localized: "password.error.missingNumber")
+        case .missingSpecialCharacter: return String(localized: "password.error.missingSpecialCharacter")
         }
     }
 }

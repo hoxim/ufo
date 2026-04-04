@@ -57,44 +57,44 @@ struct MacMissionEditorForm: View {
                         in: 1...5
                     )
                     SelectionMenuRow(
-                        title: "Właściciel",
+                        title: String(localized: "missions.editor.field.owner"),
                         value: selectedOwnerTitle,
                         isPlaceholder: ownerId == nil
                     ) {
-                        Button("Nieprzypisane") { ownerId = nil }
+                        Button(String(localized: "missions.editor.option.unassigned")) { ownerId = nil }
                         ForEach(availableOwners) { owner in
                             Button(owner.effectiveDisplayName ?? owner.email) { ownerId = owner.id }
                         }
                     }
                     SelectionMenuRow(
-                        title: "Miejsce",
+                        title: String(localized: "missions.editor.field.place"),
                         value: selectedPlaceTitle,
                         isPlaceholder: savedPlaceId == nil
                     ) {
-                        Button("Brak miejsca") { savedPlaceId = nil }
+                        Button(String(localized: "missions.editor.option.noPlace")) { savedPlaceId = nil }
                         ForEach(availablePlaces) { place in
                             Button(place.name) { savedPlaceId = place.id }
                         }
                         Divider()
-                        Button("Dodaj nowe miejsce") { isPresentingAddPlace = true }
+                        Button(String(localized: "missions.editor.action.addPlace")) { isPresentingAddPlace = true }
                     }
                     SelectionMenuRow(
-                        title: "Priorytet",
+                        title: String(localized: "missions.editor.field.priority"),
                         value: priority.localizedLabel
                     ) {
                         ForEach(MissionPriority.allCases) { value in
                             Button(value.localizedLabel) { priority = value }
                         }
                     }
-                    Toggle("Powtarzalna", isOn: $isRecurring)
-                    Toggle("Termin", isOn: $dueDateEnabled)
+                    Toggle("missions.editor.field.recurring", isOn: $isRecurring)
+                    Toggle("missions.editor.field.dueDateToggle", isOn: $dueDateEnabled)
                     if dueDateEnabled {
-                        DatePicker("Data", selection: $dueDate)
+                        DatePicker("missions.editor.field.date", selection: $dueDate)
                     }
                 }
-                Section("Powiązane") {
+                Section("missions.editor.section.related") {
                     SelectionMenuRow(
-                        title: "Lista",
+                        title: String(localized: "missions.editor.field.list"),
                         value: selectedListTitle,
                         isPlaceholder: relatedListId == nil
                     ) {
@@ -103,10 +103,10 @@ struct MacMissionEditorForm: View {
                             Button(list.name) { relatedListId = list.id }
                         }
                         Divider()
-                        Button("Dodaj nową listę") { isPresentingAddList = true }
+                        Button(String(localized: "missions.editor.action.addList")) { isPresentingAddList = true }
                     }
                     SelectionMenuRow(
-                        title: "Notatka",
+                        title: String(localized: "missions.editor.field.note"),
                         value: selectedNoteTitle,
                         isPlaceholder: relatedNoteId == nil
                     ) {
@@ -115,10 +115,10 @@ struct MacMissionEditorForm: View {
                             Button(note.title) { relatedNoteId = note.id }
                         }
                         Divider()
-                        Button("Dodaj nową notatkę") { isPresentingAddNote = true }
+                        Button(String(localized: "missions.editor.action.addNote")) { isPresentingAddNote = true }
                     }
                     SelectionMenuRow(
-                        title: "Incydent",
+                        title: String(localized: "missions.editor.field.incident"),
                         value: selectedIncidentTitle,
                         isPlaceholder: relatedIncidentId == nil
                     ) {
@@ -127,11 +127,11 @@ struct MacMissionEditorForm: View {
                             Button(incident.title) { relatedIncidentId = incident.id }
                         }
                         Divider()
-                        Button("Dodaj nowy incydent") { isPresentingAddIncident = true }
+                        Button(String(localized: "missions.editor.action.addIncident")) { isPresentingAddIncident = true }
                     }
                 }
                 Section {
-                    DisclosureGroup("Styl", isExpanded: $showStylePicker) {
+                    DisclosureGroup("missions.editor.section.style", isExpanded: $showStylePicker) {
                         OperationStylePicker(iconName: $iconName, colorHex: $iconColorHex)
                     }
                 }
@@ -203,17 +203,17 @@ struct MacMissionEditorForm: View {
 
     private var originLabel: String {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmedTitle.isEmpty ? "mission draft" : trimmedTitle
+        return trimmedTitle.isEmpty ? String(localized: "missions.editor.originDraft") : trimmedTitle
     }
 
     private var selectedOwnerTitle: String {
         availableOwners.first(where: { $0.id == ownerId })?.effectiveDisplayName
             ?? availableOwners.first(where: { $0.id == ownerId })?.email
-            ?? "Nieprzypisane"
+            ?? String(localized: "missions.editor.option.unassigned")
     }
 
     private var selectedPlaceTitle: String {
-        availablePlaces.first(where: { $0.id == savedPlaceId })?.name ?? "Brak miejsca"
+        availablePlaces.first(where: { $0.id == savedPlaceId })?.name ?? String(localized: "missions.editor.option.noPlace")
     }
 
     private var selectedListTitle: String {
