@@ -10,7 +10,9 @@ struct WatchAppRootView: View {
             case .checkingSession, .loadingWorkspace:
                 ProgressView("Ładowanie")
             case .signedOut:
-                WatchSignInView()
+                NavigationStack {
+                    WatchSignInView()
+                }
             case .ready:
                 NavigationStack {
                     WatchFeatureMenuView()

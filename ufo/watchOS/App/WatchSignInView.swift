@@ -43,12 +43,6 @@ struct WatchSignInView: View {
         }
     }
 
-    @Environment(WatchAppModel.self) private var model
-
-    @State private var email = ""
-    @State private var password = ""
-    @State private var selectedMethod: SignInMethod = .phone
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
@@ -60,22 +54,64 @@ struct WatchSignInView: View {
                     .foregroundStyle(.secondary)
 
                 ForEach(SignInMethod.allCases) { method in
-                    Button {
-                        withAnimation {
-                            selectedMethod = method
-                        }
+                    NavigationLink {
+                        destination(for: method)
                     } label: {
                         WatchSignInMethodCard(
                             title: method.title,
                             subtitle: method.subtitle,
-                            icon: method.icon,
-                            isSelected: selectedMethod == method
+                            icon: method.icon
                         )
                     }
                     .buttonStyle(.plain)
                 }
+            }
+            .padding()
+        }
+        .navigationTitle("Logowanie")
+    }
 
-                signInDetailsSection
+    @ViewBuilder
+    private func destination(for method: SignInMethod) -> some View {
+        switch method {
+        case .phone:
+            WatchPhoneSignInScreen()
+        case .code:
+            WatchCodeSignInScreen()
+        case .credentials:
+            WatchCredentialsSignInScreen()
+        }
+    }
+}
+
+private struct WatchPhoneSignInScreen: View {
+    @Environment(WatchAppModel.self) private var model
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Użyj tej opcji, jeśli UFO jest już zalogowane na sparowanym iPhonie. Otwórz aplikację UFO na telefonie, a potem zatwierdź prośbę w sekcji Urządzenia.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    Task {
+                        await model.connectToPhone()
+                    }
+                } label: {
+                    Label("Poproś iPhone'a o logowanie", systemImage: "iphone.gen3.radiowaves.left.and.right")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.isAwaitingPhoneApproval || model.isAwaitingCodeApproval)
+
+                if model.isAwaitingPhoneApproval {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ProgressView()
+                        Text("Otwórz UFO na iPhonie i zatwierdź prośbę o połączenie.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
 
                 if let errorMessage = model.errorMessage {
                     Text(errorMessage)
@@ -85,119 +121,108 @@ struct WatchSignInView: View {
             }
             .padding()
         }
-        .navigationTitle("Logowanie")
+        .navigationTitle("Przez iPhone'a")
     }
+}
 
-    @ViewBuilder
-    private var signInDetailsSection: some View {
-        switch selectedMethod {
-        case .phone:
-            phoneSignInSection
-        case .code:
-            codePairingSection
-        case .credentials:
-            directSignInSection
-        }
-    }
+private struct WatchCodeSignInScreen: View {
+    @Environment(WatchAppModel.self) private var model
 
-    @ViewBuilder
-    private var phoneSignInSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Użyj tej opcji, jeśli UFO jest już zalogowane na sparowanym iPhonie. Otwórz aplikację UFO na telefonie, a potem zatwierdź prośbę w sekcji Urządzenia.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Wygeneruj jednorazowy kod lub QR na zegarku, a potem zatwierdź logowanie w sekcji Urządzenia na iPhonie, iPadzie albo Macu.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
 
-            Button {
-                Task {
-                    await model.connectToPhone()
+                if let qrPayload = model.pairingQRCodePayload {
+                    HStack {
+                        Spacer()
+                        WatchPairingQRCodeView(payload: qrPayload)
+                        Spacer()
+                    }
                 }
-            } label: {
-                Label("Poproś iPhone'a o logowanie", systemImage: "iphone.gen3.radiowaves.left.and.right")
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(model.isAwaitingPhoneApproval || model.isAwaitingCodeApproval)
 
-            if model.isAwaitingPhoneApproval {
-                VStack(alignment: .leading, spacing: 6) {
+                if let pairingCode = model.pairingCode {
+                    Text(pairingCode)
+                        .font(.title3.monospacedDigit().bold())
+
+                    if let expiresAt = model.pairingCodeExpiresAt {
+                        Text("Ważny do \(expiresAt.formatted(date: .omitted, time: .shortened))")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if model.isAwaitingCodeApproval {
                     ProgressView()
-                    Text("Otwórz UFO na iPhonie i zatwierdź prośbę o połączenie.")
+
+                    Button("Anuluj") {
+                        model.cancelCodePairing()
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    Button {
+                        Task {
+                            await model.startCodePairing()
+                        }
+                    } label: {
+                        Label("Wygeneruj kod i QR", systemImage: "qrcode")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(model.isAwaitingPhoneApproval)
+                }
+
+                if let errorMessage = model.errorMessage {
+                    Text(errorMessage)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.red)
                 }
             }
+            .padding()
         }
+        .navigationTitle("Kod lub QR")
     }
+}
 
-    @ViewBuilder
-    private var codePairingSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Wygeneruj jednorazowy kod lub QR na zegarku, a potem zatwierdź logowanie w sekcji Urządzenia na iPhonie, iPadzie albo Macu.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+private struct WatchCredentialsSignInScreen: View {
+    @Environment(WatchAppModel.self) private var model
 
-            if let qrPayload = model.pairingQRCodePayload {
-                HStack {
-                    Spacer()
-                    WatchPairingQRCodeView(payload: qrPayload)
-                    Spacer()
-                }
-            }
+    @State private var email = ""
+    @State private var password = ""
 
-            if let pairingCode = model.pairingCode {
-                Text(pairingCode)
-                    .font(.title3.monospacedDigit().bold())
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Ta opcja nie wymaga iPhone'a ani kodu. Wpisz dane konta bezpośrednio na zegarku.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
 
-                if let expiresAt = model.pairingCodeExpiresAt {
-                    Text("Ważny do \(expiresAt.formatted(date: .omitted, time: .shortened))")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
+                TextField("Email", text: $email)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
 
-            if model.isAwaitingCodeApproval {
-                ProgressView()
+                SecureField("Hasło", text: $password)
 
-                Button("Anuluj") {
-                    model.cancelCodePairing()
-                }
-                .buttonStyle(.bordered)
-            } else {
                 Button {
                     Task {
-                        await model.startCodePairing()
+                        await model.signIn(email: email, password: password)
                     }
                 } label: {
-                    Label("Wygeneruj kod i QR", systemImage: "qrcode")
+                    Label("Zaloguj", systemImage: "person.crop.circle.badge.checkmark")
                 }
-                .buttonStyle(.bordered)
-                .disabled(model.isAwaitingPhoneApproval)
-            }
-        }
-    }
+                .buttonStyle(.borderedProminent)
+                .disabled(email.isEmpty || password.isEmpty || model.isAwaitingPhoneApproval || model.isAwaitingCodeApproval)
 
-    @ViewBuilder
-    private var directSignInSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Ta opcja nie wymaga iPhone'a ani kodu. Wpisz dane konta bezpośrednio na zegarku.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-
-            TextField("Email", text: $email)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-
-            SecureField("Hasło", text: $password)
-
-            Button {
-                Task {
-                    await model.signIn(email: email, password: password)
+                if let errorMessage = model.errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
                 }
-            } label: {
-                Label("Zaloguj", systemImage: "person.crop.circle.badge.checkmark")
             }
-            .buttonStyle(.bordered)
-            .disabled(email.isEmpty || password.isEmpty || model.isAwaitingPhoneApproval || model.isAwaitingCodeApproval)
+            .padding()
         }
+        .navigationTitle("Login i hasło")
     }
 }
 
@@ -205,30 +230,36 @@ private struct WatchSignInMethodCard: View {
     let title: String
     let subtitle: String
     let icon: String
-    let isSelected: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: icon)
-                .font(.headline)
-                .foregroundStyle(isSelected ? Color.accentColor : .secondary)
-                .frame(width: 22)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: icon)
                     .font(.headline)
-                    .multilineTextAlignment(.leading)
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 22)
 
-                Text(subtitle)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.leading)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .multilineTextAlignment(.leading)
+
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 2)
             }
-
-            Spacer(minLength: 0)
         }
         .padding(10)
-        .background(isSelected ? Color.accentColor.opacity(0.16) : Color.white.opacity(0.06))
+        .background(Color.white.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
