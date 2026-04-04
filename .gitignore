@@ -11,3 +11,8 @@ DerivedData/
 *.xcuserstate
 ufo.xcodeproj/xcuserdata/
 ufo.xcodeproj/project.xcworkspace/
+
+# Internal documentation
+docs/
+ufo/iPadOS/IPADOS_GUIDE.md
+ufo/*OS/Features/*_FEATURES_GUIDE.md
