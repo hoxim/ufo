@@ -18,6 +18,7 @@ enum PhoneBudgetKindFilter: String, CaseIterable {
 }
 
 enum PhoneBudgetRangeFilter: CaseIterable {
+    case week
     case month
     case threeMonths
     case year
@@ -25,6 +26,7 @@ enum PhoneBudgetRangeFilter: CaseIterable {
 
     var title: String {
         switch self {
+        case .week: return "7D"
         case .month: return String(localized: "budget.filter.range.month")
         case .threeMonths: return "3M"
         case .year: return String(localized: "budget.filter.range.year")
@@ -35,6 +37,8 @@ enum PhoneBudgetRangeFilter: CaseIterable {
     var startDate: Date? {
         let calendar = Calendar.current
         switch self {
+        case .week:
+            return calendar.date(byAdding: .day, value: -7, to: .now)
         case .month:
             return calendar.date(byAdding: .month, value: -1, to: .now)
         case .threeMonths:
@@ -45,15 +49,23 @@ enum PhoneBudgetRangeFilter: CaseIterable {
             return nil
         }
     }
+
+    var dateInterval: DateInterval? {
+        let end = Date.now
+        guard let startDate else { return nil }
+        return DateInterval(start: startDate, end: end)
+    }
 }
 
 enum PhoneBudgetRecurringInterval: String, CaseIterable {
+    case daily
     case weekly
     case monthly
     case yearly
 
     var title: String {
         switch self {
+        case .daily: return "Daily"
         case .weekly: return String(localized: "budget.recurring.weekly")
         case .monthly: return String(localized: "budget.recurring.monthly")
         case .yearly: return String(localized: "budget.recurring.yearly")

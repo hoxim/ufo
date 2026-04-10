@@ -9,10 +9,14 @@ final class BudgetEntry {
     var kind: String
     var amount: Double
     var category: String
+    var subcategory: String?
+    var merchantName: String?
+    var merchantURLString: String?
     var iconName: String?
     var iconColorHex: String?
     var notes: String?
     var entryDate: Date
+    var isFixed: Bool
     var isRecurring: Bool
     var recurringInterval: String?
     var createdBy: UUID?
@@ -30,10 +34,14 @@ final class BudgetEntry {
         kind: String,
         amount: Double,
         category: String = "General",
+        subcategory: String? = nil,
+        merchantName: String? = nil,
+        merchantURLString: String? = nil,
         iconName: String? = "dollarsign.circle",
         iconColorHex: String? = "#22C55E",
         notes: String? = nil,
         entryDate: Date = .now,
+        isFixed: Bool = false,
         isRecurring: Bool = false,
         recurringInterval: String? = nil,
         createdBy: UUID? = nil
@@ -44,10 +52,14 @@ final class BudgetEntry {
         self.kind = kind
         self.amount = amount
         self.category = category
+        self.subcategory = subcategory
+        self.merchantName = merchantName
+        self.merchantURLString = merchantURLString
         self.iconName = iconName
         self.iconColorHex = iconColorHex
         self.notes = notes
         self.entryDate = entryDate
+        self.isFixed = isFixed
         self.isRecurring = isRecurring
         self.recurringInterval = recurringInterval
         self.createdBy = createdBy
@@ -57,6 +69,25 @@ final class BudgetEntry {
         self.updatedBy = nil
         self.deletedAt = nil
         self.pendingSync = false
+    }
+
+    var transactionDate: Date {
+        get { entryDate }
+        set { entryDate = newValue }
+    }
+
+    var merchantURL: URL? {
+        get {
+            guard let merchantURLString, !merchantURLString.isEmpty else { return nil }
+            return URL(string: merchantURLString)
+        }
+        set {
+            merchantURLString = newValue?.absoluteString
+        }
+    }
+
+    var signedAmount: Double {
+        kind == BudgetEntryKind.expense.rawValue ? -amount : amount
     }
 }
 
