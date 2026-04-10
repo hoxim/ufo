@@ -80,6 +80,37 @@ private enum PadSidebarItem: String, Hashable, CaseIterable {
         }
     }
 
+    var accentColor: Color {
+        switch self {
+        case .search:
+            return AppTheme.FeatureColors.searchAccent
+        case .home:
+            return AppTheme.FeatureColors.homeAccent
+        case .missions:
+            return AppTheme.FeatureColors.missionsAccent
+        case .notes:
+            return AppTheme.FeatureColors.notesAccent
+        case .lists:
+            return AppTheme.FeatureColors.listsAccent
+        case .incidents:
+            return AppTheme.FeatureColors.incidentsAccent
+        case .routines:
+            return AppTheme.FeatureColors.routinesAccent
+        case .budget:
+            return AppTheme.FeatureColors.budgetAccent
+        case .messages:
+            return AppTheme.FeatureColors.messagesAccent
+        case .places:
+            return AppTheme.FeatureColors.locationsAccent
+        case .roles:
+            return AppTheme.FeatureColors.rolesAccent
+        case .crew:
+            return AppTheme.FeatureColors.peopleAccent
+        case .spacesManage:
+            return AppTheme.FeatureColors.spacesAccent
+        }
+    }
+
     init(tab: TabItem) {
         switch tab {
         case .home:
@@ -128,52 +159,113 @@ struct PadSidebarShell: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            VStack(spacing: 0) {
-                List {
-                    Section {
-                        sidebarRow(.search)
-                    }
-
-                    Section("navigation.section.browse") {
-                        sidebarRow(.home)
-                    }
-
-                    Section("navigation.section.workspace") {
-                        sidebarRow(.missions)
-                        sidebarRow(.notes)
-                        sidebarRow(.lists)
-                        sidebarRow(.incidents)
-                        sidebarRow(.routines)
-                        sidebarRow(.budget)
-                    }
-
-                    Section("navigation.section.people") {
-                        sidebarRow(.messages)
-                        sidebarRow(.places)
-                        sidebarRow(.roles)
-                        sidebarRow(.crew)
-                    }
-
-                    Section("navigation.section.spaces") {
-                        sidebarRow(.spacesManage)
+        if selectedItem == .lists {
+            PadListsSidebarWorkspace {
+                appSidebar
+            }
+            .onChange(of: selectedItem) { _, newValue in
+                selectedTab = newValue.mappedTab
+            }
+            .onChange(of: selectedTab) { _, newValue in
+                let mappedItem = PadSidebarItem(tab: newValue)
+                if mappedItem != selectedItem {
+                    selectedItem = mappedItem
+                }
+            }
+            .sheet(item: $presentedSheet) { sheet in
+                NavigationStack {
+                    switch sheet {
+                    case .profile:
+                        PadProfileScreen()
+                    case .settings:
+                        PadSettingsScreen()
                     }
                 }
-                .listStyle(.sidebar)
-                .navigationTitle("ufo")
-
-                Divider()
-
-                sidebarFooter
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
+                .presentationDetents([.medium, .large])
             }
-            .background(Color(uiColor: .systemGroupedBackground))
+        } else if selectedItem == .missions {
+            PadMissionsSidebarWorkspace {
+                appSidebar
+            }
+            .onChange(of: selectedItem) { _, newValue in
+                selectedTab = newValue.mappedTab
+            }
+            .onChange(of: selectedTab) { _, newValue in
+                let mappedItem = PadSidebarItem(tab: newValue)
+                if mappedItem != selectedItem {
+                    selectedItem = mappedItem
+                }
+            }
+            .sheet(item: $presentedSheet) { sheet in
+                NavigationStack {
+                    switch sheet {
+                    case .profile:
+                        PadProfileScreen()
+                    case .settings:
+                        PadSettingsScreen()
+                    }
+                }
+                .presentationDetents([.medium, .large])
+            }
+        } else if selectedItem == .notes {
+            PadNotesSidebarWorkspace {
+                appSidebar
+            }
+            .onChange(of: selectedItem) { _, newValue in
+                selectedTab = newValue.mappedTab
+            }
+            .onChange(of: selectedTab) { _, newValue in
+                let mappedItem = PadSidebarItem(tab: newValue)
+                if mappedItem != selectedItem {
+                    selectedItem = mappedItem
+                }
+            }
+            .sheet(item: $presentedSheet) { sheet in
+                NavigationStack {
+                    switch sheet {
+                    case .profile:
+                        PadProfileScreen()
+                    case .settings:
+                        PadSettingsScreen()
+                    }
+                }
+                .presentationDetents([.medium, .large])
+            }
+        } else if selectedItem == .incidents {
+            PadIncidentsSidebarWorkspace {
+                appSidebar
+            }
+            .onChange(of: selectedItem) { _, newValue in
+                selectedTab = newValue.mappedTab
+            }
+            .onChange(of: selectedTab) { _, newValue in
+                let mappedItem = PadSidebarItem(tab: newValue)
+                if mappedItem != selectedItem {
+                    selectedItem = mappedItem
+                }
+            }
+            .sheet(item: $presentedSheet) { sheet in
+                NavigationStack {
+                    switch sheet {
+                    case .profile:
+                        PadProfileScreen()
+                    case .settings:
+                        PadSettingsScreen()
+                    }
+                }
+                .presentationDetents([.medium, .large])
+            }
+        } else {
+            standardShell
+        }
+    }
+
+    private var standardShell: some View {
+        NavigationSplitView {
+            appSidebar
         } detail: {
-            NavigationStack {
-                detailView(for: selectedItem)
-                    .appScreenBackground()
-            }
+            detailContainer(for: selectedItem)
+                .appScreenBackground()
         }
         .navigationSplitViewStyle(.balanced)
         .onChange(of: selectedItem) { _, newValue in
@@ -198,6 +290,49 @@ struct PadSidebarShell: View {
         }
     }
 
+    private var appSidebar: some View {
+        VStack(spacing: 0) {
+            List {
+                Section {
+                    sidebarRow(.search)
+                }
+
+                Section("navigation.section.browse") {
+                    sidebarRow(.home)
+                }
+
+                Section("navigation.section.workspace") {
+                    sidebarRow(.notes)
+                    sidebarRow(.missions)
+                    sidebarRow(.lists)
+                    sidebarRow(.incidents)
+                    sidebarRow(.routines)
+                    sidebarRow(.budget)
+                }
+
+                Section("navigation.section.people") {
+                    sidebarRow(.messages)
+                    sidebarRow(.places)
+                    sidebarRow(.roles)
+                    sidebarRow(.crew)
+                }
+
+                Section("navigation.section.spaces") {
+                    sidebarRow(.spacesManage)
+                }
+            }
+            .listStyle(.sidebar)
+            .navigationTitle("ufo")
+
+            Divider()
+
+            sidebarFooter
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+        }
+        .background(AppTheme.Colors.sidebar)
+    }
+
     @ViewBuilder
     private func sidebarRow(_ item: PadSidebarItem) -> some View {
         Button {
@@ -206,13 +341,14 @@ struct PadSidebarShell: View {
             HStack(spacing: 12) {
                 Image(systemName: item.systemImage)
                     .frame(width: 20)
+                    .foregroundStyle(item.accentColor)
 
                 Text(item.title)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
             .font(.body)
-            .foregroundStyle(selectedItem == item ? .white : .primary)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .background(selectionBackground(for: item))
@@ -225,12 +361,24 @@ struct PadSidebarShell: View {
     }
 
     @ViewBuilder
+    private func detailContainer(for item: PadSidebarItem) -> some View {
+        switch item {
+        case .missions, .notes, .lists, .incidents, .routines, .budget:
+            detailView(for: item)
+        default:
+            NavigationStack {
+                detailView(for: item)
+            }
+        }
+    }
+
+    @ViewBuilder
     private func detailView(for item: PadSidebarItem) -> some View {
         switch item {
         case .search:
             PadSearchScreen()
         case .home:
-            PadHomeScreen()
+            PadHomeScreen(showsInlineProfileAccess: false)
         case .missions:
             PadMissionsScreen()
         case .notes:
@@ -260,23 +408,14 @@ struct PadSidebarShell: View {
         VStack(alignment: .leading, spacing: 12) {
             sidebarSpaceSwitcher
 
-            HStack(spacing: 10) {
-                Button {
-                    presentedSheet = .profile
-                } label: {
-                    Label("navigation.action.profile", systemImage: "person.crop.circle")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-
-                Button {
-                    presentedSheet = .settings
-                } label: {
-                    Label("navigation.action.settings", systemImage: "gearshape")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-            }
+            PadSidebarProfileControl(
+                user: authStore.currentUser,
+                selectedSpaceName: spaceRepository.selectedSpace?.name,
+                onOpenProfile: { presentedSheet = .profile },
+                onOpenSettings: { presentedSheet = .settings },
+                onManageSpaces: { selectedItem = .spacesManage },
+                onSignOut: { Task { await authStore.signOut() } }
+            )
         }
     }
 
@@ -284,7 +423,7 @@ struct PadSidebarShell: View {
     private func selectionBackground(for item: PadSidebarItem) -> some View {
         if selectedItem == item {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.accentColor)
+                .fill(AppTheme.Colors.mutedFill)
         } else {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color.clear)
@@ -311,6 +450,7 @@ struct PadSidebarShell: View {
             } label: {
                 HStack {
                     Image(systemName: "person.3.fill")
+                        .foregroundStyle(AppTheme.FeatureColors.spacesAccent)
                     Text(spaceRepository.selectedSpace?.name ?? String(localized: "spaces.selector.choose"))
                         .lineLimit(1)
                     Spacer()
@@ -321,7 +461,7 @@ struct PadSidebarShell: View {
                 .font(.subheadline.weight(.semibold))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(AppTheme.Colors.mutedFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .buttonStyle(.plain)
         }

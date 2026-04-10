@@ -64,12 +64,12 @@ struct MacActiveSpaceMenuButton: View {
     var body: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(space.type == .personal || space.type == .private ? Color.orange.opacity(0.2) : Color.blue.opacity(0.2))
+                .fill(AppTheme.Colors.mutedFill)
                 .frame(width: 30, height: 30)
                 .overlay {
                     Image(systemName: "person.3.fill")
                         .font(.caption.bold())
-                        .foregroundStyle(space.type == .personal || space.type == .private ? .orange : .blue)
+                        .foregroundStyle(AppTheme.FeatureColors.spacesAccent)
                 }
 
             Text(space.name)
@@ -164,6 +164,23 @@ struct MacHomeWidgetState {
         guard routinesCount > 0 else { return "0" }
         return "\(completedTodayRoutinesCount)/\(routinesCount)"
     }
+}
+
+#Preview("Mac Notification Bell") {
+    VStack(spacing: 16) {
+        MacNotificationBellButton(unreadCount: 0)
+        MacNotificationBellButton(unreadCount: 3)
+    }
+    .padding()
+    .background(AppTheme.Colors.canvas)
+}
+
+#Preview("Mac Active Space Button") {
+    MacActiveSpaceMenuButton(
+        space: Space(id: UUID(), name: "Family Crew", inviteCode: "UFO123")
+    )
+    .padding()
+    .background(AppTheme.Colors.canvas)
 }
 
 

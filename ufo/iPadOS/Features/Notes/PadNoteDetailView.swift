@@ -18,6 +18,7 @@ struct PadNoteDetailView: View {
     var presentationMode: DetailPresentationMode = .modal
     var openedFromLabel: String? = nil
     var onEdit: (() -> Void)? = nil
+    var showsEmbeddedHeader: Bool = true
 
     @State private var selectedRoute: RelatedContentRoute?
     
@@ -34,74 +35,84 @@ struct PadNoteDetailView: View {
     }
 
     private var detailContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if let openedFromLabel {
-                    OpenedFromBadge(title: openedFromLabel)
-                }
-
-                if !note.content.isEmpty {
-                    Text(note.renderedContent)
-                        .font(.body)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                
-                if let url = note.attachedLinkURL, !url.isEmpty, let validURL = URL(string: url) {
-                    Link(destination: validURL) {
-                        Label(url, systemImage: "link")
-                            .lineLimit(1)
-                    }
-                }
-
-                if hasRelatedContent {
-                    RelatedContentSection(title: "Related") {
-                        if let savedPlace = relatedPlace {
-                            RelatedContentButton(
-                                title: savedPlace.name,
-                                subtitle: "Open place and navigation options",
-                                systemImage: savedPlace.iconName ?? "mappin.and.ellipse",
-                                tint: Color(hex: savedPlace.iconColorHex ?? "#0F766E")
-                            ) {
-                                selectedRoute = .place(savedPlace.id)
-                            }
-                        }
-
-                        if let incident = relatedIncident {
-                            RelatedContentButton(
-                                title: incident.title,
-                                subtitle: IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized,
-                                systemImage: incident.iconName ?? "exclamationmark.triangle",
-                                tint: Color(hex: incident.iconColorHex ?? "#F59E0B")
-                            ) {
-                                selectedRoute = .incident(incident.id)
-                            }
-                        }
-
-                        if let linkedRoute, let linkedEntityTitle {
-                            RelatedContentButton(
-                                title: linkedEntityTitle,
-                                subtitle: linkedEntitySubtitle,
-                                systemImage: linkedEntitySystemImage,
-                                tint: linkedEntityTint
-                            ) {
-                                selectedRoute = linkedRoute
-                            }
-                        }
-                    }
-                } else if note.relatedLocationLatitude != nil && note.relatedLocationLongitude != nil {
-                    Label(note.relatedLocationLabel ?? String(localized: "notes.view.badge.location"), systemImage: "location")
-                        .font(.caption)
-                }
-                
-                Text(note.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        VStack(spacing: 0) {
+            if presentationMode == .embedded && showsEmbeddedHeader {
+                embeddedHeader
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let openedFromLabel {
+                        OpenedFromBadge(title: openedFromLabel)
+                    }
+
+                    if !note.content.isEmpty {
+                        Text(note.renderedContent)
+                            .font(.body)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    
+                    if let url = note.attachedLinkURL, !url.isEmpty, let validURL = URL(string: url) {
+                        Link(destination: validURL) {
+                            Label(url, systemImage: "link")
+                                .lineLimit(1)
+                        }
+                    }
+
+                    if hasRelatedContent {
+                        RelatedContentSection(title: "Related") {
+                            if let savedPlace = relatedPlace {
+                                RelatedContentButton(
+                                    title: savedPlace.name,
+                                    subtitle: "Open place and navigation options",
+                                    systemImage: savedPlace.iconName ?? "mappin.and.ellipse",
+                                    tint: Color(hex: savedPlace.iconColorHex ?? "#0F766E")
+                                ) {
+                                    selectedRoute = .place(savedPlace.id)
+                                }
+                            }
+
+                            if let incident = relatedIncident {
+                                RelatedContentButton(
+                                    title: incident.title,
+                                    subtitle: IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized,
+                                    systemImage: incident.iconName ?? "exclamationmark.triangle",
+                                    tint: Color(hex: incident.iconColorHex ?? "#F59E0B")
+                                ) {
+                                    selectedRoute = .incident(incident.id)
+                                }
+                            }
+
+                            if let linkedRoute, let linkedEntityTitle {
+                                RelatedContentButton(
+                                    title: linkedEntityTitle,
+                                    subtitle: linkedEntitySubtitle,
+                                    systemImage: linkedEntitySystemImage,
+                                    tint: linkedEntityTint
+                                ) {
+                                    selectedRoute = linkedRoute
+                                }
+                            }
+                        }
+                    } else if note.relatedLocationLatitude != nil && note.relatedLocationLongitude != nil {
+                        Label(note.relatedLocationLabel ?? String(localized: "notes.view.badge.location"), systemImage: "location")
+                            .font(.caption)
+                    }
+                    
+                    Text(note.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+            }
         }
-        .navigationTitle(note.title)
-        .inlineNavigationTitle()
+        .background(Color.systemBackground)
+        .padDetailNavigationChrome(
+            title: note.title,
+            presentationMode: presentationMode,
+            showsEmbeddedHeader: showsEmbeddedHeader
+        )
         .navigationDestination(item: $selectedRoute) { route in
             RelatedContentDestinationView(route: route, originLabel: note.title)
         }
@@ -124,6 +135,14 @@ struct PadNoteDetailView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var embeddedHeader: some View {
+        PadEmbeddedDetailHeader {
+            Text(note.title)
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(.primary)
         }
     }
 

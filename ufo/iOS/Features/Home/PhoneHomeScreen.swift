@@ -26,7 +26,7 @@ struct PhoneHomeScreen: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(Color.secondary.opacity(0.08), in: Capsule())
+                        .background(AppTheme.Colors.mutedFill, in: Capsule())
 
                     Spacer()
 
@@ -43,7 +43,7 @@ struct PhoneHomeScreen: View {
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(.thinMaterial, in: Capsule())
+                        .background(AppTheme.Colors.card, in: Capsule())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("home.screen.accessibility.customize")
@@ -316,7 +316,7 @@ struct PhoneHomeScreen: View {
                     subtitle: widget.nextMissionTitle == nil
                         ? String(localized: "home.hub.widget.nextMission.subtitleEmpty")
                         : String(localized: "home.hub.widget.nextMission.subtitle"),
-                    tint: .orange,
+                    tint: AppTheme.FeatureColors.missionsAccent,
                     span: preference.span
                 )
             }
@@ -328,7 +328,7 @@ struct PhoneHomeScreen: View {
                     title: String(localized: "home.hub.widget.activeLists.title"),
                     value: "\(widget.activeListsCount)",
                     subtitle: String(localized: "home.hub.widget.activeLists.subtitle"),
-                    tint: .pink,
+                    tint: AppTheme.FeatureColors.listsAccent,
                     span: preference.span
                 )
             }
@@ -340,7 +340,7 @@ struct PhoneHomeScreen: View {
                     title: String(localized: "home.hub.widget.notes.title"),
                     value: "\(widget.notesCount)",
                     subtitle: String(localized: "home.hub.widget.notes.subtitle"),
-                    tint: .blue,
+                    tint: AppTheme.FeatureColors.notesAccent,
                     span: preference.span
                 )
             }
@@ -352,7 +352,7 @@ struct PhoneHomeScreen: View {
                     title: String(localized: "home.hub.widget.nearestIncident.title"),
                     value: widget.nearestIncidentTitle ?? String(localized: "home.hub.widget.nearestIncident.empty"),
                     subtitle: widget.nearestIncidentDateText ?? String(localized: "home.hub.widget.nearestIncident.subtitle"),
-                    tint: .red,
+                    tint: AppTheme.FeatureColors.incidentsAccent,
                     span: preference.span
                 )
             }
@@ -364,7 +364,7 @@ struct PhoneHomeScreen: View {
                     title: String(localized: "home.routines.title"),
                     value: widget.routinesProgressText,
                     subtitle: widget.nextRoutineText ?? String(localized: "home.routines.empty"),
-                    tint: .green,
+                    tint: AppTheme.FeatureColors.routinesAccent,
                     span: preference.span
                 )
             }
