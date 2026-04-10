@@ -130,6 +130,21 @@ struct WatchPersonSummary: Identifiable, Hashable {
     let role: String
 }
 
+struct WatchBudgetRecurringSummary: Hashable {
+    let title: String
+    let amount: Double
+    let kind: String
+    let nextDate: Date
+}
+
+struct WatchBudgetSnapshot: Hashable {
+    let currentBalance: Double
+    let spentToday: Double
+    let spentThisWeek: Double
+    let currencyCode: String
+    let nextRecurring: WatchBudgetRecurringSummary?
+}
+
 struct WatchWorkspaceContext {
     let userId: UUID
     let email: String?
@@ -664,6 +679,87 @@ final class WatchSupabaseService {
         }
     }
 
+    func fetchBudgetSnapshot(spaceId: UUID) async throws -> WatchBudgetSnapshot {
+        let entries: [WatchBudgetEntryRecord] = try await client
+            .from("budget_entries")
+            .select("amount, kind, entry_date")
+            .eq("space_id", value: spaceId)
+            .is("deleted_at", value: nil)
+            .order("entry_date", ascending: true)
+            .execute()
+            .value
+
+        let calendar = Calendar.current
+        let today = Date.now
+        let weekInterval = calendar.dateInterval(of: .weekOfYear, for: today)
+        var openingBalance = 0.0
+        var currencyCode = "PLN"
+
+        do {
+            let settings: [WatchBudgetSpaceSettingsRecord] = try await client
+                .from("budget_space_settings")
+                .select("opening_balance, currency_code")
+                .eq("space_id", value: spaceId)
+                .limit(1)
+                .execute()
+                .value
+
+            if let settings = settings.first {
+                openingBalance = settings.openingBalance
+                currencyCode = settings.currencyCode
+            }
+        } catch {
+            WatchLog.error(error)
+        }
+
+        let currentBalance = entries.reduce(openingBalance) { partial, entry in
+            partial + (entry.kind == "expense" ? -entry.amount : entry.amount)
+        }
+        let spentToday = entries
+            .filter { $0.kind == "expense" && calendar.isDateInToday($0.entryDate) }
+            .reduce(0) { $0 + $1.amount }
+        let spentThisWeek = entries
+            .filter {
+                guard let weekInterval else { return false }
+                return $0.kind == "expense" && weekInterval.contains($0.entryDate)
+            }
+            .reduce(0) { $0 + $1.amount }
+
+        var nextRecurring: WatchBudgetRecurringSummary?
+        do {
+            let rules: [WatchBudgetRecurringRuleRecord] = try await client
+                .from("budget_recurring_rules")
+                .select("title, amount, kind, cadence, anchor_date, is_active")
+                .eq("space_id", value: spaceId)
+                .is("deleted_at", value: nil)
+                .eq("is_active", value: true)
+                .execute()
+                .value
+
+            nextRecurring = rules
+                .map { rule in
+                    WatchBudgetRecurringSummary(
+                        title: rule.title,
+                        amount: rule.amount,
+                        kind: rule.kind,
+                        nextDate: rule.nextOccurrence(after: today, calendar: calendar)
+                    )
+                }
+                .sorted { $0.nextDate < $1.nextDate }
+                .first
+        } catch {
+            WatchLog.error(error)
+        }
+
+        return WatchBudgetSnapshot(
+            currentBalance: currentBalance,
+            spentToday: spentToday,
+            spentThisWeek: spentThisWeek,
+            currencyCode: currencyCode,
+            nextRecurring: nextRecurring
+        )
+    }
+
     func claimPairingRequest(requestID: UUID, requestSecret: String) async throws -> WatchDevicePairingStatus {
         WatchLog.msg("WatchSupabaseService.claimPairingRequest request=\(requestID.uuidString)")
         let builder = try client
@@ -879,6 +975,64 @@ private struct WatchSavedPlaceRecord: Decodable {
     enum CodingKeys: String, CodingKey {
         case id, name, description, category, address, latitude, longitude
         case radiusMeters = "radius_meters"
+    }
+}
+
+private struct WatchBudgetEntryRecord: Decodable {
+    let amount: Double
+    let kind: String
+    let entryDate: Date
+
+    enum CodingKeys: String, CodingKey {
+        case amount, kind
+        case entryDate = "entry_date"
+    }
+}
+
+private struct WatchBudgetRecurringRuleRecord: Decodable {
+    let title: String
+    let amount: Double
+    let kind: String
+    let cadence: String
+    let anchorDate: Date
+    let isActive: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case title, amount, kind, cadence
+        case anchorDate = "anchor_date"
+        case isActive = "is_active"
+    }
+
+    func nextOccurrence(after referenceDate: Date, calendar: Calendar) -> Date {
+        var nextDate = anchorDate
+        let component: Calendar.Component
+        switch cadence {
+        case "daily":
+            component = .day
+        case "weekly":
+            component = .weekOfYear
+        case "yearly":
+            component = .year
+        default:
+            component = .month
+        }
+
+        while nextDate < referenceDate {
+            guard let advanced = calendar.date(byAdding: component, value: 1, to: nextDate) else { break }
+            nextDate = advanced
+        }
+
+        return nextDate
+    }
+}
+
+private struct WatchBudgetSpaceSettingsRecord: Decodable {
+    let openingBalance: Double
+    let currencyCode: String
+
+    enum CodingKeys: String, CodingKey {
+        case openingBalance = "opening_balance"
+        case currencyCode = "currency_code"
     }
 }
 

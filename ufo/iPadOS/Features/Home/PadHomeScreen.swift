@@ -11,11 +11,17 @@ struct PadHomeScreen: View {
     @Environment(AppNotificationStore.self) private var notificationStore
     @Environment(AppPreferences.self) private var appPreferences
 
+    private let showsInlineProfileAccess: Bool
+
     @State private var showProfileSheet = false
     @State private var showCustomizeSheet = false
     @State private var widget = PadHomeWidgetState()
     @State private var budgetRange: PadBudgetWidgetRange = .month
     @State private var activeRoute: PadHomeRoute?
+
+    init(showsInlineProfileAccess: Bool = true) {
+        self.showsInlineProfileAccess = showsInlineProfileAccess
+    }
 
     var body: some View {
         ScrollView {
@@ -26,7 +32,7 @@ struct PadHomeScreen: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(Color.secondary.opacity(0.08), in: Capsule())
+                        .background(AppTheme.Colors.mutedFill, in: Capsule())
 
                     Spacer()
 
@@ -43,7 +49,7 @@ struct PadHomeScreen: View {
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(.thinMaterial, in: Capsule())
+                        .background(AppTheme.Colors.card, in: Capsule())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("home.screen.accessibility.customize")
@@ -98,14 +104,16 @@ struct PadHomeScreen: View {
                 .accessibilityLabel("home.screen.accessibility.notifications")
             }
 
-            ToolbarItem(placement: .platformTopBarTrailing) {
-                Button {
-                    showProfileSheet = true
-                } label: {
-                    AvatarCircle(user: authStore.currentUser)
+            if showsInlineProfileAccess {
+                ToolbarItem(placement: .platformTopBarTrailing) {
+                    Button {
+                        showProfileSheet = true
+                    } label: {
+                        AvatarCircle(user: authStore.currentUser)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("home.hub.profile.open")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("home.hub.profile.open")
             }
         }
         .task {
@@ -287,23 +295,23 @@ struct PadHomeScreen: View {
         switch preference.kind {
         case .missions:
             metricWidgetButton(route: .missions) {
-                PadHomeMetricCard(sectionTitle: String(localized: "home.hub.shortcut.missions.title"), sectionIcon: "target", title: String(localized: "home.hub.widget.nextMission.title"), value: widget.nextMissionTitle ?? String(localized: "home.hub.widget.nextMission.empty"), subtitle: widget.nextMissionTitle == nil ? String(localized: "home.hub.widget.nextMission.subtitleEmpty") : String(localized: "home.hub.widget.nextMission.subtitle"), tint: .orange, span: preference.span)
+                PadHomeMetricCard(sectionTitle: String(localized: "home.hub.shortcut.missions.title"), sectionIcon: "target", title: String(localized: "home.hub.widget.nextMission.title"), value: widget.nextMissionTitle ?? String(localized: "home.hub.widget.nextMission.empty"), subtitle: widget.nextMissionTitle == nil ? String(localized: "home.hub.widget.nextMission.subtitleEmpty") : String(localized: "home.hub.widget.nextMission.subtitle"), tint: AppTheme.FeatureColors.missionsAccent, span: preference.span)
             }
         case .lists:
             metricWidgetButton(route: .lists) {
-                PadHomeMetricCard(sectionTitle: String(localized: "home.hub.shortcut.lists.title"), sectionIcon: "checklist", title: String(localized: "home.hub.widget.activeLists.title"), value: "\(widget.activeListsCount)", subtitle: String(localized: "home.hub.widget.activeLists.subtitle"), tint: .pink, span: preference.span)
+                PadHomeMetricCard(sectionTitle: String(localized: "home.hub.shortcut.lists.title"), sectionIcon: "checklist", title: String(localized: "home.hub.widget.activeLists.title"), value: "\(widget.activeListsCount)", subtitle: String(localized: "home.hub.widget.activeLists.subtitle"), tint: AppTheme.FeatureColors.listsAccent, span: preference.span)
             }
         case .notes:
             metricWidgetButton(route: .notes) {
-                PadHomeMetricCard(sectionTitle: String(localized: "home.hub.shortcut.notes.title"), sectionIcon: "note.text", title: String(localized: "home.hub.widget.notes.title"), value: "\(widget.notesCount)", subtitle: String(localized: "home.hub.widget.notes.subtitle"), tint: .blue, span: preference.span)
+                PadHomeMetricCard(sectionTitle: String(localized: "home.hub.shortcut.notes.title"), sectionIcon: "note.text", title: String(localized: "home.hub.widget.notes.title"), value: "\(widget.notesCount)", subtitle: String(localized: "home.hub.widget.notes.subtitle"), tint: AppTheme.FeatureColors.notesAccent, span: preference.span)
             }
         case .incidents:
             metricWidgetButton(route: .incidents) {
-                PadHomeMetricCard(sectionTitle: String(localized: "home.hub.shortcut.incidents.title"), sectionIcon: "bolt.horizontal", title: String(localized: "home.hub.widget.nearestIncident.title"), value: widget.nearestIncidentTitle ?? String(localized: "home.hub.widget.nearestIncident.empty"), subtitle: widget.nearestIncidentDateText ?? String(localized: "home.hub.widget.nearestIncident.subtitle"), tint: .red, span: preference.span)
+                PadHomeMetricCard(sectionTitle: String(localized: "home.hub.shortcut.incidents.title"), sectionIcon: "bolt.horizontal", title: String(localized: "home.hub.widget.nearestIncident.title"), value: widget.nearestIncidentTitle ?? String(localized: "home.hub.widget.nearestIncident.empty"), subtitle: widget.nearestIncidentDateText ?? String(localized: "home.hub.widget.nearestIncident.subtitle"), tint: AppTheme.FeatureColors.incidentsAccent, span: preference.span)
             }
         case .routines:
             metricWidgetButton(route: .routines) {
-                PadHomeMetricCard(sectionTitle: String(localized: "navigation.item.routines"), sectionIcon: "clock.arrow.circlepath", title: String(localized: "home.routines.title"), value: widget.routinesProgressText, subtitle: widget.nextRoutineText ?? String(localized: "home.routines.empty"), tint: .green, span: preference.span)
+                PadHomeMetricCard(sectionTitle: String(localized: "navigation.item.routines"), sectionIcon: "clock.arrow.circlepath", title: String(localized: "home.routines.title"), value: widget.routinesProgressText, subtitle: widget.nextRoutineText ?? String(localized: "home.routines.empty"), tint: AppTheme.FeatureColors.routinesAccent, span: preference.span)
             }
         case .summary:
             PadTodaySummaryCard(widget: widget)

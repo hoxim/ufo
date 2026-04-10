@@ -10,6 +10,7 @@ enum WatchFeatureMenuItem: String, CaseIterable, Identifiable {
     case incidents
     case lists
     case missions
+    case budget
 
     var id: String { rawValue }
 
@@ -31,6 +32,8 @@ enum WatchFeatureMenuItem: String, CaseIterable, Identifiable {
             return "watch.feature.lists.title"
         case .missions:
             return "watch.feature.missions.title"
+        case .budget:
+            return "Budget"
         }
     }
 
@@ -52,6 +55,8 @@ enum WatchFeatureMenuItem: String, CaseIterable, Identifiable {
             return "checklist"
         case .missions:
             return "flag"
+        case .budget:
+            return "creditcard"
         }
     }
 
@@ -73,6 +78,8 @@ enum WatchFeatureMenuItem: String, CaseIterable, Identifiable {
             return "watch.feature.lists.subtitle"
         case .missions:
             return "watch.feature.missions.subtitle"
+        case .budget:
+            return "Balance, spending, recurring"
         }
     }
 }

@@ -8,55 +8,61 @@ struct PadTodaySummaryCard: View {
     let widget: PadHomeWidgetState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PadHomeWidgetSectionHeader(
-                title: String(localized: "home.card.today.title"),
-                icon: "person.3.sequence.fill"
-            )
+        VStack(alignment: .leading, spacing: 14) {
+            Divider()
+                .overlay(AppTheme.Colors.divider)
 
-            Text("home.card.today.description")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 12) {
+                PadHomeWidgetSectionHeader(
+                    title: String(localized: "home.card.today.title"),
+                    icon: "person.3.sequence.fill",
+                    tint: AppTheme.FeatureColors.homeAccent
+                )
 
-            HStack(spacing: 12) {
-                summaryPill(title: String(localized: "home.card.today.dueMissions"), value: "\(widget.dueTodayCount)", tint: .orange)
-                summaryPill(title: String(localized: "home.card.today.recurring"), value: "\(widget.recurringMissionCount)", tint: .blue)
-                summaryPill(title: String(localized: "home.card.today.pinnedNotes"), value: "\(widget.pinnedNotesCount)", tint: .pink)
-            }
-
-            HStack(spacing: 12) {
-                summaryPill(title: String(localized: "home.card.today.openIncidents"), value: "\(widget.openIncidentsCount)", tint: .red)
-                summaryPill(title: String(localized: "home.card.today.criticalAlerts"), value: "\(widget.criticalIncidentsCount)", tint: .red.opacity(0.8))
-                summaryPill(title: String(localized: "home.card.today.savedPlaces"), value: "\(widget.savedPlacesCount)", tint: .green)
-            }
-
-            if let recentCheckInText = widget.recentCheckInText {
-                Label(String(format: String(localized: "home.card.today.lastCheckIn"), recentCheckInText), systemImage: "location.circle.fill")
+                Text("home.card.today.description")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            } else {
-                Text("home.card.today.noCheckIns")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 12) {
+                    summaryPill(title: String(localized: "home.card.today.dueMissions"), value: "\(widget.dueTodayCount)", tint: AppTheme.FeatureColors.missionsAccent)
+                    summaryPill(title: String(localized: "home.card.today.recurring"), value: "\(widget.recurringMissionCount)", tint: AppTheme.FeatureColors.routinesAccent)
+                    summaryPill(title: String(localized: "home.card.today.pinnedNotes"), value: "\(widget.pinnedNotesCount)", tint: AppTheme.FeatureColors.notesAccent)
+                }
+
+                HStack(spacing: 12) {
+                    summaryPill(title: String(localized: "home.card.today.openIncidents"), value: "\(widget.openIncidentsCount)", tint: AppTheme.FeatureColors.incidentsAccent)
+                    summaryPill(title: String(localized: "home.card.today.criticalAlerts"), value: "\(widget.criticalIncidentsCount)", tint: AppTheme.FeatureColors.notificationsAccent)
+                    summaryPill(title: String(localized: "home.card.today.savedPlaces"), value: "\(widget.savedPlacesCount)", tint: AppTheme.FeatureColors.locationsAccent)
+                }
+
+                if let recentCheckInText = widget.recentCheckInText {
+                    Label(String(format: String(localized: "home.card.today.lastCheckIn"), recentCheckInText), systemImage: "location.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("home.card.today.noCheckIns")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
     private func summaryPill(title: String, value: String, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(tint)
             Text(value)
                 .font(.headline)
-                .foregroundStyle(tint)
+                .foregroundStyle(.primary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .background(AppTheme.Colors.mutedFill, in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -93,6 +99,7 @@ struct PadHomeBudgetCard: View {
             PadHomeWidgetSectionHeader(
                 title: String(localized: "home.card.budget.title"),
                 icon: "dollarsign.circle",
+                tint: AppTheme.FeatureColors.budgetAccent,
                 onOpen: onOpen
             )
 
@@ -107,8 +114,9 @@ struct PadHomeBudgetCard: View {
                             .padding(.vertical, 4)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(range == option ? Color.accentColor.opacity(0.2) : Color.white.opacity(0.06))
+                                    .fill(range == option ? AppTheme.FeatureColors.budgetAccent : AppTheme.Colors.mutedFill)
                             )
+                            .foregroundStyle(range == option ? Color.white : Color.primary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -121,7 +129,7 @@ struct PadHomeBudgetCard: View {
                         .foregroundStyle(.secondary)
                     Text(balance.formatted(.currency(code: "PLN")))
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(balance >= 0 ? .green : .red)
+                        .foregroundStyle(.primary)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -130,7 +138,7 @@ struct PadHomeBudgetCard: View {
                         .foregroundStyle(.secondary)
                     Text(income.formatted(.currency(code: "PLN")))
                         .font(.subheadline)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(.primary)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -139,7 +147,7 @@ struct PadHomeBudgetCard: View {
                         .foregroundStyle(.secondary)
                     Text(expense.formatted(.currency(code: "PLN")))
                         .font(.subheadline)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.primary)
                 }
             }
 
@@ -160,7 +168,7 @@ struct PadHomeBudgetCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(AppTheme.Colors.card, in: RoundedRectangle(cornerRadius: 16))
         .contentShape(RoundedRectangle(cornerRadius: 16))
         .onTapGesture {
             onOpen()
@@ -171,10 +179,11 @@ struct PadHomeBudgetCard: View {
 struct PadHomeWidgetSectionHeader: View {
     let title: String
     let icon: String
+    let tint: Color
     var onOpen: (() -> Void)? = nil
 
     private var sectionForeground: Color {
-        Color.primary.opacity(0.92)
+        tint
     }
 
     private var chevronForeground: Color {
@@ -247,7 +256,7 @@ struct PadHomeMetricCard: View {
                 .foregroundStyle(tint)
             Text(value)
                 .font(.title2.bold())
-                .foregroundStyle(tint)
+                .foregroundStyle(.primary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.78)
             Text(subtitle)
@@ -257,8 +266,57 @@ struct PadHomeMetricCard: View {
         }
         .frame(maxWidth: .infinity, minHeight: cardHeight, maxHeight: cardHeight, alignment: .topLeading)
         .padding(18)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(AppTheme.Colors.card, in: RoundedRectangle(cornerRadius: 16))
     }
+}
+
+#Preview("iPad Today Summary Card") {
+    PadTodaySummaryCard(
+        widget: PadHomeWidgetState(
+            dueTodayCount: 4,
+            recurringMissionCount: 2,
+            pinnedNotesCount: 3,
+            openIncidentsCount: 1,
+            criticalIncidentsCount: 0,
+            savedPlacesCount: 5,
+            recentCheckInText: "Maria · School"
+        )
+    )
+    .padding()
+    .background(AppTheme.Colors.canvas)
+}
+
+#Preview("iPad Budget Card") {
+    PadHomeBudgetCard(
+        entries: padHomePreviewBudgetEntries(),
+        range: .constant(.month),
+        onOpen: {}
+    )
+    .padding()
+    .background(AppTheme.Colors.canvas)
+}
+
+#Preview("iPad Metric Card") {
+    PadHomeMetricCard(
+        sectionTitle: String(localized: "home.hub.shortcut.missions.title"),
+        sectionIcon: "target",
+        title: String(localized: "home.hub.widget.nextMission.title"),
+        value: "Doctor appointment",
+        subtitle: String(localized: "home.hub.widget.nextMission.subtitle"),
+        tint: AppTheme.FeatureColors.missionsAccent,
+        span: .half
+    )
+    .padding()
+    .background(AppTheme.Colors.canvas)
+}
+
+private func padHomePreviewBudgetEntries() -> [BudgetEntry] {
+    let spaceID = UUID()
+    return [
+        BudgetEntry(spaceId: spaceID, title: "Salary", kind: BudgetEntryKind.income.rawValue, amount: 6200, category: "Work"),
+        BudgetEntry(spaceId: spaceID, title: "Rent", kind: BudgetEntryKind.expense.rawValue, amount: 1800, category: "Home"),
+        BudgetEntry(spaceId: spaceID, title: "Utilities", kind: BudgetEntryKind.expense.rawValue, amount: 320, category: "Home")
+    ]
 }
 
 

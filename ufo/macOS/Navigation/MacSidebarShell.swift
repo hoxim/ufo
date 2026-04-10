@@ -80,6 +80,37 @@ private enum MacSidebarItem: String, Hashable, CaseIterable {
         }
     }
 
+    var accentColor: Color {
+        switch self {
+        case .search:
+            return AppTheme.FeatureColors.searchAccent
+        case .home:
+            return AppTheme.FeatureColors.homeAccent
+        case .missions:
+            return AppTheme.FeatureColors.missionsAccent
+        case .notes:
+            return AppTheme.FeatureColors.notesAccent
+        case .lists:
+            return AppTheme.FeatureColors.listsAccent
+        case .incidents:
+            return AppTheme.FeatureColors.incidentsAccent
+        case .routines:
+            return AppTheme.FeatureColors.routinesAccent
+        case .budget:
+            return AppTheme.FeatureColors.budgetAccent
+        case .messages:
+            return AppTheme.FeatureColors.messagesAccent
+        case .places:
+            return AppTheme.FeatureColors.locationsAccent
+        case .roles:
+            return AppTheme.FeatureColors.rolesAccent
+        case .crew:
+            return AppTheme.FeatureColors.peopleAccent
+        case .spacesManage:
+            return AppTheme.FeatureColors.spacesAccent
+        }
+    }
+
     init(tab: TabItem) {
         switch tab {
         case .home:
@@ -133,8 +164,8 @@ struct MacSidebarShell: View {
                     }
 
                     Section("navigation.section.workspace") {
-                        sidebarRow(.missions)
                         sidebarRow(.notes)
+                        sidebarRow(.missions)
                         sidebarRow(.lists)
                         sidebarRow(.incidents)
                         sidebarRow(.routines)
@@ -198,8 +229,17 @@ struct MacSidebarShell: View {
 
     @ViewBuilder
     private func sidebarRow(_ item: MacSidebarItem) -> some View {
-        Label(item.title, systemImage: item.systemImage)
-            .tag(item)
+        HStack(spacing: 12) {
+            Image(systemName: item.systemImage)
+                .frame(width: 20)
+                .foregroundStyle(item.accentColor)
+
+            Text(item.title)
+                .foregroundStyle(.primary)
+
+            Spacer()
+        }
+        .tag(item)
     }
 
     @ViewBuilder
@@ -223,6 +263,7 @@ struct MacSidebarShell: View {
                                 }
                             } icon: {
                                 Image(systemName: spaceRepository.selectedSpace?.id == space.id ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(AppTheme.FeatureColors.spacesAccent)
                             }
                         }
                     }
@@ -231,10 +272,14 @@ struct MacSidebarShell: View {
                 if let selectedSpace = spaceRepository.selectedSpace {
                     MacActiveSpaceMenuButton(space: selectedSpace)
                 } else {
-                    Label("spaces.selector.choose", systemImage: "person.3.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.3.fill")
+                            .foregroundStyle(AppTheme.FeatureColors.spacesAccent)
+                        Text("spaces.selector.choose")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .menuStyle(.borderlessButton)

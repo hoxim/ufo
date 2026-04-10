@@ -282,6 +282,11 @@ final class WatchAppModel {
         return try await service.fetchPeople(spaceId: spaceID)
     }
 
+    func fetchBudgetSnapshot() async throws -> WatchBudgetSnapshot {
+        guard let spaceID = selectedSpaceID else { throw WatchAppModelFlowError.missingSelectedSpace }
+        return try await service.fetchBudgetSnapshot(spaceId: spaceID)
+    }
+
     func fetchMission(id: UUID) async throws -> WatchMissionDetail {
         try await service.fetchMission(id: id)
     }

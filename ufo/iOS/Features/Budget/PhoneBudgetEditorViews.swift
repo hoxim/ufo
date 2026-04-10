@@ -1,6 +1,7 @@
 #if os(iOS)
 
 import SwiftUI
+import SwiftData
 
 
 struct PhoneAddBudgetEntryView: View {
@@ -15,10 +16,14 @@ struct PhoneAddBudgetEntryView: View {
     @State private var amountText = ""
     @State private var category = PhoneBudgetPresetCategory.food.title
     @State private var customCategoryName = ""
+    @State private var subcategory = ""
+    @State private var merchantName = ""
+    @State private var merchantURLString = ""
     @State private var iconName = "dollarsign.circle"
     @State private var iconColorHex = "#22C55E"
     @State private var notes = ""
     @State private var date = Date()
+    @State private var isFixed = false
     @State private var isRecurring = false
     @State private var recurringInterval: PhoneBudgetRecurringInterval = .monthly
     @State private var isSaving = false
@@ -51,7 +56,16 @@ struct PhoneAddBudgetEntryView: View {
                 }
                 TextField("budget.entry.field.customCategory", text: $customCategoryName)
                     .prominentFormTextInput()
+                TextField("Subcategory", text: $subcategory)
+                    .prominentFormTextInput()
+                TextField("Merchant / company", text: $merchantName)
+                    .prominentFormTextInput()
+                TextField("Merchant link", text: $merchantURLString)
+                    .prominentFormTextInput()
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
                 Toggle("budget.entry.field.recurring", isOn: $isRecurring)
+                Toggle("Fixed amount / bill", isOn: $isFixed)
                 if isRecurring {
                     Picker("budget.entry.field.interval", selection: $recurringInterval) {
                         ForEach(PhoneBudgetRecurringInterval.allCases, id: \.self) { interval in
@@ -101,10 +115,14 @@ struct PhoneAddBudgetEntryView: View {
             kind: kind,
             amount: amount,
             category: resolvedCategory,
+            subcategory: trimmedValue(subcategory),
+            merchantName: trimmedValue(merchantName),
+            merchantURLString: trimmedValue(merchantURLString),
             iconName: iconName,
             iconColorHex: iconColorHex,
             notes: notes.isEmpty ? nil : notes,
             date: date,
+            isFixed: isFixed,
             recurring: isRecurring,
             recurringInterval: isRecurring ? recurringInterval.rawValue : nil,
             actor: actor
@@ -119,6 +137,11 @@ struct PhoneAddBudgetEntryView: View {
         case .expense:
             return (PhoneBudgetPresetCategory.allCases.map(\.title) + customCategories).uniquedPreservingOrder()
         }
+    }
+
+    private func trimmedValue(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 
@@ -306,6 +329,55 @@ private extension Array where Element == String {
             return seen.insert(key).inserted
         }
     }
+}
+
+#Preview("Phone Add Budget Entry") {
+    NavigationStack {
+        PhoneAddBudgetEntryView(
+            store: phonePreviewBudgetStore(),
+            actor: UUID(),
+            customCategories: ["Pets", "School"]
+        )
+    }
+}
+
+#Preview("Phone Add Budget Goal") {
+    NavigationStack {
+        PhoneAddBudgetGoalView(
+            store: phonePreviewBudgetStore(),
+            actor: UUID()
+        )
+    }
+}
+
+#Preview("Phone Add Category Budget") {
+    NavigationStack {
+        PhoneAddCategoryBudgetView(
+            initialCategory: "Food",
+            initialAmount: 500,
+            customCategories: ["Pets"],
+            existingCategories: [PhoneBudgetPresetCategory.food.title, PhoneBudgetPresetCategory.home.title, "Pets"],
+            onSave: { _, _ in },
+            onAddCategory: { _ in }
+        )
+    }
+}
+
+#Preview("Phone Add Custom Budget Category") {
+    NavigationStack {
+        PhoneAddCustomBudgetCategoryView { _ in }
+    }
+}
+
+@MainActor
+private func phonePreviewBudgetStore() -> BudgetStore {
+    let preview = MainNavigationPreviewFactory.make()
+    let store = BudgetStore(
+        modelContext: preview.container.mainContext,
+        repository: BudgetRepository(client: SupabaseConfig.client, context: preview.container.mainContext)
+    )
+    store.setSpace(preview.spaceRepository.selectedSpace?.id)
+    return store
 }
 
 

@@ -56,6 +56,7 @@ struct PadRoutinesScreen: View {
                 }
                 .appScreenBackground()
                 .navigationTitle("navigation.item.routines")
+                .navigationBarTitleDisplayMode(.large)
                 .hideTabBarIfSupported()
                 .toolbar {
                     ToolbarItemGroup(placement: .platformTopBarTrailing) {
@@ -107,12 +108,34 @@ struct PadRoutinesScreen: View {
     }
 
     private func header(for date: Date) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(date.formatted(.dateTime.day().month(.wide).year()))
-                .font(.largeTitle.bold())
-            Text(date.formatted(.dateTime.weekday(.wide)))
-                .font(.title3)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("navigation.item.routines")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .multilineTextAlignment(.leading)
+
+                HStack(spacing: 8) {
+                    if let selectedSpaceName = spaceRepo.selectedSpace?.name, !selectedSpaceName.isEmpty {
+                        Text(selectedSpaceName)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Text(verbatim: "\(filteredRoutines.count)")
+                        .foregroundStyle(.secondary)
+                }
+                .font(.footnote)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(date.formatted(.dateTime.day().month(.wide).year()))
+                    .font(.largeTitle.bold())
+                Text(date.formatted(.dateTime.weekday(.wide)))
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

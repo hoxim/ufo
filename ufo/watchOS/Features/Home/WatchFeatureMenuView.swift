@@ -79,7 +79,25 @@ struct WatchFeatureMenuView: View {
             WatchListsFeatureView()
         case .missions:
             WatchMissionsFeatureView()
+        case .budget:
+            WatchBudgetFeatureView()
         }
+    }
+}
+
+#Preview("Watch Feature Menu") {
+    let model = WatchAppModel()
+    model.currentUserName = "Preview User"
+    model.currentUserEmail = "preview@ufo.app"
+    model.spaces = [
+        WatchSpaceSummary(id: UUID(), name: "Family Crew", role: "admin"),
+        WatchSpaceSummary(id: UUID(), name: "Work", role: "member")
+    ]
+    model.selectedSpaceID = model.spaces.first?.id
+
+    return NavigationStack {
+        WatchFeatureMenuView()
+            .environment(model)
     }
 }
 

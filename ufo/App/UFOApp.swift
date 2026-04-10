@@ -30,6 +30,8 @@ struct UFOApp: App {
             LinkedThing.self,
             Assignment.self,
             BudgetEntry.self,
+            BudgetRecurringRule.self,
+            BudgetSpaceSettings.self,
             BudgetGoal.self,
             SharedList.self,
             SharedListItem.self,
@@ -43,7 +45,7 @@ struct UFOApp: App {
             RoutineLog.self
         ])
         // New local store name to avoid loading an old incompatible SwiftData file.
-        let config = ModelConfiguration("UFO_Clean_DB_v6", isStoredInMemoryOnly: false)
+        let config = ModelConfiguration("UFO_Clean_DB_v7", isStoredInMemoryOnly: false)
 
         do {
             return try ModelContainer(for: schema, configurations: [config])

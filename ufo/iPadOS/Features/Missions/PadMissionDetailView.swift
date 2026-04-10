@@ -12,6 +12,7 @@ struct PadMissionDetailView: View {
     var presentationMode: DetailPresentationMode = .modal
     var openedFromLabel: String? = nil
     var onEdit: (() -> Void)? = nil
+    var showsEmbeddedHeader: Bool = true
 
     @State private var selectedRoute: RelatedContentRoute?
     @State private var isCreatingNote = false
@@ -30,149 +31,153 @@ struct PadMissionDetailView: View {
     }
 
     private var detailContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                if let openedFromLabel {
-                    OpenedFromBadge(title: openedFromLabel)
-                }
+        VStack(spacing: 0) {
+            if presentationMode == .embedded && showsEmbeddedHeader {
+                embeddedHeader
+            }
 
-                HStack(spacing: 10) {
-                    if let iconName = mission.iconName, !iconName.isEmpty {
-                        Image(systemName: iconName)
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(Color(hex: mission.iconColorHex ?? "#F59E0B"))
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if let openedFromLabel {
+                        OpenedFromBadge(title: openedFromLabel)
                     }
-                    Text(mission.title)
-                        .font(.title2.bold())
-                }
 
-                HStack(spacing: 10) {
-                    Image(systemName: mission.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(mission.isCompleted ? .green : .gray)
-                    Text(mission.isCompleted ? "Completed" : "Open")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+                    if presentationMode == .modal {
+                        titleRow
+                    }
 
-                HStack(spacing: 10) {
-                    Label(MissionPriority(rawValue: mission.resolvedPriority)?.localizedLabel ?? mission.resolvedPriority.capitalized, systemImage: "flag")
-                        .font(.caption)
-                    if mission.isRecurringValue {
-                        Label("Recurring", systemImage: "repeat")
+                    HStack(spacing: 10) {
+                        Image(systemName: mission.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(mission.isCompleted ? .green : .gray)
+                        Text(mission.isCompleted ? "Completed" : "Open")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack(spacing: 10) {
+                        Label(MissionPriority(rawValue: mission.resolvedPriority)?.localizedLabel ?? mission.resolvedPriority.capitalized, systemImage: "flag")
                             .font(.caption)
+                        if mission.isRecurringValue {
+                            Label("Recurring", systemImage: "repeat")
+                                .font(.caption)
+                        }
+                        if let dueDate = mission.dueDate {
+                            Label(dueDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+                                .font(.caption)
+                        }
+                        if let savedPlaceName = mission.savedPlaceName, !savedPlaceName.isEmpty {
+                            Label(savedPlaceName, systemImage: "mappin.and.ellipse")
+                                .font(.caption)
+                        }
                     }
-                    if let dueDate = mission.dueDate {
-                        Label(dueDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
-                            .font(.caption)
-                    }
-                    if let savedPlaceName = mission.savedPlaceName, !savedPlaceName.isEmpty {
-                        Label(savedPlaceName, systemImage: "mappin.and.ellipse")
-                            .font(.caption)
-                    }
-                }
-                .foregroundStyle(.secondary)
+                    .foregroundStyle(.secondary)
 
-                if !mission.missionDescription.isEmpty {
+                    if !mission.missionDescription.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("missions.editor.field.description")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(mission.missionDescription)
+                                .font(.body)
+                        }
+                    }
+
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("missions.editor.field.description")
+                        Text("missions.editor.field.difficulty")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(mission.missionDescription)
-                            .font(.body)
+                        HStack(spacing: 4) {
+                            ForEach(0..<mission.difficulty, id: \.self) { _ in
+                                Image(systemName: "star.fill")
+                                    .foregroundStyle(.yellow)
+                            }
+                        }
                     }
-                }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("missions.editor.field.difficulty")
+                    RelatedContentSection(title: "Quick Actions") {
+                        RelatedContentButton(
+                            title: "Create note",
+                            subtitle: "Start a note already linked to this mission",
+                            systemImage: "square.and.pencil",
+                            tint: .blue
+                        ) {
+                            isCreatingNote = true
+                        }
+
+                        RelatedContentButton(
+                            title: "Create list",
+                            subtitle: "Create a shopping or task list for this mission",
+                            systemImage: "checklist",
+                            tint: .purple
+                        ) {
+                            isCreatingList = true
+                        }
+                    }
+
+                    if hasRelatedContent {
+                        RelatedContentSection(title: "Related") {
+                            if let savedPlace = relatedPlace {
+                                RelatedContentButton(
+                                    title: savedPlace.name,
+                                    subtitle: "Open place and start navigation",
+                                    systemImage: savedPlace.iconName ?? "mappin.and.ellipse",
+                                    tint: Color(hex: savedPlace.iconColorHex ?? "#0F766E")
+                                ) {
+                                    selectedRoute = .place(savedPlace.id)
+                                }
+                            }
+
+                            ForEach(relatedLists) { list in
+                                RelatedContentButton(
+                                    title: list.name,
+                                    subtitle: "Open connected list",
+                                    systemImage: list.iconName ?? "checklist",
+                                    tint: Color(hex: list.iconColorHex ?? "#6366F1")
+                                ) {
+                                    selectedRoute = .list(list.id)
+                                }
+                            }
+
+                            ForEach(relatedNotes) { note in
+                                RelatedContentButton(
+                                    title: note.title,
+                                    subtitle: note.previewText.isEmpty ? "Open connected note" : note.previewText,
+                                    systemImage: "note.text",
+                                    tint: .blue
+                                ) {
+                                    selectedRoute = .note(note.id)
+                                }
+                            }
+
+                            ForEach(relatedIncidents) { incident in
+                                RelatedContentButton(
+                                    title: incident.title,
+                                    subtitle: IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized,
+                                    systemImage: incident.iconName ?? "exclamationmark.triangle",
+                                    tint: Color(hex: incident.iconColorHex ?? "#F59E0B")
+                                ) {
+                                    selectedRoute = .incident(incident.id)
+                                }
+                            }
+                        }
+                    }
+
+                    missionImageView
+
+                    Text(mission.updatedAt.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    HStack(spacing: 4) {
-                        ForEach(0..<mission.difficulty, id: \.self) { _ in
-                            Image(systemName: "star.fill")
-                                .foregroundStyle(.yellow)
-                        }
-                    }
                 }
-
-                RelatedContentSection(title: "Quick Actions") {
-                    RelatedContentButton(
-                        title: "Create note",
-                        subtitle: "Start a note already linked to this mission",
-                        systemImage: "square.and.pencil",
-                        tint: .blue
-                    ) {
-                        isCreatingNote = true
-                    }
-
-                    RelatedContentButton(
-                        title: "Create list",
-                        subtitle: "Create a shopping or task list for this mission",
-                        systemImage: "checklist",
-                        tint: .purple
-                    ) {
-                        isCreatingList = true
-                    }
-                }
-
-                if hasRelatedContent {
-                    RelatedContentSection(title: "Related") {
-                        if let savedPlace = relatedPlace {
-                            RelatedContentButton(
-                                title: savedPlace.name,
-                                subtitle: "Open place and start navigation",
-                                systemImage: savedPlace.iconName ?? "mappin.and.ellipse",
-                                tint: Color(hex: savedPlace.iconColorHex ?? "#0F766E")
-                            ) {
-                                selectedRoute = .place(savedPlace.id)
-                            }
-                        }
-
-                        ForEach(relatedLists) { list in
-                            RelatedContentButton(
-                                title: list.name,
-                                subtitle: "Open connected list",
-                                systemImage: list.iconName ?? "checklist",
-                                tint: Color(hex: list.iconColorHex ?? "#6366F1")
-                            ) {
-                                selectedRoute = .list(list.id)
-                            }
-                        }
-
-                        ForEach(relatedNotes) { note in
-                            RelatedContentButton(
-                                title: note.title,
-                                subtitle: note.previewText.isEmpty ? "Open connected note" : note.previewText,
-                                systemImage: "note.text",
-                                tint: .blue
-                            ) {
-                                selectedRoute = .note(note.id)
-                            }
-                        }
-
-                        ForEach(relatedIncidents) { incident in
-                            RelatedContentButton(
-                                title: incident.title,
-                                subtitle: IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized,
-                                systemImage: incident.iconName ?? "exclamationmark.triangle",
-                                tint: Color(hex: incident.iconColorHex ?? "#F59E0B")
-                            ) {
-                                selectedRoute = .incident(incident.id)
-                            }
-                        }
-                    }
-                }
-
-                missionImageView
-
-                Text(mission.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
         }
-        .navigationTitle("Mission")
-        .inlineNavigationTitle()
+        .background(Color.systemBackground)
+        .padDetailNavigationChrome(
+            title: mission.title,
+            presentationMode: presentationMode,
+            showsEmbeddedHeader: showsEmbeddedHeader
+        )
         .navigationDestination(item: $selectedRoute) { route in
             RelatedContentDestinationView(route: route, originLabel: mission.title)
         }
@@ -220,6 +225,24 @@ struct PadMissionDetailView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var titleRow: some View {
+        HStack(spacing: 10) {
+            if let iconName = mission.iconName, !iconName.isEmpty {
+                Image(systemName: iconName)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color(hex: mission.iconColorHex ?? "#F59E0B"))
+            }
+            Text(mission.title)
+                .font(.title2.bold())
+        }
+    }
+
+    private var embeddedHeader: some View {
+        PadEmbeddedDetailHeader {
+            titleRow
         }
     }
 

@@ -70,9 +70,9 @@ enum HomeWidgetKind: String, CaseIterable, Codable, Identifiable {
 
     var defaultSpan: HomeWidgetSpan {
         switch self {
-        case .missions, .summary, .budget:
+        case .notes, .summary, .budget:
             .full
-        case .lists, .notes, .incidents, .routines:
+        case .missions, .lists, .incidents, .routines:
             .half
         }
     }
@@ -95,6 +95,62 @@ struct BudgetCategoryLimitPreference: Codable, Identifiable, Equatable, Hashable
     var amount: Double
 
     var id: String { category }
+}
+
+enum BudgetDashboardWidgetKind: String, CaseIterable, Codable, Identifiable {
+    case overview
+    case cashFlow
+    case runningBalance
+    case categoryBreakdown
+    case upcomingRecurring
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .overview: "Overview"
+        case .cashFlow: "Cash Flow"
+        case .runningBalance: "Running Balance"
+        case .categoryBreakdown: "Categories"
+        case .upcomingRecurring: "Upcoming"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .overview: "chart.bar.doc.horizontal"
+        case .cashFlow: "chart.bar.xaxis"
+        case .runningBalance: "chart.line.uptrend.xyaxis"
+        case .categoryBreakdown: "chart.pie"
+        case .upcomingRecurring: "calendar.badge.clock"
+        }
+    }
+
+    var supportedSpans: [HomeWidgetSpan] {
+        switch self {
+        case .cashFlow, .runningBalance:
+            [.full]
+        case .overview, .categoryBreakdown, .upcomingRecurring:
+            [.half, .full]
+        }
+    }
+
+    var defaultSpan: HomeWidgetSpan {
+        switch self {
+        case .cashFlow, .runningBalance:
+            .full
+        case .overview, .categoryBreakdown, .upcomingRecurring:
+            .half
+        }
+    }
+}
+
+struct BudgetDashboardWidgetPreference: Codable, Identifiable, Equatable {
+    var kind: BudgetDashboardWidgetKind
+    var isVisible: Bool
+    var span: HomeWidgetSpan
+
+    var id: BudgetDashboardWidgetKind { kind }
 }
 
 enum AppProductTier: String, CaseIterable, Identifiable {
@@ -127,6 +183,7 @@ final class AppPreferences {
     private let productTierKey = "app_product_tier"
     private let autoSyncEnabledKey = "settings_auto_sync_enabled"
     private let homeWidgetsKey = "home_widgets_configuration_v1"
+    private let budgetDashboardWidgetsKey = "budget_dashboard_widgets_configuration_v1"
     private let budgetCustomCategoriesKey = "budget_custom_categories_v1"
     private let budgetCategoryLimitsKey = "budget_category_limits_v1"
 
@@ -147,6 +204,11 @@ final class AppPreferences {
 
     var homeWidgets: [HomeWidgetPreference] {
         didSet {
+            let normalized = Self.normalizedHomeWidgets(homeWidgets)
+            guard normalized == homeWidgets else {
+                homeWidgets = normalized
+                return
+            }
             persistHomeWidgets()
         }
     }
@@ -159,6 +221,17 @@ final class AppPreferences {
                 return
             }
             persistBudgetCustomCategories()
+        }
+    }
+
+    var budgetDashboardWidgets: [BudgetDashboardWidgetPreference] {
+        didSet {
+            let normalized = Self.normalizedBudgetDashboardWidgets(budgetDashboardWidgets)
+            guard normalized == budgetDashboardWidgets else {
+                budgetDashboardWidgets = normalized
+                return
+            }
+            persistBudgetDashboardWidgets()
         }
     }
 
@@ -191,6 +264,7 @@ final class AppPreferences {
         self.productTier = AppProductTier(rawValue: storedTier ?? "") ?? .premiumOnline
         self.autoSyncEnabled = userDefaults.object(forKey: autoSyncEnabledKey) as? Bool ?? true
         self.homeWidgets = Self.loadHomeWidgets(from: userDefaults, key: homeWidgetsKey)
+        self.budgetDashboardWidgets = Self.loadBudgetDashboardWidgets(from: userDefaults, key: budgetDashboardWidgetsKey)
         self.budgetCustomCategories = Self.loadCodable([String].self, from: userDefaults, key: budgetCustomCategoriesKey) ?? []
         self.budgetCategoryLimits = Self.loadCodable([BudgetCategoryLimitPreference].self, from: userDefaults, key: budgetCategoryLimitsKey) ?? []
         self.budgetCustomCategories = Self.normalizedBudgetCategories(budgetCustomCategories)
@@ -209,6 +283,12 @@ final class AppPreferences {
 
     func addBudgetCustomCategory(_ value: String) {
         budgetCustomCategories.append(value)
+    }
+
+    func updateBudgetDashboardWidget(_ kind: BudgetDashboardWidgetKind, mutate: (inout BudgetDashboardWidgetPreference) -> Void) {
+        guard let index = budgetDashboardWidgets.firstIndex(where: { $0.kind == kind }) else { return }
+        mutate(&budgetDashboardWidgets[index])
+        budgetDashboardWidgets = Self.normalizedBudgetDashboardWidgets(budgetDashboardWidgets)
     }
 
     func removeBudgetCustomCategory(_ value: String) {
@@ -247,6 +327,10 @@ final class AppPreferences {
         persistCodable(budgetCustomCategories, key: budgetCustomCategoriesKey)
     }
 
+    private func persistBudgetDashboardWidgets() {
+        persistCodable(budgetDashboardWidgets, key: budgetDashboardWidgetsKey)
+    }
+
     private func persistBudgetCategoryLimits() {
         persistCodable(budgetCategoryLimits, key: budgetCategoryLimitsKey)
     }
@@ -276,6 +360,17 @@ final class AppPreferences {
         return normalizedHomeWidgets(decoded)
     }
 
+    private static func loadBudgetDashboardWidgets(from userDefaults: UserDefaults, key: String) -> [BudgetDashboardWidgetPreference] {
+        guard
+            let data = userDefaults.data(forKey: key),
+            let decoded = try? JSONDecoder().decode([BudgetDashboardWidgetPreference].self, from: data)
+        else {
+            return defaultBudgetDashboardWidgets
+        }
+
+        return normalizedBudgetDashboardWidgets(decoded)
+    }
+
     private static func normalizedHomeWidgets(_ widgets: [HomeWidgetPreference]) -> [HomeWidgetPreference] {
         var normalized: [HomeWidgetPreference] = []
         var seenKinds = Set<HomeWidgetKind>()
@@ -294,7 +389,7 @@ final class AppPreferences {
             )
         }
 
-        for kind in HomeWidgetKind.allCases where !seenKinds.contains(kind) {
+        for kind in preferredHomeWidgetOrder where !seenKinds.contains(kind) {
             normalized.append(
                 HomeWidgetPreference(
                     kind: kind,
@@ -304,13 +399,86 @@ final class AppPreferences {
             )
         }
 
-        return normalized
+        if normalized == legacyDefaultHomeWidgets || normalized == legacyPreferredOrderHomeWidgets {
+            return preferredHomeWidgetDefaults
+        }
+
+        let nonSummaryWidgets = normalized.filter { $0.kind != .summary }
+        let summaryWidgets = normalized.filter { $0.kind == .summary }
+        return nonSummaryWidgets + summaryWidgets
     }
 
     private static var defaultHomeWidgets: [HomeWidgetPreference] {
-        HomeWidgetKind.allCases.map {
-            HomeWidgetPreference(kind: $0, isVisible: $0.defaultVisibility, span: $0.defaultSpan)
+        preferredHomeWidgetDefaults
+    }
+
+    private static func normalizedBudgetDashboardWidgets(_ widgets: [BudgetDashboardWidgetPreference]) -> [BudgetDashboardWidgetPreference] {
+        var normalized: [BudgetDashboardWidgetPreference] = []
+        var seenKinds = Set<BudgetDashboardWidgetKind>()
+
+        for widget in widgets {
+            guard !seenKinds.contains(widget.kind) else { continue }
+            seenKinds.insert(widget.kind)
+
+            let supportedSpans = widget.kind.supportedSpans
+            normalized.append(
+                BudgetDashboardWidgetPreference(
+                    kind: widget.kind,
+                    isVisible: widget.isVisible,
+                    span: supportedSpans.contains(widget.span) ? widget.span : widget.kind.defaultSpan
+                )
+            )
         }
+
+        for kind in preferredBudgetDashboardWidgetOrder where !seenKinds.contains(kind) {
+            normalized.append(BudgetDashboardWidgetPreference(kind: kind, isVisible: true, span: kind.defaultSpan))
+        }
+
+        return normalized
+    }
+
+    private static var preferredHomeWidgetOrder: [HomeWidgetKind] {
+        [.notes, .missions, .lists, .incidents, .routines, .budget, .summary]
+    }
+
+    private static var preferredHomeWidgetDefaults: [HomeWidgetPreference] {
+        preferredHomeWidgetOrder.map { kind in
+            HomeWidgetPreference(kind: kind, isVisible: kind.defaultVisibility, span: kind.defaultSpan)
+        }
+    }
+
+    private static var preferredBudgetDashboardWidgetOrder: [BudgetDashboardWidgetKind] {
+        [.overview, .cashFlow, .runningBalance, .categoryBreakdown, .upcomingRecurring]
+    }
+
+    private static var defaultBudgetDashboardWidgets: [BudgetDashboardWidgetPreference] {
+        preferredBudgetDashboardWidgetOrder.map { kind in
+            BudgetDashboardWidgetPreference(kind: kind, isVisible: true, span: kind.defaultSpan)
+        }
+    }
+
+    private static var legacyPreferredOrderHomeWidgets: [HomeWidgetPreference] {
+        [
+            HomeWidgetPreference(kind: .notes, isVisible: true, span: .half),
+            HomeWidgetPreference(kind: .missions, isVisible: true, span: .full),
+            HomeWidgetPreference(kind: .lists, isVisible: true, span: .half),
+            HomeWidgetPreference(kind: .incidents, isVisible: true, span: .half),
+            HomeWidgetPreference(kind: .routines, isVisible: true, span: .half),
+            HomeWidgetPreference(kind: .budget, isVisible: true, span: .full),
+            HomeWidgetPreference(kind: .summary, isVisible: true, span: .full)
+        ]
+    }
+
+    private static var legacyDefaultHomeWidgets: [HomeWidgetPreference] {
+        [
+            HomeWidgetPreference(kind: .missions, isVisible: true, span: .full),
+            HomeWidgetPreference(kind: .lists, isVisible: true, span: .half),
+            HomeWidgetPreference(kind: .notes, isVisible: true, span: .half),
+            HomeWidgetPreference(kind: .incidents, isVisible: true, span: .half),
+            HomeWidgetPreference(kind: .routines, isVisible: true, span: .half),
+            HomeWidgetPreference(kind: .summary, isVisible: true, span: .full),
+            HomeWidgetPreference(kind: .budget, isVisible: true, span: .full)
+        ]
     }
 
     private static func normalizedBudgetCategories(_ categories: [String]) -> [String] {
