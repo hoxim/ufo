@@ -475,8 +475,7 @@ struct PadIncidentsSidebarWorkspace<Sidebar: View>: View {
                 presentationMode: .embedded,
                 onEdit: {
                     editingIncident = incident
-                },
-                showsEmbeddedHeader: false
+                }
             )
         } else if incidentStore != nil {
             ContentUnavailableView(

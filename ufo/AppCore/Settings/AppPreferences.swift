@@ -174,14 +174,176 @@ enum AppProductTier: String, CaseIterable, Identifiable {
     }
 }
 
+enum AppLanguagePreference: String, CaseIterable, Identifiable {
+    case system
+    case english
+    case polish
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: String(localized: "settings.localization.language.system")
+        case .english: "English"
+        case .polish: "Polski"
+        }
+    }
+
+    var localeIdentifier: String? {
+        switch self {
+        case .system: nil
+        case .english: "en"
+        case .polish: "pl"
+        }
+    }
+}
+
+enum AppCurrencyPreference: String, CaseIterable, Identifiable {
+    case pln = "PLN"
+    case eur = "EUR"
+    case usd = "USD"
+    case gbp = "GBP"
+    case chf = "CHF"
+    case czk = "CZK"
+    case sek = "SEK"
+    case nok = "NOK"
+    case dkk = "DKK"
+
+    var id: String { rawValue }
+    var currencyCode: String { rawValue }
+
+    var title: String {
+        let locale = Locale.current
+        let localizedName = locale.localizedString(forCurrencyCode: rawValue) ?? rawValue
+        return "\(rawValue) - \(localizedName)"
+    }
+}
+
+enum AppMeasurementSystemPreference: String, CaseIterable, Identifiable {
+    case system
+    case metric
+    case imperial
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: String(localized: "settings.localization.measurement.system")
+        case .metric: String(localized: "settings.localization.measurement.metric")
+        case .imperial: String(localized: "settings.localization.measurement.imperial")
+        }
+    }
+}
+
+enum AppWeightUnitPreference: String, CaseIterable, Identifiable {
+    case system
+    case kilograms
+    case pounds
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: String(localized: "settings.localization.weight.system")
+        case .kilograms: String(localized: "settings.localization.weight.kilograms")
+        case .pounds: String(localized: "settings.localization.weight.pounds")
+        }
+    }
+}
+
+enum NoteEditorFontDesign: String, CaseIterable, Identifiable {
+    case system
+    case rounded
+    case serif
+    case monospaced
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: String(localized: "settings.notes.fontDesign.system")
+        case .rounded: String(localized: "settings.notes.fontDesign.rounded")
+        case .serif: String(localized: "settings.notes.fontDesign.serif")
+        case .monospaced: String(localized: "settings.notes.fontDesign.monospaced")
+        }
+    }
+}
+
+enum NoteEditorFontSizePreference: String, CaseIterable, Identifiable {
+    case compact
+    case standard
+    case large
+    case extraLarge
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .compact: String(localized: "settings.notes.fontSize.compact")
+        case .standard: String(localized: "settings.notes.fontSize.standard")
+        case .large: String(localized: "settings.notes.fontSize.large")
+        case .extraLarge: String(localized: "settings.notes.fontSize.extraLarge")
+        }
+    }
+
+    var phoneBodySize: Double {
+        switch self {
+        case .compact: 17
+        case .standard: 19
+        case .large: 21
+        case .extraLarge: 23
+        }
+    }
+
+    var padBodySize: Double { phoneBodySize }
+
+    var macBodySize: Double {
+        switch self {
+        case .compact: 16
+        case .standard: 18
+        case .large: 20
+        case .extraLarge: 22
+        }
+    }
+
+    func headingSize(for bodySize: Double) -> Double {
+        bodySize + 11
+    }
+}
+
+enum AppWeekStartPreference: String, CaseIterable, Identifiable {
+    case system
+    case monday
+    case sunday
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: String(localized: "settings.localization.weekStart.system")
+        case .monday: String(localized: "settings.localization.weekStart.monday")
+        case .sunday: String(localized: "settings.localization.weekStart.sunday")
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class AppPreferences {
     static let shared = AppPreferences()
 
+    nonisolated static let noteEditorFontDesignKey = "settings_notes_font_design"
+    nonisolated static let noteEditorFontSizeKey = "settings_notes_font_size"
+
     private let userDefaults: UserDefaults
     private let productTierKey = "app_product_tier"
     private let autoSyncEnabledKey = "settings_auto_sync_enabled"
+    private let appLanguageKey = "settings_app_language"
+    private let defaultCurrencyKey = "settings_default_currency"
+    private let measurementSystemKey = "settings_measurement_system"
+    private let weightUnitKey = "settings_weight_unit"
+    private let weekStartKey = "settings_week_start"
+    private let biometricUnlockEnabledKey = "settings_biometric_unlock_enabled"
     private let homeWidgetsKey = "home_widgets_configuration_v1"
     private let budgetDashboardWidgetsKey = "budget_dashboard_widgets_configuration_v1"
     private let budgetCustomCategoriesKey = "budget_custom_categories_v1"
@@ -199,6 +361,54 @@ final class AppPreferences {
     var autoSyncEnabled: Bool {
         didSet {
             userDefaults.set(autoSyncEnabled, forKey: autoSyncEnabledKey)
+        }
+    }
+
+    var appLanguage: AppLanguagePreference {
+        didSet {
+            userDefaults.set(appLanguage.rawValue, forKey: appLanguageKey)
+        }
+    }
+
+    var defaultCurrency: AppCurrencyPreference {
+        didSet {
+            userDefaults.set(defaultCurrency.rawValue, forKey: defaultCurrencyKey)
+        }
+    }
+
+    var measurementSystem: AppMeasurementSystemPreference {
+        didSet {
+            userDefaults.set(measurementSystem.rawValue, forKey: measurementSystemKey)
+        }
+    }
+
+    var weightUnit: AppWeightUnitPreference {
+        didSet {
+            userDefaults.set(weightUnit.rawValue, forKey: weightUnitKey)
+        }
+    }
+
+    var weekStart: AppWeekStartPreference {
+        didSet {
+            userDefaults.set(weekStart.rawValue, forKey: weekStartKey)
+        }
+    }
+
+    var noteEditorFontDesign: NoteEditorFontDesign {
+        didSet {
+            userDefaults.set(noteEditorFontDesign.rawValue, forKey: Self.noteEditorFontDesignKey)
+        }
+    }
+
+    var noteEditorFontSize: NoteEditorFontSizePreference {
+        didSet {
+            userDefaults.set(noteEditorFontSize.rawValue, forKey: Self.noteEditorFontSizeKey)
+        }
+    }
+
+    var biometricUnlockEnabled: Bool {
+        didSet {
+            userDefaults.set(biometricUnlockEnabled, forKey: biometricUnlockEnabledKey)
         }
     }
 
@@ -258,11 +468,23 @@ final class AppPreferences {
         supportsCloudFeatures
     }
 
+    var defaultCurrencyCode: String {
+        defaultCurrency.currencyCode
+    }
+
     private init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         let storedTier = userDefaults.string(forKey: productTierKey)
         self.productTier = AppProductTier(rawValue: storedTier ?? "") ?? .premiumOnline
         self.autoSyncEnabled = userDefaults.object(forKey: autoSyncEnabledKey) as? Bool ?? true
+        self.appLanguage = AppLanguagePreference(rawValue: userDefaults.string(forKey: appLanguageKey) ?? "") ?? .system
+        self.defaultCurrency = AppCurrencyPreference(rawValue: userDefaults.string(forKey: defaultCurrencyKey) ?? "") ?? .pln
+        self.measurementSystem = AppMeasurementSystemPreference(rawValue: userDefaults.string(forKey: measurementSystemKey) ?? "") ?? .system
+        self.weightUnit = AppWeightUnitPreference(rawValue: userDefaults.string(forKey: weightUnitKey) ?? "") ?? .system
+        self.weekStart = AppWeekStartPreference(rawValue: userDefaults.string(forKey: weekStartKey) ?? "") ?? .system
+        self.noteEditorFontDesign = NoteEditorFontDesign(rawValue: userDefaults.string(forKey: Self.noteEditorFontDesignKey) ?? "") ?? .system
+        self.noteEditorFontSize = NoteEditorFontSizePreference(rawValue: userDefaults.string(forKey: Self.noteEditorFontSizeKey) ?? "") ?? .standard
+        self.biometricUnlockEnabled = userDefaults.object(forKey: biometricUnlockEnabledKey) as? Bool ?? false
         self.homeWidgets = Self.loadHomeWidgets(from: userDefaults, key: homeWidgetsKey)
         self.budgetDashboardWidgets = Self.loadBudgetDashboardWidgets(from: userDefaults, key: budgetDashboardWidgetsKey)
         self.budgetCustomCategories = Self.loadCodable([String].self, from: userDefaults, key: budgetCustomCategoriesKey) ?? []

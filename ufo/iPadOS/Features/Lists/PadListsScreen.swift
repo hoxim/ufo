@@ -394,9 +394,7 @@ struct PadListsSidebarWorkspace<Sidebar: View>: View {
             PadListDetailView(
                 store: store,
                 listId: selectedListId,
-                actorId: authRepo.currentUser?.id,
-                presentationMode: .embedded,
-                showsEmbeddedHeader: false
+                actorId: authRepo.currentUser?.id
             )
         } else if listStore != nil {
             ContentUnavailableView(

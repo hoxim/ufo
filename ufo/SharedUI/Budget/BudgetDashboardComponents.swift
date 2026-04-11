@@ -461,7 +461,7 @@ struct BudgetSpaceSettingsEditorView: View {
     let initialCurrencyCode: String
 
     @State private var openingBalanceText: String
-    @State private var currencyCode: String
+    @State private var currency: AppCurrencyPreference
     @State private var isSaving = false
 
     init(
@@ -475,7 +475,7 @@ struct BudgetSpaceSettingsEditorView: View {
         self.initialOpeningBalance = initialOpeningBalance
         self.initialCurrencyCode = initialCurrencyCode
         _openingBalanceText = State(initialValue: initialOpeningBalance == 0 ? "" : String(format: "%.2f", initialOpeningBalance).replacingOccurrences(of: ".", with: ","))
-        _currencyCode = State(initialValue: initialCurrencyCode)
+        _currency = State(initialValue: AppCurrencyPreference(rawValue: initialCurrencyCode.uppercased()) ?? .pln)
     }
 
     var body: some View {
@@ -485,8 +485,11 @@ struct BudgetSpaceSettingsEditorView: View {
                     .prominentFormTextInput()
                     .decimalPadKeyboardIfSupported()
 
-                TextField("Currency code", text: $currencyCode)
-                    .prominentFormTextInput()
+                Picker("settings.localization.currency", selection: $currency) {
+                    ForEach(AppCurrencyPreference.allCases) { currency in
+                        Text(currency.title).tag(currency)
+                    }
+                }
             }
             .navigationTitle("Budget settings")
             .modalInlineTitleDisplayMode()
@@ -495,7 +498,7 @@ struct BudgetSpaceSettingsEditorView: View {
                     dismiss()
                 }
                 ModalConfirmToolbarItem(
-                    isDisabled: isSaving || currencyCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                    isDisabled: isSaving,
                     isProcessing: isSaving,
                     action: { Task { await save() } }
                 )
@@ -511,7 +514,7 @@ struct BudgetSpaceSettingsEditorView: View {
         let openingBalance = Double(openingBalanceText.replacingOccurrences(of: ",", with: ".")) ?? 0
         await store.updateSpaceSettings(
             openingBalance: openingBalance,
-            currencyCode: currencyCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(),
+            currencyCode: currency.currencyCode,
             actor: actor
         )
         dismiss()

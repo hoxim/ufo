@@ -12,12 +12,13 @@ extension MacNoteRichTextCodec {
     }
 
     static func platformFont(for style: MacNoteBlockStyle, bold: Bool, inlineCode: Bool, isPrefix: Bool) -> Any {
+        let fontSize = MacNoteFontPreferences.fontSize
         let size: CGFloat
         switch style {
         case .heading:
-            size = 30
+            size = CGFloat(fontSize.headingSize(for: fontSize.macBodySize))
         default:
-            size = 18
+            size = CGFloat(fontSize.macBodySize)
         }
 
         if inlineCode && !isPrefix {
@@ -25,7 +26,7 @@ extension MacNoteRichTextCodec {
         }
 
         let weight: NSFont.Weight = (bold || style == .heading) ? .bold : .regular
-        var font = NSFont.systemFont(ofSize: size, weight: weight)
+        var font = MacNoteFontPreferences.font(size: size, weight: weight)
 
         if style == .quote && !isPrefix {
             let italicDescriptor = font.fontDescriptor.withSymbolicTraits(.italic)
@@ -33,6 +34,34 @@ extension MacNoteRichTextCodec {
         }
 
         return font
+    }
+}
+
+private enum MacNoteFontPreferences {
+    static var fontSize: NoteEditorFontSizePreference {
+        NoteEditorFontSizePreference(rawValue: UserDefaults.standard.string(forKey: AppPreferences.noteEditorFontSizeKey) ?? "") ?? .standard
+    }
+
+    static var fontDesign: NoteEditorFontDesign {
+        NoteEditorFontDesign(rawValue: UserDefaults.standard.string(forKey: AppPreferences.noteEditorFontDesignKey) ?? "") ?? .system
+    }
+
+    static func font(size: CGFloat, weight: NSFont.Weight) -> NSFont {
+        switch fontDesign {
+        case .monospaced:
+            return NSFont.monospacedSystemFont(ofSize: size, weight: weight)
+        case .serif:
+            return serifFont(size: size, weight: weight)
+        case .rounded, .system:
+            return NSFont.systemFont(ofSize: size, weight: weight)
+        }
+    }
+
+    private static func serifFont(size: CGFloat, weight: NSFont.Weight) -> NSFont {
+        let preferredName = weight == .bold || weight == .semibold ? "NewYork-Bold" : "NewYork-Regular"
+        return NSFont(name: preferredName, size: size)
+            ?? NSFont(name: "Times New Roman", size: size)
+            ?? NSFont.systemFont(ofSize: size, weight: weight)
     }
 }
 #endif

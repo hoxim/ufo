@@ -278,7 +278,7 @@ final class BudgetStore {
     }
 
     var currencyCode: String {
-        spaceSettings?.currencyCode ?? "PLN"
+        spaceSettings?.currencyCode ?? AppPreferences.shared.defaultCurrencyCode
     }
 
     var openingBalance: Double {
@@ -329,7 +329,7 @@ final class BudgetStore {
             spaceSettings = try repository.upsertSpaceSettingsLocal(
                 spaceId: currentSpaceId,
                 openingBalance: 0,
-                currencyCode: "PLN",
+                currencyCode: AppPreferences.shared.defaultCurrencyCode,
                 actor: nil
             )
         } catch {
