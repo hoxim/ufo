@@ -8,8 +8,8 @@ final class Incident: Thing {
     var createdBy: UUID?
     var title: String
     var incidentDescription: String?
-    var severity: IncidentSeverity = .medium
-    var status: IncidentStatus = .open
+    var severity: IncidentSeverity = IncidentSeverity.medium
+    var status: IncidentStatus = IncidentStatus.open
     var assigneeId: UUID?
     var cost: Double?
     var createdAt: Date

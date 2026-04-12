@@ -15,7 +15,7 @@ final class Mission: Thing {
     var dueDate: Date?
     var savedPlaceId: UUID?
     var savedPlaceName: String?
-    var priority: MissionPriority = .medium
+    var priority: MissionPriority = MissionPriority.medium
     var isRecurring: Bool = false
     var space: Space?
     var version: Int = 1
@@ -27,7 +27,7 @@ final class Mission: Thing {
     var iconName: String?
     var iconColorHex: String?
     var imageData: Data?
-    var visibilityMode: SpaceContentVisibilityMode = .everyone
+    var visibilityMode: SpaceContentVisibilityMode = SpaceContentVisibilityMode.everyone
 
     @Relationship(inverse: \UserProfile.assignedMissions)
     var assignees: [UserProfile] = []
