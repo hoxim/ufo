@@ -264,4 +264,24 @@ private extension PadEditIncidentView {
     }
 }
 
+#Preview("Pad Edit Incident") {
+    let preview = makePadIncidentPreviewData()
+
+    NavigationStack {
+        PadEditIncidentView(
+            store: preview.store,
+            incident: preview.incident,
+            userId: preview.user.id,
+            availableMissions: [preview.mission],
+            availableLists: [preview.list],
+            availablePlaces: [preview.place],
+            initialRelatedMissionId: preview.mission.id,
+            initialRelatedListId: preview.list.id,
+            initialRelatedPlaceId: preview.place.id
+        )
+    }
+    .environment(preview.spaceRepository)
+    .modelContainer(preview.container)
+}
+
 #endif

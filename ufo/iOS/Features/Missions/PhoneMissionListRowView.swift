@@ -109,4 +109,31 @@ struct PhoneMissionListRowView: View {
     }
 }
 
+private func makePhoneMissionRowPreviewMission() -> Mission {
+    let mission = Mission(
+        spaceId: UUID(),
+        title: "Prepare emergency bag",
+        missionDescription: "Pack documents, flashlight and basic medicine.",
+        difficulty: 3,
+        dueDate: .now.addingTimeInterval(86_400),
+        priority: MissionPriority.high.rawValue,
+        isRecurring: true,
+        createdBy: UUID()
+    )
+    mission.iconName = "flag.fill"
+    mission.iconColorHex = "#F59E0B"
+    return mission
+}
+
+#Preview("Phone Mission Row") {
+    PhoneMissionListRowView(
+        mission: makePhoneMissionRowPreviewMission(),
+        onToggleCompleted: {},
+        onOpen: {},
+        onEdit: {},
+        onDelete: {}
+    )
+    .padding()
+}
+
 #endif

@@ -264,4 +264,18 @@ struct MacIncidentDetailView: View {
     }
 }
 
+#Preview("Mac Incident Detail") {
+    let preview = makeMacIncidentPreviewData()
+
+    NavigationStack {
+        MacIncidentDetailView(
+            incident: preview.incident,
+            presentationMode: .embedded,
+            openedFromLabel: "Weather center"
+        )
+    }
+    .environment(preview.authRepository)
+    .modelContainer(preview.container)
+}
+
 #endif

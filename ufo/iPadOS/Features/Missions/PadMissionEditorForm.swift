@@ -229,4 +229,83 @@ struct PadMissionEditorForm: View {
     }
 }
 
+private struct PadMissionEditorFormPreviewHost: View {
+    @State private var title = "Prepare weekend trip"
+    @State private var description = "Pack chargers, documents and snacks."
+    @State private var difficulty = 3
+    @State private var ownerId: UUID? = PadMissionEditorPreviewData.owner.id
+    @State private var dueDateEnabled = true
+    @State private var dueDate = Date.now.addingTimeInterval(86_400)
+    @State private var savedPlaceId: UUID? = PadMissionEditorPreviewData.place.id
+    @State private var relatedListId: UUID? = PadMissionEditorPreviewData.list.id
+    @State private var relatedNoteId: UUID? = PadMissionEditorPreviewData.note.id
+    @State private var relatedIncidentId: UUID? = PadMissionEditorPreviewData.incident.id
+    @State private var priority: MissionPriority = .high
+    @State private var isRecurring = false
+    @State private var iconName = "flag.fill"
+    @State private var iconColorHex = "#F59E0B"
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var imageData: Data?
+
+    var body: some View {
+        PadMissionEditorForm(
+            title: $title,
+            description: $description,
+            difficulty: $difficulty,
+            ownerId: $ownerId,
+            dueDateEnabled: $dueDateEnabled,
+            dueDate: $dueDate,
+            savedPlaceId: $savedPlaceId,
+            relatedListId: $relatedListId,
+            relatedNoteId: $relatedNoteId,
+            relatedIncidentId: $relatedIncidentId,
+            priority: $priority,
+            isRecurring: $isRecurring,
+            iconName: $iconName,
+            iconColorHex: $iconColorHex,
+            selectedPhotoItem: $selectedPhotoItem,
+            imageData: $imageData,
+            availablePlaces: [PadMissionEditorPreviewData.place],
+            availableOwners: [PadMissionEditorPreviewData.owner],
+            availableLists: [PadMissionEditorPreviewData.list],
+            availableNotes: [PadMissionEditorPreviewData.note],
+            availableIncidents: [PadMissionEditorPreviewData.incident],
+            isSaving: false,
+            navigationTitle: "missions.editor.title.new",
+            onSave: {}
+        )
+    }
+}
+
+private enum PadMissionEditorPreviewData {
+    static let owner = UserProfile(id: UUID(), email: "preview@ufo.app", fullName: "Preview User", role: "admin")
+    static let spaceId = UUID()
+    static let place = SavedPlace(
+        spaceId: spaceId,
+        name: "Home",
+        placeDescription: "Main base",
+        iconName: "house.fill",
+        iconColorHex: "#2563EB",
+        address: "Marszalkowska 1, Warszawa",
+        latitude: 52.2297,
+        longitude: 21.0122,
+        createdBy: owner.id
+    )
+    static let list = SharedList(spaceId: spaceId, name: "Trip checklist", type: SharedListType.shopping.rawValue)
+    static let note = Note(spaceId: spaceId, title: "Packing notes", content: "Remember passports.", createdBy: owner.id)
+    static let incident = Incident(
+        spaceId: spaceId,
+        title: "Storm warning",
+        incidentDescription: "Watch the weather before departure.",
+        occurrenceDate: .now,
+        createdBy: owner.id
+    )
+}
+
+#Preview("Pad Mission Editor Form") {
+    NavigationStack {
+        PadMissionEditorFormPreviewHost()
+    }
+}
+
 #endif

@@ -260,4 +260,112 @@ struct MacListDetailView: View {
     }
 }
 
+@MainActor
+private struct MacListPreviewData {
+    let container: ModelContainer
+    let spaceRepository: SpaceRepository
+    let store: SharedListStore
+    let user: UserProfile
+    let list: SharedList
+    let places: [SavedPlace]
+}
+
+@MainActor
+private func makeMacListPreviewData() -> MacListPreviewData {
+    let schema = Schema([
+        UserProfile.self,
+        Space.self,
+        SpaceMembership.self,
+        SavedPlace.self,
+        SharedList.self,
+        SharedListItem.self
+    ])
+    let container = try! ModelContainer(
+        for: schema,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+    let context = container.mainContext
+
+    let user = UserProfile(id: UUID(), email: "preview@ufo.app", fullName: "Preview User", role: "admin")
+    let space = Space(id: UUID(), name: "Family Crew", inviteCode: "UFO123")
+    let place = SavedPlace(
+        spaceId: space.id,
+        name: "Home",
+        placeDescription: "Main family base",
+        iconName: "house.fill",
+        iconColorHex: "#2563EB",
+        address: "Marszalkowska 1, Warszawa",
+        latitude: 52.2297,
+        longitude: 21.0122,
+        createdBy: user.id
+    )
+    let list = SharedList(
+        spaceId: space.id,
+        name: "Weekend shopping",
+        type: SharedListType.shopping.rawValue,
+        iconName: "cart.fill",
+        iconColorHex: "#F43F5E",
+        savedPlaceId: place.id,
+        savedPlaceName: place.name,
+        createdBy: user.id
+    )
+
+    context.insert(user)
+    context.insert(space)
+    context.insert(SpaceMembership(user: user, space: space, role: "admin"))
+    context.insert(place)
+    context.insert(list)
+    context.insert(SharedListItem(listId: list.id, title: "Milk", isCompleted: true, position: 1))
+    context.insert(SharedListItem(listId: list.id, title: "Bread", isCompleted: false, position: 2))
+    try? context.save()
+
+    let repository = SharedListRepository(client: SupabaseConfig.client, context: context)
+    let store = SharedListStore(modelContext: context, repository: repository)
+    store.setSpace(space.id)
+
+    let spaceRepository = SpaceRepository(client: SupabaseConfig.client)
+    spaceRepository.selectedSpace = space
+
+    return MacListPreviewData(
+        container: container,
+        spaceRepository: spaceRepository,
+        store: store,
+        user: user,
+        list: list,
+        places: [place]
+    )
+}
+
+#Preview("Mac Add List") {
+    let preview = makeMacListPreviewData()
+
+    return NavigationStack {
+        MacAddListView(
+            store: preview.store,
+            actorId: preview.user.id,
+            availablePlaces: preview.places,
+            onCreated: { _ in },
+            initialSavedPlaceId: preview.places.first?.id,
+            originLabel: "Kitchen"
+        )
+    }
+    .environment(preview.spaceRepository)
+    .modelContainer(preview.container)
+}
+
+#Preview("Mac List Detail") {
+    let preview = makeMacListPreviewData()
+
+    return NavigationStack {
+        MacListDetailView(
+            store: preview.store,
+            listId: preview.list.id,
+            actorId: preview.user.id,
+            openedFromLabel: "Kitchen"
+        )
+    }
+    .environment(preview.spaceRepository)
+    .modelContainer(preview.container)
+}
+
 #endif

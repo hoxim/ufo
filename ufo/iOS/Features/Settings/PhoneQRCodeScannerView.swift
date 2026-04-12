@@ -129,4 +129,11 @@ private struct PhoneQRCodeScannerView: UIViewControllerRepresentable {
     }
 }
 
+#Preview("Pairing QR Scanner") {
+    PhonePairingQRScannerSheet(
+        onPayloadScanned: { _ in },
+        onCancel: {}
+    )
+}
+
 #endif

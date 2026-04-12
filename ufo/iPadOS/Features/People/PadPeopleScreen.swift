@@ -334,4 +334,29 @@ struct PadPeopleScreen: View {
         .modelContainer(container)
 }
 
+#Preview("People Hub Empty State") {
+    let schema = Schema([
+        UserProfile.self,
+        Space.self,
+        SpaceMembership.self,
+        SpaceRoleDefinition.self
+    ])
+    let container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let context = container.mainContext
+
+    let user = UserProfile(id: UUID(), email: "preview@ufo.app", fullName: "Preview User", role: "admin")
+    context.insert(user)
+    try! context.save()
+
+    let authRepo = AuthRepository(client: SupabaseConfig.client, isLoggedIn: true, currentUser: user)
+    let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
+    let authStore = AuthStore(authRepository: authRepo, spaceRepository: spaceRepo)
+    authStore.state = .ready
+
+    return PadPeopleScreen()
+        .environment(spaceRepo)
+        .environment(authStore)
+        .modelContainer(container)
+}
+
 #endif

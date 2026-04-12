@@ -264,4 +264,18 @@ struct PhoneIncidentDetailView: View {
     }
 }
 
+#Preview("Phone Incident Detail") {
+    let preview = makePhoneIncidentPreviewData()
+
+    NavigationStack {
+        PhoneIncidentDetailView(
+            incident: preview.incident,
+            presentationMode: .embedded,
+            openedFromLabel: "Weather center"
+        )
+    }
+    .environment(preview.authRepository)
+    .modelContainer(preview.container)
+}
+
 #endif

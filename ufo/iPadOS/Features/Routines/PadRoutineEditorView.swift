@@ -141,4 +141,20 @@ struct PadRoutineEditorView: View {
     }
 }
 
+#Preview("Pad Routine Editor") {
+    let container = try! ModelContainer(
+        for: Schema([Routine.self]),
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+
+    return NavigationStack {
+        PadRoutineEditorView(
+            spaceId: UUID(),
+            actorId: UUID(),
+            onSave: {}
+        )
+    }
+    .modelContainer(container)
+}
+
 #endif

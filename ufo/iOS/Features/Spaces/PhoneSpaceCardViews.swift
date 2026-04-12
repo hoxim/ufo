@@ -375,4 +375,40 @@ struct PhoneSpaceMemberAvatar: View {
     }
 }
 
+#Preview("Phone Space Card") {
+    let space = Space(id: UUID(), name: "Family Crew", inviteCode: "UFO123", category: SpaceType.family.rawValue)
+    let members = [
+        SpaceMemberRecipient(
+            id: UUID(),
+            email: "preview@ufo.app",
+            fullName: "Preview User",
+            avatarURL: nil,
+            providerAvatarURL: nil,
+            role: "admin"
+        ),
+        SpaceMemberRecipient(
+            id: UUID(),
+            email: "alex@ufo.app",
+            fullName: "Alex",
+            avatarURL: nil,
+            providerAvatarURL: nil,
+            role: "member"
+        )
+    ]
+
+    PhoneSpaceCard(
+        space: space,
+        role: "admin",
+        isSelected: true,
+        isExpanded: true,
+        members: members,
+        onSelect: {},
+        onToggleExpanded: {},
+        onInvite: {},
+        onEdit: {},
+        onDeleteOrLeave: {}
+    )
+    .padding()
+}
+
 #endif

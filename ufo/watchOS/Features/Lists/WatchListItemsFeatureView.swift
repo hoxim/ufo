@@ -203,4 +203,29 @@ private struct WatchListItemEditorScreen: View {
     }
 }
 
+#Preview("Watch List Item Detail") {
+    let model = WatchAppModel()
+    let item = WatchSharedListItemSummary(
+        id: UUID(),
+        title: "Milk",
+        isCompleted: false,
+        position: 1,
+        version: 1
+    )
+
+    return NavigationStack {
+        WatchListItemDetailScreen(item: item, onDidChange: {})
+            .environment(model)
+    }
+}
+
+#Preview("Watch List Item Editor") {
+    NavigationStack {
+        WatchListItemEditorScreen(
+            titleKey: "watch.lists.items.newTitle",
+            actionTitleKey: "watch.common.add"
+        ) { _ in }
+    }
+}
+
 #endif

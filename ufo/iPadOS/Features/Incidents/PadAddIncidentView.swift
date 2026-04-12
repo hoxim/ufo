@@ -258,4 +258,121 @@ private extension PadAddIncidentView {
     }
 }
 
+@MainActor
+struct PadIncidentPreviewData {
+    let container: ModelContainer
+    let authRepository: AuthRepository
+    let spaceRepository: SpaceRepository
+    let store: IncidentStore
+    let user: UserProfile
+    let mission: Mission
+    let list: SharedList
+    let place: SavedPlace
+    let incident: Incident
+}
+
+@MainActor
+func makePadIncidentPreviewData() -> PadIncidentPreviewData {
+    let schema = Schema([
+        UserProfile.self,
+        Space.self,
+        SpaceMembership.self,
+        Mission.self,
+        SharedList.self,
+        SavedPlace.self,
+        Incident.self,
+        LinkedThing.self,
+        Note.self
+    ])
+    let container = try! ModelContainer(
+        for: schema,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+    let context = container.mainContext
+
+    let user = UserProfile(id: UUID(), email: "preview@ufo.app", fullName: "Preview User", role: "admin")
+    let space = Space(id: UUID(), name: "Family Crew", inviteCode: "UFO123")
+    let mission = Mission(
+        spaceId: space.id,
+        title: "Prepare first aid kit",
+        missionDescription: "Restock bandages and medicine.",
+        difficulty: 2,
+        createdBy: user.id
+    )
+    let list = SharedList(spaceId: space.id, name: "Emergency checklist", type: SharedListType.shopping.rawValue)
+    let place = SavedPlace(
+        spaceId: space.id,
+        name: "Home",
+        placeDescription: "Family base",
+        iconName: "house.fill",
+        iconColorHex: "#0F766E",
+        address: "Marszalkowska 1, Warszawa",
+        latitude: 52.2297,
+        longitude: 21.0122,
+        createdBy: user.id
+    )
+    let incident = Incident(
+        spaceId: space.id,
+        title: "Storm warning",
+        incidentDescription: "Secure windows before evening.",
+        severity: IncidentSeverity.high.rawValue,
+        status: IncidentStatus.open.rawValue,
+        assigneeId: user.id,
+        cost: 120,
+        occurrenceDate: .now,
+        createdBy: user.id
+    )
+    incident.iconName = "bolt.horizontal.fill"
+    incident.iconColorHex = "#F59E0B"
+
+    context.insert(user)
+    context.insert(space)
+    context.insert(SpaceMembership(user: user, space: space, role: "admin"))
+    context.insert(mission)
+    context.insert(list)
+    context.insert(place)
+    context.insert(incident)
+    context.insert(LinkedThing(thingId: space.id, parentId: incident.id, childId: mission.id, updatedBy: user.id))
+    context.insert(LinkedThing(thingId: space.id, parentId: incident.id, childId: list.id, updatedBy: user.id))
+    context.insert(LinkedThing(thingId: space.id, parentId: incident.id, childId: place.id, updatedBy: user.id))
+    context.insert(Note(spaceId: space.id, title: "Weather note", content: "Move garden furniture inside.", createdBy: user.id))
+    try? context.save()
+
+    let repository = IncidentRepository(client: SupabaseConfig.client, context: context)
+    let store = IncidentStore(modelContext: context, repository: repository)
+    store.setSpace(space.id)
+
+    let authRepository = AuthRepository(client: SupabaseConfig.client, isLoggedIn: true, currentUser: user)
+    let spaceRepository = SpaceRepository(client: SupabaseConfig.client)
+    spaceRepository.selectedSpace = space
+
+    return PadIncidentPreviewData(
+        container: container,
+        authRepository: authRepository,
+        spaceRepository: spaceRepository,
+        store: store,
+        user: user,
+        mission: mission,
+        list: list,
+        place: place,
+        incident: incident
+    )
+}
+
+#Preview("Pad Add Incident") {
+    let preview = makePadIncidentPreviewData()
+
+    NavigationStack {
+        PadAddIncidentView(
+            store: preview.store,
+            userId: preview.user.id,
+            availableMissions: [preview.mission],
+            availableLists: [preview.list],
+            availablePlaces: [preview.place]
+        )
+    }
+    .environment(preview.spaceRepository)
+    .modelContainer(preview.container)
+}
+
 #endif

@@ -141,4 +141,20 @@ struct MacRoutineEditorView: View {
     }
 }
 
+#Preview("Mac Routine Editor") {
+    let container = try! ModelContainer(
+        for: Schema([Routine.self]),
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+
+    return NavigationStack {
+        MacRoutineEditorView(
+            spaceId: UUID(),
+            actorId: UUID(),
+            onSave: {}
+        )
+    }
+    .modelContainer(container)
+}
+
 #endif

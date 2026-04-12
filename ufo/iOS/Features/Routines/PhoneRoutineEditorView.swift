@@ -141,4 +141,20 @@ struct PhoneRoutineEditorView: View {
     }
 }
 
+#Preview("Phone Routine Editor") {
+    let container = try! ModelContainer(
+        for: Schema([Routine.self]),
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+
+    return NavigationStack {
+        PhoneRoutineEditorView(
+            spaceId: UUID(),
+            actorId: UUID(),
+            onSave: {}
+        )
+    }
+    .modelContainer(container)
+}
+
 #endif

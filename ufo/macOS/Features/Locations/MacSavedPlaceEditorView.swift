@@ -515,6 +515,103 @@ private struct MacLocationSelectionSummary: View {
     }
 }
 
+#Preview("Mac Add Saved Place") {
+    let schema = Schema([
+        UserProfile.self,
+        Space.self,
+        SpaceMembership.self,
+        SavedPlace.self,
+        LocationPing.self,
+        LocationCheckIn.self
+    ])
+    let container = try! ModelContainer(
+        for: schema,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+    let context = container.mainContext
+    let user = UserProfile(id: UUID(), email: "preview@ufo.app", fullName: "Preview User", role: "admin")
+    let space = Space(id: UUID(), name: "Family Crew", inviteCode: "UFO123")
+    let existingPlace = SavedPlace(
+        spaceId: space.id,
+        name: "School",
+        placeDescription: "Morning drop-off",
+        iconName: "graduationcap.fill",
+        iconColorHex: "#2563EB",
+        address: "Aleje Jerozolimskie 1, Warszawa",
+        latitude: 52.2318,
+        longitude: 21.0062,
+        createdBy: user.id
+    )
+    context.insert(user)
+    context.insert(space)
+    context.insert(SpaceMembership(user: user, space: space, role: "admin"))
+    context.insert(existingPlace)
+    try? context.save()
 
+    let repository = LocationRepository(client: SupabaseConfig.client, context: context)
+    let store = LocationStore(modelContext: context, repository: repository)
+    store.setSpace(space.id)
+
+    let viewModel = MacLocationViewModel()
+    viewModel.locationStore = store
+    viewModel.currentLocation = CLLocation(latitude: 52.2297, longitude: 21.0122)
+
+    return MacAddSavedPlaceSheet(
+        viewModel: viewModel,
+        actorId: user.id,
+        originLabel: "Nearby places"
+    )
+    .modelContainer(container)
+}
+
+#Preview("Mac Edit Saved Place") {
+    let schema = Schema([
+        UserProfile.self,
+        Space.self,
+        SpaceMembership.self,
+        SavedPlace.self,
+        LocationPing.self,
+        LocationCheckIn.self
+    ])
+    let container = try! ModelContainer(
+        for: schema,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+    let context = container.mainContext
+    let user = UserProfile(id: UUID(), email: "preview@ufo.app", fullName: "Preview User", role: "admin")
+    let space = Space(id: UUID(), name: "Family Crew", inviteCode: "UFO123")
+    let place = SavedPlace(
+        spaceId: space.id,
+        name: "School",
+        placeDescription: "Morning drop-off",
+        iconName: "graduationcap.fill",
+        iconColorHex: "#2563EB",
+        address: "Aleje Jerozolimskie 1, Warszawa",
+        latitude: 52.2318,
+        longitude: 21.0062,
+        createdBy: user.id
+    )
+    context.insert(user)
+    context.insert(space)
+    context.insert(SpaceMembership(user: user, space: space, role: "admin"))
+    context.insert(place)
+    try? context.save()
+
+    let repository = LocationRepository(client: SupabaseConfig.client, context: context)
+    let store = LocationStore(modelContext: context, repository: repository)
+    store.setSpace(space.id)
+
+    let viewModel = MacLocationViewModel()
+    viewModel.locationStore = store
+    viewModel.currentLocation = CLLocation(latitude: 52.2297, longitude: 21.0122)
+
+    return MacAddSavedPlaceSheet(
+        viewModel: viewModel,
+        actorId: user.id,
+        placeToEdit: place,
+        originLabel: "Nearby places"
+    )
+    .modelContainer(container)
+}
 
 #endif

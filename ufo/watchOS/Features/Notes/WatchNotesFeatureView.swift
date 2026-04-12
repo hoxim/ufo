@@ -259,4 +259,32 @@ private struct WatchNoteEditorScreen: View {
     }
 }
 
+#Preview("Watch Note Detail") {
+    let model = WatchAppModel()
+    let note = WatchNoteSummary(
+        id: UUID(),
+        title: "Shopping reminder",
+        content: "Buy fruit, milk and batteries on the way home.",
+        isPinned: true,
+        updatedAt: .now.addingTimeInterval(-3600),
+        version: 1
+    )
+
+    return NavigationStack {
+        WatchNoteDetailScreen(note: note, onDidChange: {})
+            .environment(model)
+    }
+}
+
+#Preview("Watch Note Editor") {
+    NavigationStack {
+        WatchNoteEditorScreen(
+            titleKey: "notes.editor.title.new",
+            actionTitleKey: "watch.common.add",
+            initialTitle: "Packing list",
+            initialContent: "Passport\nCharger\nSnacks"
+        ) { _, _ in }
+    }
+}
+
 #endif
