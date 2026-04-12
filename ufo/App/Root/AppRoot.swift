@@ -10,7 +10,11 @@ struct AppRoot: View {
     @Environment(SpaceRepository.self) private var spaceRepository
     @Environment(AppNotificationStore.self) private var notificationStore
     @Environment(AppPreferences.self) private var appPreferences
-    
+#if os(iOS)
+    @Environment(AppBiometricStore.self) private var biometricStore
+#endif
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var selectedTab: TabItem = .home
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
@@ -47,11 +51,22 @@ struct AppRoot: View {
                 .zIndex(200)
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
+
+#if os(iOS)
+            if biometricStore.isLocked {
+                AppLockScreen()
+                    .zIndex(300)
+                    .transition(.opacity)
+            }
+#endif
         }
         .animation(.default, value: authStore.state)
         .animation(.easeInOut, value: spaceRepository.selectedSpace)
         .animation(.spring(), value: spaceRepository.pendingInvitation)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: notificationStore.activeToast)
+#if os(iOS)
+        .animation(.easeInOut(duration: 0.25), value: biometricStore.isLocked)
+#endif
         .task {
             guard !isPreview else { return }
             if authStore.state == .checkingSession {
@@ -59,6 +74,9 @@ struct AppRoot: View {
             }
             if authStore.state == .ready {
                 await deviceSessionStore.bootstrap(context: CurrentDeviceContext.make())
+#if os(iOS)
+                biometricStore.lockIfNeeded(preferences: appPreferences)
+#endif
             } else if authStore.state == .signedOut {
                 deviceSessionStore.reset()
             }
@@ -72,11 +90,26 @@ struct AppRoot: View {
             Task {
                 if newValue == .ready {
                     await deviceSessionStore.bootstrap(context: CurrentDeviceContext.make())
+#if os(iOS)
+                    biometricStore.lockIfNeeded(preferences: appPreferences)
+#endif
                 } else if newValue == .signedOut {
                     deviceSessionStore.reset()
                 }
             }
         }
+#if os(iOS)
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .background:
+                biometricStore.handleBackground()
+            case .active:
+                biometricStore.handleForeground(preferences: appPreferences)
+            default:
+                break
+            }
+        }
+#endif
     }
 
     // MARK: - Layout

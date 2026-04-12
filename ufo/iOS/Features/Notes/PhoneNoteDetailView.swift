@@ -69,7 +69,7 @@ struct PhoneNoteDetailView: View {
                         if let incident = relatedIncident {
                             RelatedContentButton(
                                 title: incident.title,
-                                subtitle: IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized,
+                                subtitle: incident.severity.localizedLabel,
                                 systemImage: incident.iconName ?? "exclamationmark.triangle",
                                 tint: Color(hex: incident.iconColorHex ?? "#F59E0B")
                             ) {

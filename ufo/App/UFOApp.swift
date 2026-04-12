@@ -45,7 +45,8 @@ struct UFOApp: App {
             RoutineLog.self
         ])
         // New local store name to avoid loading an old incompatible SwiftData file.
-        let config = ModelConfiguration("UFO_Clean_DB_v7", isStoredInMemoryOnly: false)
+        // v8: Mission/Incident/BudgetEntry/BudgetRecurringRule migrated from String to typed enums
+        let config = ModelConfiguration("UFO_Clean_DB_v8", isStoredInMemoryOnly: false)
 
         do {
             return try ModelContainer(for: schema, configurations: [config])
@@ -64,6 +65,7 @@ struct UFOApp: App {
     @State private var appPreferences: AppPreferences
 #if os(iOS)
     @State private var watchSessionBridge: PhoneWatchSessionBridge
+    @State private var biometricStore: AppBiometricStore
 #endif
 
     init() {
@@ -85,6 +87,7 @@ struct UFOApp: App {
         _appPreferences = State(initialValue: appPreferences)
 #if os(iOS)
         _watchSessionBridge = State(initialValue: PhoneWatchSessionBridge(authRepository: authRepo))
+        _biometricStore = State(initialValue: AppBiometricStore())
 #endif
     }
 
@@ -99,6 +102,7 @@ struct UFOApp: App {
                 .environment(notificationStore)
                 .environment(appPreferences)
                 .environment(watchSessionBridge)
+                .environment(biometricStore)
                 .background(Color.backgroundSolid)
                 .onOpenURL { url in
                     SupabaseConfig.client.auth.handle(url)

@@ -26,9 +26,9 @@ struct PhoneBudgetCashFlowSection: View {
                 ForEach(entries) { item in
                     LineMark(
                         x: .value("Date", item.entryDate),
-                        y: .value("Amount", item.kind == BudgetEntryKind.expense.rawValue ? -item.amount : item.amount)
+                        y: .value("Amount", item.kind == .expense ? -item.amount : item.amount)
                     )
-                    .foregroundStyle(item.kind == BudgetEntryKind.expense.rawValue ? .red : .green)
+                    .foregroundStyle(item.kind == .expense ? .red : .green)
                 }
             }
             .frame(height: 220)
@@ -229,8 +229,8 @@ private struct PhoneBudgetTransactionRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Text((entry.kind == BudgetEntryKind.expense.rawValue ? -entry.amount : entry.amount).formatted(.currency(code: "PLN")))
-                .foregroundStyle(entry.kind == BudgetEntryKind.expense.rawValue ? .red : .green)
+            Text((entry.kind == .expense ? -entry.amount : entry.amount).formatted(.currency(code: "PLN")))
+                .foregroundStyle(entry.kind == .expense ? .red : .green)
         }
     }
 }

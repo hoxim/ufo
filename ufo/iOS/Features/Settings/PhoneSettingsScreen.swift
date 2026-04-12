@@ -4,6 +4,7 @@ import SwiftUI
 
 struct PhoneSettingsScreen: View {
     @Environment(AppPreferences.self) private var appPreferences
+    @Environment(AppBiometricStore.self) private var biometricStore
     @Environment(PhoneWatchSessionBridge.self) private var watchSessionBridge
     @AppStorage("settings_space_limit") private var spaceLimit: Int = 5
     @AppStorage("settings_default_space_type") private var defaultSpaceType: String = SpaceType.personal.rawValue
@@ -36,6 +37,22 @@ struct PhoneSettingsScreen: View {
                         Text("settings.defaultSpace.shared").tag(SpaceType.shared.rawValue)
                     }
                     .disabled(!appPreferences.allowsSharedSpaces)
+                }
+
+                if biometricStore.isBiometryAvailable {
+                    Section("settings.section.security") {
+                        Toggle(isOn: biometricLockBinding) {
+                            Label(biometricStore.biometryLabel, systemImage: biometricStore.biometrySystemImage)
+                        }
+
+                        if appPreferences.biometricLockEnabled {
+                            Picker("settings.security.autoLock", selection: autoLockBinding) {
+                                ForEach(AutoLockTimeout.allCases) { timeout in
+                                    Text(timeout.title).tag(timeout)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Section("settings.section.privacy") {
@@ -84,6 +101,20 @@ struct PhoneSettingsScreen: View {
         Binding(
             get: { appPreferences.autoSyncEnabled },
             set: { appPreferences.autoSyncEnabled = $0 }
+        )
+    }
+
+    private var biometricLockBinding: Binding<Bool> {
+        Binding(
+            get: { appPreferences.biometricLockEnabled },
+            set: { appPreferences.biometricLockEnabled = $0 }
+        )
+    }
+
+    private var autoLockBinding: Binding<AutoLockTimeout> {
+        Binding(
+            get: { appPreferences.autoLockTimeout },
+            set: { appPreferences.autoLockTimeout = $0 }
         )
     }
 }

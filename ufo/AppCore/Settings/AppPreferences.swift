@@ -153,6 +153,24 @@ struct BudgetDashboardWidgetPreference: Codable, Identifiable, Equatable {
     var id: BudgetDashboardWidgetKind { kind }
 }
 
+enum AutoLockTimeout: Int, CaseIterable, Identifiable {
+    case immediately = 0
+    case oneMinute = 60
+    case fiveMinutes = 300
+    case never = -1
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .immediately: String(localized: "settings.security.autoLock.immediately")
+        case .oneMinute:   String(localized: "settings.security.autoLock.oneMinute")
+        case .fiveMinutes: String(localized: "settings.security.autoLock.fiveMinutes")
+        case .never:       String(localized: "settings.security.autoLock.never")
+        }
+    }
+}
+
 enum AppProductTier: String, CaseIterable, Identifiable {
     case standardOffline
     case premiumOnline
@@ -186,6 +204,8 @@ final class AppPreferences {
     private let budgetDashboardWidgetsKey = "budget_dashboard_widgets_configuration_v1"
     private let budgetCustomCategoriesKey = "budget_custom_categories_v1"
     private let budgetCategoryLimitsKey = "budget_category_limits_v1"
+    private let biometricLockEnabledKey = "security_biometric_lock_enabled"
+    private let autoLockTimeoutKey = "security_auto_lock_timeout"
 
     var productTier: AppProductTier {
         didSet {
@@ -235,6 +255,18 @@ final class AppPreferences {
         }
     }
 
+    var biometricLockEnabled: Bool {
+        didSet {
+            userDefaults.set(biometricLockEnabled, forKey: biometricLockEnabledKey)
+        }
+    }
+
+    var autoLockTimeout: AutoLockTimeout {
+        didSet {
+            userDefaults.set(autoLockTimeout.rawValue, forKey: autoLockTimeoutKey)
+        }
+    }
+
     var budgetCategoryLimits: [BudgetCategoryLimitPreference] {
         didSet {
             let normalized = Self.normalizedBudgetCategoryLimits(budgetCategoryLimits)
@@ -269,6 +301,9 @@ final class AppPreferences {
         self.budgetCategoryLimits = Self.loadCodable([BudgetCategoryLimitPreference].self, from: userDefaults, key: budgetCategoryLimitsKey) ?? []
         self.budgetCustomCategories = Self.normalizedBudgetCategories(budgetCustomCategories)
         self.budgetCategoryLimits = Self.normalizedBudgetCategoryLimits(budgetCategoryLimits)
+        self.biometricLockEnabled = userDefaults.object(forKey: biometricLockEnabledKey) as? Bool ?? false
+        let timeoutRaw = userDefaults.object(forKey: autoLockTimeoutKey) as? Int ?? AutoLockTimeout.immediately.rawValue
+        self.autoLockTimeout = AutoLockTimeout(rawValue: timeoutRaw) ?? .immediately
 
         if !supportsCloudFeatures {
             self.autoSyncEnabled = false

@@ -185,8 +185,8 @@ struct MacAddIncidentView: View {
         let createdIncident = await store.addIncident(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: details.isEmpty ? nil : details,
-            severity: severity.rawValue,
-            status: status.rawValue,
+            severity: severity,
+            status: status,
             assigneeId: assigneeId,
             cost: Double(costText.replacingOccurrences(of: ",", with: ".")),
             occurrenceDate: date,

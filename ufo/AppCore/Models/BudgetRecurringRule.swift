@@ -11,10 +11,10 @@ enum BudgetRecurringCadence: String, CaseIterable, Codable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .daily: return "Daily"
-        case .weekly: return String(localized: "budget.recurring.weekly")
-        case .monthly: return String(localized: "budget.recurring.monthly")
-        case .yearly: return String(localized: "budget.recurring.yearly")
+        case .daily:   "Daily"
+        case .weekly:  String(localized: "budget.recurring.weekly")
+        case .monthly: String(localized: "budget.recurring.monthly")
+        case .yearly:  String(localized: "budget.recurring.yearly")
         }
     }
 }
@@ -24,14 +24,14 @@ final class BudgetRecurringRule {
     @Attribute(.unique) var id: UUID
     var spaceId: UUID
     var title: String
-    var kind: String
+    var kind: BudgetEntryKind
     var amount: Double
     var category: String
     var subcategory: String?
     var merchantName: String?
     var merchantURLString: String?
     var notes: String?
-    var cadence: String
+    var cadence: BudgetRecurringCadence
     var anchorDate: Date
     var isFixed: Bool
     var iconName: String?
@@ -49,14 +49,14 @@ final class BudgetRecurringRule {
         id: UUID = UUID(),
         spaceId: UUID,
         title: String,
-        kind: String,
+        kind: BudgetEntryKind,
         amount: Double,
         category: String,
         subcategory: String? = nil,
         merchantName: String? = nil,
         merchantURLString: String? = nil,
         notes: String? = nil,
-        cadence: String,
+        cadence: BudgetRecurringCadence,
         anchorDate: Date = .now,
         isFixed: Bool = true,
         iconName: String? = "arrow.triangle.2.circlepath.circle",
@@ -89,11 +89,6 @@ final class BudgetRecurringRule {
         self.pendingSync = false
     }
 
-    var recurringCadence: BudgetRecurringCadence {
-        get { BudgetRecurringCadence(rawValue: cadence) ?? .monthly }
-        set { cadence = newValue.rawValue }
-    }
-
     var merchantURL: URL? {
         get {
             guard let merchantURLString, !merchantURLString.isEmpty else { return nil }
@@ -108,16 +103,11 @@ final class BudgetRecurringRule {
         var next = anchorDate
         guard next < referenceDate else { return next }
 
-        let component: Calendar.Component
-        switch recurringCadence {
-        case .daily:
-            component = .day
-        case .weekly:
-            component = .weekOfYear
-        case .monthly:
-            component = .month
-        case .yearly:
-            component = .year
+        let component: Calendar.Component = switch cadence {
+        case .daily:   .day
+        case .weekly:  .weekOfYear
+        case .monthly: .month
+        case .yearly:  .year
         }
 
         while next < referenceDate {

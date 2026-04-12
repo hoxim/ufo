@@ -1,23 +1,15 @@
-//
-//  Incident.swift
-//  ufo
-//
-//  Created by Marcin Ryzko on 09/02/2026.
-//
-
 import Foundation
 import SwiftData
 
 @Model
 final class Incident: Thing {
-
     @Attribute(.unique) var id: UUID
     var spaceId: UUID
     var createdBy: UUID?
     var title: String
     var incidentDescription: String?
-    var severity: String?
-    var status: String?
+    var severity: IncidentSeverity = .medium
+    var status: IncidentStatus = .open
     var assigneeId: UUID?
     var cost: Double?
     var createdAt: Date
@@ -31,7 +23,6 @@ final class Incident: Thing {
     var iconName: String?
     var iconColorHex: String?
     var imageData: Data?
-    
 
     @Relationship(deleteRule: .cascade)
     var links: [LinkedThing] = []
@@ -41,8 +32,8 @@ final class Incident: Thing {
         spaceId: UUID,
         title: String,
         incidentDescription: String? = nil,
-        severity: String = IncidentSeverity.medium.rawValue,
-        status: String = IncidentStatus.open.rawValue,
+        severity: IncidentSeverity = .medium,
+        status: IncidentStatus = .open,
         assigneeId: UUID? = nil,
         cost: Double? = nil,
         occurrenceDate: Date,
@@ -72,20 +63,10 @@ final class Incident: Thing {
 
 extension Incident {
     @Transient
-    var subThings: [any Thing] {
-        return []
-    }
-
-    var resolvedSeverity: String {
-        severity ?? IncidentSeverity.medium.rawValue
-    }
-
-    var resolvedStatus: String {
-        status ?? IncidentStatus.open.rawValue
-    }
+    var subThings: [any Thing] { [] }
 }
 
-enum IncidentSeverity: String, CaseIterable, Identifiable {
+enum IncidentSeverity: String, CaseIterable, Codable, Identifiable {
     case low
     case medium
     case high
@@ -95,19 +76,15 @@ enum IncidentSeverity: String, CaseIterable, Identifiable {
 
     var localizedLabel: String {
         switch self {
-        case .low:
-            return String(localized: "shared.priority.low")
-        case .medium:
-            return String(localized: "shared.priority.medium")
-        case .high:
-            return String(localized: "shared.priority.high")
-        case .critical:
-            return String(localized: "shared.priority.critical")
+        case .low:      String(localized: "shared.priority.low")
+        case .medium:   String(localized: "shared.priority.medium")
+        case .high:     String(localized: "shared.priority.high")
+        case .critical: String(localized: "shared.priority.critical")
         }
     }
 }
 
-enum IncidentStatus: String, CaseIterable, Identifiable {
+enum IncidentStatus: String, CaseIterable, Codable, Identifiable {
     case open
     case inProgress = "in_progress"
     case resolved
@@ -116,12 +93,9 @@ enum IncidentStatus: String, CaseIterable, Identifiable {
 
     var localizedLabel: String {
         switch self {
-        case .open:
-            return String(localized: "shared.status.open")
-        case .inProgress:
-            return String(localized: "shared.status.inProgress")
-        case .resolved:
-            return String(localized: "shared.status.resolved")
+        case .open:       String(localized: "shared.status.open")
+        case .inProgress: String(localized: "shared.status.inProgress")
+        case .resolved:   String(localized: "shared.status.resolved")
         }
     }
 }

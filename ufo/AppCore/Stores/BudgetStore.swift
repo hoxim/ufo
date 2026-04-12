@@ -4,35 +4,35 @@ import SwiftData
 
 @MainActor
 @Observable
-final class BudgetStore {
-    private let modelContext: ModelContext
+final class BudgetStore: SpaceScopedStore {
+    let modelContext: ModelContext
     private let repository: BudgetRepository
     private let analytics = BudgetAnalyticsService()
-    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var entries: [BudgetEntry] = []
     var recurringRules: [BudgetRecurringRule] = []
     var goals: [BudgetGoal] = []
     var spaceSettings: BudgetSpaceSettings?
     var currentSpaceId: UUID?
-    var isSyncing: Bool = false
+    var isSyncing = false
     var lastErrorMessage: String?
+
+    // Cached analytics snapshot — invalidated on every loadLocal()
+    private var _summaryCache: BudgetSummarySnapshot?
 
     init(modelContext: ModelContext, repository: BudgetRepository) {
         self.modelContext = modelContext
         self.repository = repository
     }
 
-    func setSpace(_ spaceId: UUID?) {
-        currentSpaceId = spaceId
-        guard let spaceId else {
-            entries = []
-            recurringRules = []
-            goals = []
-            spaceSettings = nil
-            return
-        }
-        loadLocal(spaceId: spaceId)
+    // MARK: - SpaceScopedStore
+
+    func clearSpaceData() {
+        entries = []
+        recurringRules = []
+        goals = []
+        spaceSettings = nil
+        _summaryCache = nil
     }
 
     func loadLocal(spaceId: UUID) {
@@ -41,40 +41,66 @@ final class BudgetStore {
             recurringRules = try repository.fetchRecurringRulesLocal(spaceId: spaceId)
             goals = try repository.fetchGoalsLocal(spaceId: spaceId)
             spaceSettings = try repository.fetchSpaceSettingsLocal(spaceId: spaceId)
-            lastErrorMessage = nil
-        } catch {
-            entries = []
-            recurringRules = []
-            goals = []
-            spaceSettings = nil
-            lastErrorMessage = localizedErrorMessage("budget.error.loadLocal", error: error)
-        }
-    }
-
-    func refreshRemote() async {
-        guard let spaceId = currentSpaceId else { return }
-        guard cloudSyncEnabled else {
-            loadLocal(spaceId: spaceId)
-            ensureLocalSpaceSettings()
-            return
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-
-        do {
-            try await repository.pullRemoteToLocal(spaceId: spaceId)
-            entries = try repository.fetchEntriesLocal(spaceId: spaceId)
-            recurringRules = try repository.fetchRecurringRulesLocal(spaceId: spaceId)
-            goals = try repository.fetchGoalsLocal(spaceId: spaceId)
-            spaceSettings = try repository.fetchSpaceSettingsLocal(spaceId: spaceId)
+            _summaryCache = nil
             ensureLocalSpaceSettings()
             lastErrorMessage = nil
         } catch {
-            loadLocal(spaceId: spaceId)
-            ensureLocalSpaceSettings()
-            lastErrorMessage = localizedErrorMessage("budget.error.refresh", error: error)
+            clearSpaceData()
+            lastErrorMessage = error.localizedDescription
         }
     }
+
+    func pullRemoteData(spaceId: UUID) async throws {
+        try await repository.pullRemoteToLocal(spaceId: spaceId)
+    }
+
+    func syncPendingData(spaceId: UUID) async throws {
+        try await repository.syncPendingLocal(spaceId: spaceId)
+    }
+
+    func afterSync() {
+        notifyHomeWidgetsDataDidChange()
+    }
+
+    // MARK: - Analytics (cached)
+
+    var currencyCode: String {
+        spaceSettings?.currencyCode ?? "PLN"
+    }
+
+    var openingBalance: Double {
+        spaceSettings?.openingBalance ?? 0
+    }
+
+    /// Computed once per data load — not recalculated on every access.
+    var summarySnapshot: BudgetSummarySnapshot {
+        if let cached = _summaryCache { return cached }
+        let snapshot = analytics.summary(entries: entries, openingBalance: openingBalance)
+        _summaryCache = snapshot
+        return snapshot
+    }
+
+    var totalIncome: Double  { summarySnapshot.income }
+    var totalExpense: Double { summarySnapshot.expense }
+    var balance: Double      { summarySnapshot.currentBalance }
+
+    func cashFlow(interval: DateInterval) -> [BudgetCashFlowPoint] {
+        analytics.cashFlow(entries: entries, in: interval)
+    }
+
+    func runningBalance(interval: DateInterval? = nil) -> [BudgetRunningBalancePoint] {
+        analytics.runningBalance(entries: entries, openingBalance: openingBalance, in: interval)
+    }
+
+    func categoryBreakdown(for entries: [BudgetEntry], limits: [String: Double]) -> [BudgetCategoryBreakdownPoint] {
+        analytics.categoryBreakdown(entries: entries, limits: limits)
+    }
+
+    func upcomingRecurring(limit: Int = 5) -> [BudgetUpcomingRecurringPoint] {
+        analytics.upcomingRecurring(rules: recurringRules, limit: limit)
+    }
+
+    // MARK: - CRUD
 
     func addEntry(
         title: String,
@@ -134,7 +160,7 @@ final class BudgetStore {
                 )
             }
 
-            reloadCurrentSpace()
+            loadLocal(spaceId: spaceId)
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
@@ -177,7 +203,7 @@ final class BudgetStore {
                 iconColorHex: iconColorHex,
                 actor: actor
             )
-            reloadCurrentSpace()
+            loadLocal(spaceId: spaceId)
             await syncPending()
         } catch {
             lastErrorMessage = localizedErrorMessage("budget.error.addEntry", error: error)
@@ -193,6 +219,7 @@ final class BudgetStore {
                 currencyCode: currencyCode,
                 actor: actor
             )
+            _summaryCache = nil
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
@@ -211,7 +238,7 @@ final class BudgetStore {
                 dueDate: dueDate,
                 actor: actor
             )
-            reloadCurrentSpace()
+            loadLocal(spaceId: spaceId)
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
@@ -235,7 +262,7 @@ final class BudgetStore {
         guard let spaceId = currentSpaceId else { return }
         do {
             try repository.markEntryDeletedLocal(entry, actor: actor)
-            entries = try repository.fetchEntriesLocal(spaceId: spaceId)
+            loadLocal(spaceId: spaceId)
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
@@ -254,74 +281,7 @@ final class BudgetStore {
         }
     }
 
-    func syncPending() async {
-        guard let spaceId = currentSpaceId else { return }
-        guard cloudSyncEnabled else {
-            loadLocal(spaceId: spaceId)
-            ensureLocalSpaceSettings()
-            lastErrorMessage = nil
-            return
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-
-        do {
-            try await repository.syncPendingLocal(spaceId: spaceId)
-            try await repository.pullRemoteToLocal(spaceId: spaceId)
-            reloadCurrentSpace()
-            try modelContext.save()
-            notifyHomeWidgetsDataDidChange()
-            lastErrorMessage = nil
-        } catch {
-            lastErrorMessage = localizedErrorMessage("budget.error.sync", error: error)
-        }
-    }
-
-    var currencyCode: String {
-        spaceSettings?.currencyCode ?? "PLN"
-    }
-
-    var openingBalance: Double {
-        spaceSettings?.openingBalance ?? 0
-    }
-
-    var summarySnapshot: BudgetSummarySnapshot {
-        analytics.summary(entries: entries, openingBalance: openingBalance)
-    }
-
-    var totalIncome: Double {
-        summarySnapshot.income
-    }
-
-    var totalExpense: Double {
-        summarySnapshot.expense
-    }
-
-    var balance: Double {
-        summarySnapshot.currentBalance
-    }
-
-    func cashFlow(interval: DateInterval) -> [BudgetCashFlowPoint] {
-        analytics.cashFlow(entries: entries, in: interval)
-    }
-
-    func runningBalance(interval: DateInterval? = nil) -> [BudgetRunningBalancePoint] {
-        analytics.runningBalance(entries: entries, openingBalance: openingBalance, in: interval)
-    }
-
-    func categoryBreakdown(for entries: [BudgetEntry], limits: [String: Double]) -> [BudgetCategoryBreakdownPoint] {
-        analytics.categoryBreakdown(entries: entries, limits: limits)
-    }
-
-    func upcomingRecurring(limit: Int = 5) -> [BudgetUpcomingRecurringPoint] {
-        analytics.upcomingRecurring(rules: recurringRules, limit: limit)
-    }
-
-    private func reloadCurrentSpace() {
-        guard let spaceId = currentSpaceId else { return }
-        loadLocal(spaceId: spaceId)
-        ensureLocalSpaceSettings()
-    }
+    // MARK: - Private
 
     private func ensureLocalSpaceSettings() {
         guard let currentSpaceId, spaceSettings == nil else { return }

@@ -4,14 +4,13 @@ import SwiftData
 
 @MainActor
 @Observable
-final class MessageStore {
-    private let modelContext: ModelContext
+final class MessageStore: SpaceScopedStore {
+    let modelContext: ModelContext
     private let repository: MessageRepository
-    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var messages: [SpaceMessage] = []
     var currentSpaceId: UUID?
-    var isSyncing: Bool = false
+    var isSyncing = false
     var lastErrorMessage: String?
 
     init(modelContext: ModelContext, repository: MessageRepository) {
@@ -19,48 +18,32 @@ final class MessageStore {
         self.repository = repository
     }
 
-    /// Sets space.
-    func setSpace(_ spaceId: UUID?) {
-        currentSpaceId = spaceId
-        guard let spaceId else {
-            messages = []
-            return
-        }
-        loadLocal(spaceId: spaceId)
+    // MARK: - SpaceScopedStore
+
+    func clearSpaceData() {
+        messages = []
     }
 
-    /// Loads local.
     func loadLocal(spaceId: UUID) {
         do {
             messages = try repository.fetchLocal(spaceId: spaceId)
             lastErrorMessage = nil
         } catch {
             messages = []
-            lastErrorMessage = localizedErrorMessage("messages.error.load", error: error)
+            lastErrorMessage = error.localizedDescription
         }
     }
 
-    /// Handles refresh remote.
-    func refreshRemote() async {
-        guard let spaceId = currentSpaceId else { return }
-        guard cloudSyncEnabled else {
-            loadLocal(spaceId: spaceId)
-            return
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-
-        do {
-            try await repository.pullRemoteToLocal(spaceId: spaceId)
-            messages = try repository.fetchLocal(spaceId: spaceId)
-            lastErrorMessage = nil
-        } catch {
-            loadLocal(spaceId: spaceId)
-            lastErrorMessage = localizedErrorMessage("messages.error.refresh", error: error)
-        }
+    func pullRemoteData(spaceId: UUID) async throws {
+        try await repository.pullRemoteToLocal(spaceId: spaceId)
     }
 
-    /// Handles send message.
+    func syncPendingData(spaceId: UUID) async throws {
+        try await repository.syncPendingLocal(spaceId: spaceId)
+    }
+
+    // MARK: - CRUD
+
     func sendMessage(body: String, senderId: UUID, senderName: String, recipientIds: [UUID]) async {
         guard let spaceId = currentSpaceId else { return }
         do {
@@ -71,32 +54,10 @@ final class MessageStore {
                 body: body,
                 recipientIds: recipientIds
             )
-            messages = try repository.fetchLocal(spaceId: spaceId)
+            loadLocal(spaceId: spaceId)
             await syncPending()
         } catch {
             lastErrorMessage = localizedErrorMessage("messages.error.send", error: error)
-        }
-    }
-
-    /// Syncs pending.
-    func syncPending() async {
-        guard let spaceId = currentSpaceId else { return }
-        guard cloudSyncEnabled else {
-            loadLocal(spaceId: spaceId)
-            lastErrorMessage = nil
-            return
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-
-        do {
-            try await repository.syncPendingLocal(spaceId: spaceId)
-            try await repository.pullRemoteToLocal(spaceId: spaceId)
-            messages = try repository.fetchLocal(spaceId: spaceId)
-            try modelContext.save()
-            lastErrorMessage = nil
-        } catch {
-            lastErrorMessage = localizedErrorMessage("messages.error.sync", error: error)
         }
     }
 }

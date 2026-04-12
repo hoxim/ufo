@@ -1,11 +1,3 @@
-//
-//  Mission.swift
-//  ufo
-//
-//  Created by Marcin Ryzko on 30/01/2026.
-//
-
-
 import Foundation
 import SwiftData
 
@@ -23,8 +15,8 @@ final class Mission: Thing {
     var dueDate: Date?
     var savedPlaceId: UUID?
     var savedPlaceName: String?
-    var priority: String?
-    var isRecurring: Bool?
+    var priority: MissionPriority = .medium
+    var isRecurring: Bool = false
     var space: Space?
     var version: Int = 1
     var lastUpdatedAt: Date
@@ -35,9 +27,8 @@ final class Mission: Thing {
     var iconName: String?
     var iconColorHex: String?
     var imageData: Data?
-    var visibilityMode: String = SpaceContentVisibilityMode.everyone.rawValue
-    
-    // relation to  UserProfile
+    var visibilityMode: SpaceContentVisibilityMode = .everyone
+
     @Relationship(inverse: \UserProfile.assignedMissions)
     var assignees: [UserProfile] = []
 
@@ -54,9 +45,9 @@ final class Mission: Thing {
         dueDate: Date? = nil,
         savedPlaceId: UUID? = nil,
         savedPlaceName: String? = nil,
-        priority: String = MissionPriority.medium.rawValue,
+        priority: MissionPriority = .medium,
         isRecurring: Bool = false,
-        visibilityMode: String = SpaceContentVisibilityMode.everyone.rawValue,
+        visibilityMode: SpaceContentVisibilityMode = .everyone,
         iconName: String? = nil,
         iconColorHex: String? = "#F59E0B",
         imageData: Data? = nil,
@@ -87,24 +78,10 @@ final class Mission: Thing {
 
 extension Mission {
     @Transient
-    var subThings: [any Thing] {
-        return []
-    }
-
-    var resolvedPriority: String {
-        priority ?? MissionPriority.medium.rawValue
-    }
-
-    var isRecurringValue: Bool {
-        isRecurring ?? false
-    }
-
-    var resolvedVisibilityMode: String {
-        visibilityMode.isEmpty ? SpaceContentVisibilityMode.everyone.rawValue : visibilityMode
-    }
+    var subThings: [any Thing] { [] }
 }
 
-enum SpaceContentVisibilityMode: String, CaseIterable, Identifiable {
+enum SpaceContentVisibilityMode: String, CaseIterable, Codable, Identifiable {
     case everyone
     case groups
     case `private`
@@ -112,7 +89,7 @@ enum SpaceContentVisibilityMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-enum MissionPriority: String, CaseIterable, Identifiable {
+enum MissionPriority: String, CaseIterable, Codable, Identifiable {
     case low
     case medium
     case high
@@ -121,12 +98,9 @@ enum MissionPriority: String, CaseIterable, Identifiable {
 
     var localizedLabel: String {
         switch self {
-        case .low:
-            return String(localized: "shared.priority.low")
-        case .medium:
-            return String(localized: "shared.priority.medium")
-        case .high:
-            return String(localized: "shared.priority.high")
+        case .low:    String(localized: "shared.priority.low")
+        case .medium: String(localized: "shared.priority.medium")
+        case .high:   String(localized: "shared.priority.high")
         }
     }
 }

@@ -145,7 +145,7 @@ struct PhoneIncidentsScreen: View {
                         Text(incident.occurrenceDate.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text("\(IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized) · \(IncidentStatus(rawValue: incident.resolvedStatus)?.localizedLabel ?? incident.resolvedStatus.capitalized)")
+                        Text("\(incident.severity.localizedLabel) · \(incident.status.localizedLabel)")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                         if let cost = incident.cost {
@@ -194,8 +194,8 @@ struct PhoneIncidentsScreen: View {
         return store.incidents.filter { incident in
             incident.title.localizedCaseInsensitiveContains(query)
                 || (incident.incidentDescription?.localizedCaseInsensitiveContains(query) ?? false)
-                || incident.resolvedSeverity.localizedCaseInsensitiveContains(query)
-                || incident.resolvedStatus.localizedCaseInsensitiveContains(query)
+                || incident.severity.rawValue.localizedCaseInsensitiveContains(query)
+                || incident.status.rawValue.localizedCaseInsensitiveContains(query)
         }
     }
 

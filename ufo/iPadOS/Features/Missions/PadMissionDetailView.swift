@@ -55,9 +55,9 @@ struct PadMissionDetailView: View {
                     }
 
                     HStack(spacing: 10) {
-                        Label(MissionPriority(rawValue: mission.resolvedPriority)?.localizedLabel ?? mission.resolvedPriority.capitalized, systemImage: "flag")
+                        Label(mission.priority.localizedLabel, systemImage: "flag")
                             .font(.caption)
-                        if mission.isRecurringValue {
+                        if mission.isRecurring {
                             Label("Recurring", systemImage: "repeat")
                                 .font(.caption)
                         }
@@ -152,7 +152,7 @@ struct PadMissionDetailView: View {
                             ForEach(relatedIncidents) { incident in
                                 RelatedContentButton(
                                     title: incident.title,
-                                    subtitle: IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized,
+                                    subtitle: incident.severity.localizedLabel,
                                     systemImage: incident.iconName ?? "exclamationmark.triangle",
                                     tint: Color(hex: incident.iconColorHex ?? "#F59E0B")
                                 ) {

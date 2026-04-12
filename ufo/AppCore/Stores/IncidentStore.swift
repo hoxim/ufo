@@ -4,16 +4,15 @@ import SwiftData
 
 @MainActor
 @Observable
-final class IncidentStore {
-    private let modelContext: ModelContext
+final class IncidentStore: SpaceScopedStore {
+    let modelContext: ModelContext
     private let repository: IncidentRepository
     private let linkRepository: LinkRepository
-    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var incidents: [Incident] = []
-    var isSyncing: Bool = false
-    var lastErrorMessage: String?
     var currentSpaceId: UUID?
+    var isSyncing = false
+    var lastErrorMessage: String?
 
     init(modelContext: ModelContext, repository: IncidentRepository) {
         self.modelContext = modelContext
@@ -21,53 +20,41 @@ final class IncidentStore {
         self.linkRepository = LinkRepository(client: SupabaseConfig.client, context: modelContext)
     }
 
-    /// Sets space.
-    func setSpace(_ spaceId: UUID?) {
-        currentSpaceId = spaceId
-        guard let spaceId else {
-            incidents = []
-            return
-        }
-        loadLocal(spaceId: spaceId)
+    // MARK: - SpaceScopedStore
+
+    func clearSpaceData() {
+        incidents = []
     }
 
-    /// Loads local.
     func loadLocal(spaceId: UUID) {
         do {
             incidents = try repository.fetchAllLocal(spaceId: spaceId)
             lastErrorMessage = nil
         } catch {
             incidents = []
-            lastErrorMessage = localizedErrorMessage("incidents.error.loadLocal", error: error)
+            lastErrorMessage = error.localizedDescription
         }
     }
 
-    /// Handles refresh remote.
-    func refreshRemote() async {
-        guard let spaceId = currentSpaceId else { return }
-        guard cloudSyncEnabled else {
-            loadLocal(spaceId: spaceId)
-            return
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-
-        do {
-            try await repository.pullRemoteToLocal(spaceId: spaceId)
-            incidents = try repository.fetchAllLocal(spaceId: spaceId)
-            lastErrorMessage = nil
-        } catch {
-            loadLocal(spaceId: spaceId)
-            lastErrorMessage = localizedErrorMessage("incidents.error.refresh", error: error)
-        }
+    func pullRemoteData(spaceId: UUID) async throws {
+        try await repository.pullRemoteToLocal(spaceId: spaceId)
     }
 
-    /// Handles add incident.
+    func syncPendingData(spaceId: UUID) async throws {
+        try await repository.syncPendingLocal(spaceId: spaceId)
+    }
+
+    func afterSync() {
+        notifyHomeWidgetsDataDidChange()
+    }
+
+    // MARK: - CRUD
+
     func addIncident(
         title: String,
         description: String?,
-        severity: String,
-        status: String,
+        severity: IncidentSeverity,
+        status: IncidentStatus,
         assigneeId: UUID?,
         cost: Double?,
         occurrenceDate: Date,
@@ -104,7 +91,7 @@ final class IncidentStore {
                 managedRelatedIds: managedRelatedIds,
                 actor: userId
             )
-            incidents = try repository.fetchAllLocal(spaceId: spaceId)
+            loadLocal(spaceId: spaceId)
             notifyHomeWidgetsDataDidChange()
             await syncPending()
             return incident
@@ -114,13 +101,12 @@ final class IncidentStore {
         }
     }
 
-    /// Updates incident.
     func updateIncident(
         _ incident: Incident,
         title: String? = nil,
         description: String? = nil,
-        severity: String? = nil,
-        status: String? = nil,
+        severity: IncidentSeverity? = nil,
+        status: IncidentStatus? = nil,
         assigneeId: UUID?? = nil,
         cost: Double?? = nil,
         occurrenceDate: Date? = nil,
@@ -145,15 +131,9 @@ final class IncidentStore {
                 occurrenceDate: occurrenceDate,
                 updatedBy: userId
             )
-            if let iconName {
-                incident.iconName = iconName
-            }
-            if let iconColorHex {
-                incident.iconColorHex = iconColorHex
-            }
-            if let imageData {
-                incident.imageData = imageData
-            }
+            if let iconName { incident.iconName = iconName }
+            if let iconColorHex { incident.iconColorHex = iconColorHex }
+            if let imageData { incident.imageData = imageData }
             incident.pendingSync = true
             if let spaceId = currentSpaceId {
                 try syncRelatedLinks(
@@ -163,7 +143,7 @@ final class IncidentStore {
                     managedRelatedIds: managedRelatedIds,
                     actor: userId
                 )
-                incidents = try repository.fetchAllLocal(spaceId: spaceId)
+                loadLocal(spaceId: spaceId)
             }
             notifyHomeWidgetsDataDidChange()
             await syncPending()
@@ -172,13 +152,10 @@ final class IncidentStore {
         }
     }
 
-    /// Deletes incident.
     func deleteIncident(_ incident: Incident, userId: UUID?) async {
         do {
             try repository.softDeleteLocal(incident, updatedBy: userId)
-            if let spaceId = currentSpaceId {
-                incidents = try repository.fetchAllLocal(spaceId: spaceId)
-            }
+            if let spaceId = currentSpaceId { loadLocal(spaceId: spaceId) }
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
@@ -186,28 +163,7 @@ final class IncidentStore {
         }
     }
 
-    /// Syncs pending.
-    func syncPending() async {
-        guard let spaceId = currentSpaceId else { return }
-        guard cloudSyncEnabled else {
-            loadLocal(spaceId: spaceId)
-            lastErrorMessage = nil
-            return
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-
-        do {
-            try await repository.syncPendingLocal(spaceId: spaceId)
-            try await repository.pullRemoteToLocal(spaceId: spaceId)
-            incidents = try repository.fetchAllLocal(spaceId: spaceId)
-            try modelContext.save()
-            notifyHomeWidgetsDataDidChange()
-            lastErrorMessage = nil
-        } catch {
-            lastErrorMessage = localizedErrorMessage("incidents.error.sync", error: error)
-        }
-    }
+    // MARK: - Private
 
     private func syncRelatedLinks(
         parentId: UUID,
