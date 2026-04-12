@@ -116,7 +116,7 @@ private func makePhoneMissionRowPreviewMission() -> Mission {
         missionDescription: "Pack documents, flashlight and basic medicine.",
         difficulty: 3,
         dueDate: .now.addingTimeInterval(86_400),
-        priority: MissionPriority.high.rawValue,
+        priority: .high,
         isRecurring: true,
         createdBy: UUID()
     )

@@ -519,10 +519,10 @@ final class AppPreferences {
         self.biometricUnlockEnabled = userDefaults.object(forKey: biometricUnlockEnabledKey) as? Bool ?? false
         self.homeWidgets = Self.loadHomeWidgets(from: userDefaults, key: homeWidgetsKey)
         self.budgetDashboardWidgets = Self.loadBudgetDashboardWidgets(from: userDefaults, key: budgetDashboardWidgetsKey)
-        self.budgetCustomCategories = Self.loadCodable([String].self, from: userDefaults, key: budgetCustomCategoriesKey) ?? []
-        self.budgetCategoryLimits = Self.loadCodable([BudgetCategoryLimitPreference].self, from: userDefaults, key: budgetCategoryLimitsKey) ?? []
-        self.budgetCustomCategories = Self.normalizedBudgetCategories(budgetCustomCategories)
-        self.budgetCategoryLimits = Self.normalizedBudgetCategoryLimits(budgetCategoryLimits)
+        let rawCategories = Self.loadCodable([String].self, from: userDefaults, key: budgetCustomCategoriesKey) ?? []
+        let rawLimits = Self.loadCodable([BudgetCategoryLimitPreference].self, from: userDefaults, key: budgetCategoryLimitsKey) ?? []
+        self.budgetCustomCategories = Self.normalizedBudgetCategories(rawCategories)
+        self.budgetCategoryLimits = Self.normalizedBudgetCategoryLimits(rawLimits)
         self.biometricLockEnabled = userDefaults.object(forKey: biometricLockEnabledKey) as? Bool ?? false
         let timeoutRaw = userDefaults.object(forKey: autoLockTimeoutKey) as? Int ?? AutoLockTimeout.immediately.rawValue
         self.autoLockTimeout = AutoLockTimeout(rawValue: timeoutRaw) ?? .immediately

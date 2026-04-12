@@ -446,7 +446,7 @@ struct PadAddSavedPlaceSheet: View {
                 placeToEdit,
                 name: cleanTitle,
                 description: trimmedDescription.isEmpty ? nil : trimmedDescription,
-                category: category.rawValue,
+                category: category,
                 iconName: iconName.isEmpty ? nil : iconName,
                 iconColorHex: iconColorHex,
                 address: trimmedAddress.isEmpty ? nil : trimmedAddress,
@@ -460,7 +460,7 @@ struct PadAddSavedPlaceSheet: View {
             savedPlace = await viewModel.locationStore?.addSavedPlace(
                 name: cleanTitle,
                 description: trimmedDescription.isEmpty ? nil : trimmedDescription,
-                category: category.rawValue,
+                category: category,
                 iconName: iconName.isEmpty ? nil : iconName,
                 iconColorHex: iconColorHex,
                 address: trimmedAddress.isEmpty ? nil : trimmedAddress,

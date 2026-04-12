@@ -354,7 +354,7 @@ struct PadBudgetScreen: View {
     private var filteredEntries: [BudgetEntry] {
         var values = periodFilteredEntries.sorted(by: { $0.transactionDate < $1.transactionDate })
         if selectedKindFilter != .all {
-            values = values.filter { $0.kind == selectedKindFilter.rawValue }
+            values = values.filter { $0.kind.rawValue == selectedKindFilter.rawValue }
         }
         if selectedCategoryFilter != String(localized: "budget.filter.option.all") {
             values = values.filter { $0.category == selectedCategoryFilter }
@@ -510,17 +510,13 @@ struct PadBudgetScreen: View {
     context.insert(BudgetSpaceSettings(id: space.id, spaceId: space.id, openingBalance: 2100, currencyCode: "PLN"))
     context.insert(BudgetGoal(spaceId: space.id, title: "Vacation", targetAmount: 5000, currentAmount: 1200))
 
-    do {
-        try context.save()
-    } catch {
-        Log.dbError("Budget preview context.save", error)
-    }
+    try? context.save()
 
     let authRepo = AuthRepository(client: SupabaseConfig.client, isLoggedIn: true, currentUser: user)
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
     spaceRepo.selectedSpace = space
 
-    PadBudgetScreen()
+    return PadBudgetScreen()
         .environment(authRepo)
         .environment(spaceRepo)
         .modelContainer(container)
