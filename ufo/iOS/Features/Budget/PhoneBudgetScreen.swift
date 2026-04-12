@@ -340,7 +340,7 @@ struct PhoneBudgetScreen: View {
     private var filteredEntries: [BudgetEntry] {
         var values = periodFilteredEntries.sorted(by: { $0.transactionDate < $1.transactionDate })
         if selectedKindFilter != .all {
-            values = values.filter { $0.kind == selectedKindFilter.rawValue }
+            values = values.filter { $0.kind.rawValue == selectedKindFilter.rawValue }
         }
         if selectedCategoryFilter != String(localized: "budget.filter.option.all") {
             values = values.filter { $0.category == selectedCategoryFilter }
@@ -490,9 +490,9 @@ struct PhoneBudgetScreen: View {
     context.insert(space)
     context.insert(SpaceMembership(user: user, space: space, role: "admin"))
 
-    context.insert(BudgetEntry(spaceId: space.id, title: "Salary", kind: "income", amount: 4200, category: "Work", merchantName: "Employer"))
-    context.insert(BudgetEntry(spaceId: space.id, title: "Groceries", kind: "expense", amount: 350, category: "Food", merchantName: "Lidl", isFixed: false))
-    context.insert(BudgetRecurringRule(spaceId: space.id, title: "Netflix", kind: "expense", amount: 67, category: "Subscriptions", merchantName: "Netflix", cadence: BudgetRecurringCadence.monthly.rawValue))
+    context.insert(BudgetEntry(spaceId: space.id, title: "Salary", kind: .income, amount: 4200, category: "Work", merchantName: "Employer"))
+    context.insert(BudgetEntry(spaceId: space.id, title: "Groceries", kind: .expense, amount: 350, category: "Food", merchantName: "Lidl", isFixed: false))
+    context.insert(BudgetRecurringRule(spaceId: space.id, title: "Netflix", kind: .expense, amount: 67, category: "Subscriptions", merchantName: "Netflix", cadence: .monthly))
     context.insert(BudgetSpaceSettings(id: space.id, spaceId: space.id, openingBalance: 2100, currencyCode: "PLN"))
     context.insert(BudgetGoal(spaceId: space.id, title: "Vacation", targetAmount: 5000, currentAmount: 1200))
 
@@ -506,7 +506,7 @@ struct PhoneBudgetScreen: View {
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
     spaceRepo.selectedSpace = space
 
-    return PhoneBudgetScreen()
+    PhoneBudgetScreen()
         .environment(authRepo)
         .environment(spaceRepo)
         .modelContainer(container)

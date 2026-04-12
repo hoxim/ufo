@@ -52,7 +52,7 @@ enum MainNavigationPreviewFactory {
         context.insert(Mission(spaceId: space.id, title: "Buy food", missionDescription: "Weekly shopping", difficulty: 2))
         context.insert(SharedList(spaceId: space.id, name: "Shopping list", type: "shopping"))
         context.insert(Note(spaceId: space.id, title: "Reminder", content: "Take umbrella", createdBy: user.id))
-        context.insert(BudgetEntry(spaceId: space.id, title: "Salary", kind: "income", amount: 4200, category: "Work"))
+        context.insert(BudgetEntry(spaceId: space.id, title: "Salary", kind: .income, amount: 4200, category: "Work"))
         let routine = Routine(spaceId: space.id, title: "Breakfast", category: RoutineCategory.food.rawValue, startMinuteOfDay: 480, durationMinutes: 30, createdBy: user.id)
         context.insert(routine)
         context.insert(RoutineLog(routineId: routine.id, spaceId: space.id, loggedAt: .now, createdBy: user.id))

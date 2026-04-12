@@ -504,9 +504,9 @@ struct PadBudgetScreen: View {
     context.insert(space)
     context.insert(SpaceMembership(user: user, space: space, role: "admin"))
 
-    context.insert(BudgetEntry(spaceId: space.id, title: "Salary", kind: "income", amount: 4200, category: "Work", merchantName: "Employer"))
-    context.insert(BudgetEntry(spaceId: space.id, title: "Groceries", kind: "expense", amount: 350, category: "Food", merchantName: "Lidl"))
-    context.insert(BudgetRecurringRule(spaceId: space.id, title: "Netflix", kind: "expense", amount: 67, category: "Subscriptions", merchantName: "Netflix", cadence: BudgetRecurringCadence.monthly.rawValue))
+    context.insert(BudgetEntry(spaceId: space.id, title: "Salary", kind: .income, amount: 4200, category: "Work", merchantName: "Employer"))
+    context.insert(BudgetEntry(spaceId: space.id, title: "Groceries", kind: .expense, amount: 350, category: "Food", merchantName: "Lidl"))
+    context.insert(BudgetRecurringRule(spaceId: space.id, title: "Netflix", kind: .expense, amount: 67, category: "Subscriptions", merchantName: "Netflix", cadence: .monthly))
     context.insert(BudgetSpaceSettings(id: space.id, spaceId: space.id, openingBalance: 2100, currencyCode: "PLN"))
     context.insert(BudgetGoal(spaceId: space.id, title: "Vacation", targetAmount: 5000, currentAmount: 1200))
 
@@ -520,7 +520,7 @@ struct PadBudgetScreen: View {
     let spaceRepo = SpaceRepository(client: SupabaseConfig.client)
     spaceRepo.selectedSpace = space
 
-    return PadBudgetScreen()
+    PadBudgetScreen()
         .environment(authRepo)
         .environment(spaceRepo)
         .modelContainer(container)
