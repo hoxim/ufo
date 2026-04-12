@@ -52,13 +52,13 @@ struct PadIncidentDetailView: View {
 
                 HStack(spacing: 10) {
                     Label(
-                        IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized,
+                        incident.severity.localizedLabel,
                         systemImage: "exclamationmark.triangle"
                     )
                     .font(.caption)
 
                     Label(
-                        IncidentStatus(rawValue: incident.resolvedStatus)?.localizedLabel ?? incident.resolvedStatus.capitalized,
+                        incident.status.localizedLabel,
                         systemImage: "clock"
                     )
                     .font(.caption)

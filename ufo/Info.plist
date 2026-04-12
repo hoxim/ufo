@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Aplikacja używa Face ID do ochrony Twoich danych.</string>
 	<key>NSLocationUsageDescription</key>
 	<string>Aplikacja potrzebuje lokalizacji, aby pokazać aktualną pozycję na mapie Space.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

@@ -75,10 +75,10 @@ struct MacMissionListRowView: View {
             }
 
             HStack(spacing: 8) {
-                Text(MissionPriority(rawValue: mission.resolvedPriority)?.localizedLabel ?? mission.resolvedPriority.capitalized)
+                Text(mission.priority.localizedLabel)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                if mission.isRecurringValue {
+                if mission.isRecurring {
                     Text("Recurring")
                         .font(.caption2)
                         .foregroundStyle(.secondary)

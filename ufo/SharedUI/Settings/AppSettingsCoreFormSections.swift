@@ -13,12 +13,17 @@ import AppKit
 
 struct AppSettingsCoreFormSections: View {
     @Environment(AppPreferences.self) private var appPreferences
+#if os(iOS)
+    @Environment(AppBiometricStore.self) private var biometricStore
+#endif
     @AppStorage("settings_space_limit") private var spaceLimit: Int = 5
     @AppStorage("settings_default_space_type") private var defaultSpaceType: String = SpaceType.personal.rawValue
     @AppStorage("settings_location_sharing_enabled") private var locationSharingEnabled: Bool = false
     @State private var locationPermissionStatus = SettingsPermissionStatus.unknown
     @State private var notificationPermissionStatus = SettingsPermissionStatus.unknown
+#if os(macOS)
     @State private var biometricAvailability = SettingsBiometricAvailability.current()
+#endif
 
     var body: some View {
         Group {
@@ -162,6 +167,25 @@ struct AppSettingsCoreFormSections: View {
     }
 
     private var securitySection: some View {
+#if os(iOS)
+        Group {
+            if biometricStore.isBiometryAvailable {
+                Section("settings.section.security") {
+                    Toggle(isOn: biometricLockBinding) {
+                        Label(biometricStore.biometryLabel, systemImage: biometricStore.biometrySystemImage)
+                    }
+
+                    if appPreferences.biometricLockEnabled {
+                        Picker("settings.security.autoLock", selection: autoLockBinding) {
+                            ForEach(AutoLockTimeout.allCases) { timeout in
+                                Text(timeout.title).tag(timeout)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+#else
         Section("settings.section.security") {
             Toggle(isOn: biometricUnlockBinding) {
                 Label("settings.security.biometricUnlock", systemImage: "lock.shield")
@@ -172,6 +196,7 @@ struct AppSettingsCoreFormSections: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
+#endif
     }
 
     private var productTierBinding: Binding<AppProductTier> {
@@ -240,19 +265,37 @@ struct AppSettingsCoreFormSections: View {
         )
     }
 
+#if os(iOS)
+    private var biometricLockBinding: Binding<Bool> {
+        Binding(
+            get: { appPreferences.biometricLockEnabled },
+            set: { appPreferences.biometricLockEnabled = $0 }
+        )
+    }
+
+    private var autoLockBinding: Binding<AutoLockTimeout> {
+        Binding(
+            get: { appPreferences.autoLockTimeout },
+            set: { appPreferences.autoLockTimeout = $0 }
+        )
+    }
+#else
     private var biometricUnlockBinding: Binding<Bool> {
         Binding(
             get: { appPreferences.biometricUnlockEnabled && biometricAvailability.isAvailable },
             set: { appPreferences.biometricUnlockEnabled = $0 && biometricAvailability.isAvailable }
         )
     }
+#endif
 
     private func refreshDerivedState() {
         normalizeDefaultSpaceType()
+#if os(macOS)
         biometricAvailability = SettingsBiometricAvailability.current()
         if !biometricAvailability.isAvailable {
             appPreferences.biometricUnlockEnabled = false
         }
+#endif
         locationPermissionStatus = SettingsPermissionStatus(locationStatus: CLLocationManager().authorizationStatus)
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             Task { @MainActor in
@@ -342,6 +385,7 @@ private enum SettingsPermissionStatus {
     }
 }
 
+#if os(macOS)
 private struct SettingsBiometricAvailability {
     let isAvailable: Bool
     let message: LocalizedStringKey
@@ -372,6 +416,7 @@ private struct SettingsBiometricAvailability {
         }
     }
 }
+#endif
 
 private enum AppSettingsSystemOpener {
     static func open() {

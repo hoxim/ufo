@@ -57,8 +57,8 @@ struct PadEditIncidentView: View {
         _title = State(initialValue: incident.title)
         _details = State(initialValue: incident.incidentDescription ?? "")
         _date = State(initialValue: incident.occurrenceDate)
-        _severity = State(initialValue: IncidentSeverity(rawValue: incident.resolvedSeverity) ?? .medium)
-        _status = State(initialValue: IncidentStatus(rawValue: incident.resolvedStatus) ?? .open)
+        _severity = State(initialValue: incident.severity)
+        _status = State(initialValue: incident.status)
         _assigneeId = State(initialValue: incident.assigneeId)
         _costText = State(initialValue: incident.cost.map { String($0) } ?? "")
         _iconName = State(initialValue: incident.iconName ?? "bolt.horizontal")
@@ -194,8 +194,8 @@ struct PadEditIncidentView: View {
             incident,
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: details.isEmpty ? nil : details,
-            severity: severity.rawValue,
-            status: status.rawValue,
+            severity: severity,
+            status: status,
             assigneeId: assigneeId,
             cost: Double(costText.replacingOccurrences(of: ",", with: ".")),
             occurrenceDate: date,

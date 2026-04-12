@@ -4,15 +4,14 @@ import SwiftData
 
 @MainActor
 @Observable
-final class MissionStore {
-    private let modelContext: ModelContext
+final class MissionStore: SpaceScopedStore {
+    let modelContext: ModelContext
     private let repository: MissionRepository
     private let linkRepository: LinkRepository
-    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var missions: [Mission] = []
     var currentSpaceId: UUID?
-    var isSyncing: Bool = false
+    var isSyncing = false
     var lastErrorMessage: String?
 
     init(modelContext: ModelContext, missionRepository: MissionRepository) {
@@ -21,48 +20,36 @@ final class MissionStore {
         self.linkRepository = LinkRepository(client: SupabaseConfig.client, context: modelContext)
     }
 
-    /// Sets space.
-    func setSpace(_ spaceId: UUID?) {
-        currentSpaceId = spaceId
-        guard let spaceId else {
-            missions = []
-            return
-        }
-        loadLocal(spaceId: spaceId)
+    // MARK: - SpaceScopedStore
+
+    func clearSpaceData() {
+        missions = []
     }
 
-    /// Loads local.
     func loadLocal(spaceId: UUID) {
         do {
             missions = try repository.fetchAllLocal(spaceId: spaceId)
             lastErrorMessage = nil
         } catch {
             missions = []
-            lastErrorMessage = localizedErrorMessage("missions.error.loadLocal", error: error)
+            lastErrorMessage = error.localizedDescription
         }
     }
 
-    /// Handles refresh remote.
-    func refreshRemote() async {
-        guard let spaceId = currentSpaceId else { return }
-        guard cloudSyncEnabled else {
-            loadLocal(spaceId: spaceId)
-            return
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-
-        do {
-            try await repository.pullRemoteToLocal(spaceId: spaceId)
-            missions = try repository.fetchAllLocal(spaceId: spaceId)
-            lastErrorMessage = nil
-        } catch {
-            loadLocal(spaceId: spaceId)
-            lastErrorMessage = localizedErrorMessage("missions.error.refresh", error: error)
-        }
+    func pullRemoteData(spaceId: UUID) async throws {
+        try await repository.pullRemoteToLocal(spaceId: spaceId)
     }
 
-    /// Handles add mission.
+    func syncPendingData(spaceId: UUID) async throws {
+        try await repository.syncPendingLocal(spaceId: spaceId)
+    }
+
+    func afterSync() {
+        notifyHomeWidgetsDataDidChange()
+    }
+
+    // MARK: - CRUD
+
     func addMission(
         title: String,
         description: String,
@@ -71,7 +58,7 @@ final class MissionStore {
         dueDate: Date?,
         savedPlaceId: UUID?,
         savedPlaceName: String?,
-        priority: String,
+        priority: MissionPriority,
         isRecurring: Bool,
         iconName: String?,
         iconColorHex: String?,
@@ -108,7 +95,7 @@ final class MissionStore {
                 managedRelatedIds: managedRelatedIds,
                 actor: userId
             )
-            missions = try repository.fetchAllLocal(spaceId: spaceId)
+            loadLocal(spaceId: spaceId)
             notifyHomeWidgetsDataDidChange()
             await syncPending()
             return mission
@@ -118,7 +105,6 @@ final class MissionStore {
         }
     }
 
-    /// Updates mission.
     func updateMission(
         _ mission: Mission,
         title: String? = nil,
@@ -128,7 +114,7 @@ final class MissionStore {
         dueDate: Date?? = nil,
         savedPlaceId: UUID?? = nil,
         savedPlaceName: String?? = nil,
-        priority: String? = nil,
+        priority: MissionPriority? = nil,
         isRecurring: Bool? = nil,
         iconName: String? = nil,
         iconColorHex: String? = nil,
@@ -155,15 +141,9 @@ final class MissionStore {
                 isCompleted: isCompleted,
                 updatedBy: userId
             )
-            if let iconName {
-                mission.iconName = iconName
-            }
-            if let iconColorHex {
-                mission.iconColorHex = iconColorHex
-            }
-            if let imageData {
-                mission.imageData = imageData
-            }
+            if let iconName { mission.iconName = iconName }
+            if let iconColorHex { mission.iconColorHex = iconColorHex }
+            if let imageData { mission.imageData = imageData }
             mission.pendingSync = true
             if let spaceId = currentSpaceId {
                 try syncRelatedLinks(
@@ -173,7 +153,7 @@ final class MissionStore {
                     managedRelatedIds: managedRelatedIds,
                     actor: userId
                 )
-                missions = try repository.fetchAllLocal(spaceId: spaceId)
+                loadLocal(spaceId: spaceId)
             }
             notifyHomeWidgetsDataDidChange()
             await syncPending()
@@ -184,18 +164,14 @@ final class MissionStore {
         }
     }
 
-    /// Toggles completed.
     func toggleCompleted(_ mission: Mission, userId: UUID?) async {
         _ = await updateMission(mission, isCompleted: !mission.isCompleted, userId: userId)
     }
 
-    /// Deletes mission.
     func deleteMission(_ mission: Mission, userId: UUID?) async {
         do {
             try repository.softDeleteLocal(mission, updatedBy: userId)
-            if let spaceId = currentSpaceId {
-                missions = try repository.fetchAllLocal(spaceId: spaceId)
-            }
+            if let spaceId = currentSpaceId { loadLocal(spaceId: spaceId) }
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
@@ -203,28 +179,7 @@ final class MissionStore {
         }
     }
 
-    /// Syncs pending.
-    func syncPending() async {
-        guard let spaceId = currentSpaceId else { return }
-        guard cloudSyncEnabled else {
-            loadLocal(spaceId: spaceId)
-            lastErrorMessage = nil
-            return
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-
-        do {
-            try await repository.syncPendingLocal(spaceId: spaceId)
-            try await repository.pullRemoteToLocal(spaceId: spaceId)
-            missions = try repository.fetchAllLocal(spaceId: spaceId)
-            try modelContext.save()
-            notifyHomeWidgetsDataDidChange()
-            lastErrorMessage = nil
-        } catch {
-            lastErrorMessage = localizedErrorMessage("missions.error.sync", error: error)
-        }
-    }
+    // MARK: - Private
 
     private func syncRelatedLinks(
         parentId: UUID,

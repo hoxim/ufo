@@ -111,8 +111,8 @@ final class IncidentRepository {
         spaceId: UUID,
         title: String,
         description: String?,
-        severity: String,
-        status: String,
+        severity: IncidentSeverity,
+        status: IncidentStatus,
         assigneeId: UUID?,
         cost: Double?,
         occurrenceDate: Date,
@@ -141,8 +141,8 @@ final class IncidentRepository {
         _ incident: Incident,
         title: String? = nil,
         description: String? = nil,
-        severity: String? = nil,
-        status: String? = nil,
+        severity: IncidentSeverity? = nil,
+        status: IncidentStatus? = nil,
         assigneeId: UUID?? = nil,
         cost: Double?? = nil,
         occurrenceDate: Date? = nil,
@@ -184,8 +184,8 @@ final class IncidentRepository {
             created_by: incident.createdBy,
             title: incident.title,
             description: incident.incidentDescription,
-            severity: incident.resolvedSeverity,
-            status: incident.resolvedStatus,
+            severity: incident.severity.rawValue,
+            status: incident.status.rawValue,
             assignee_id: incident.assigneeId,
             cost: incident.cost,
             occurrence_date: incident.occurrenceDate,
@@ -220,8 +220,8 @@ final class IncidentRepository {
                 if local.version <= record.version {
                     local.title = record.title
                     local.incidentDescription = record.description
-                    local.severity = record.severity
-                    local.status = record.status
+                    local.severity = IncidentSeverity(rawValue: record.severity) ?? .medium
+                    local.status = IncidentStatus(rawValue: record.status) ?? .open
                     local.assigneeId = record.assigneeId
                     local.cost = record.cost
                     local.occurrenceDate = record.occurrenceDate
@@ -242,8 +242,8 @@ final class IncidentRepository {
                     spaceId: record.spaceId,
                     title: record.title,
                     incidentDescription: record.description,
-                    severity: record.severity,
-                    status: record.status,
+                    severity: IncidentSeverity(rawValue: record.severity) ?? .medium,
+                    status: IncidentStatus(rawValue: record.status) ?? .open,
                     assigneeId: record.assigneeId,
                     cost: record.cost,
                     occurrenceDate: record.occurrenceDate,

@@ -4,10 +4,9 @@ import SwiftData
 
 @MainActor
 @Observable
-final class NoteStore {
-    private let modelContext: ModelContext
+final class NoteStore: SpaceScopedStore {
+    let modelContext: ModelContext
     private let repository: NoteRepository
-    private var cloudSyncEnabled: Bool { AppPreferences.shared.isCloudSyncEnabled }
 
     var notes: [Note] = []
     var folders: [NoteFolder] = []
@@ -20,18 +19,13 @@ final class NoteStore {
         self.repository = repository
     }
 
-    /// Assigns active space and refreshes local cache for this scope.
-    func setSpace(_ spaceId: UUID?) {
-        currentSpaceId = spaceId
-        guard let spaceId else {
-            notes = []
-            folders = []
-            return
-        }
-        loadLocal(spaceId: spaceId)
+    // MARK: - SpaceScopedStore
+
+    func clearSpaceData() {
+        notes = []
+        folders = []
     }
 
-    /// Loads local notes for currently selected space.
     func loadLocal(spaceId: UUID) {
         do {
             notes = try repository.fetchAllLocal(spaceId: spaceId)
@@ -40,32 +34,28 @@ final class NoteStore {
         } catch {
             notes = []
             folders = []
-            lastErrorMessage = localizedErrorMessage("notes.error.load", error: error)
+            lastErrorMessage = error.localizedDescription
         }
     }
 
-    /// Pulls latest notes from remote and merges to local.
-    func refreshRemote() async {
-        guard let spaceId = currentSpaceId else { return }
-        guard cloudSyncEnabled else {
-            loadLocal(spaceId: spaceId)
-            return
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-        do {
-            try await repository.pullFoldersRemoteToLocal(spaceId: spaceId)
-            try await repository.pullRemoteToLocal(spaceId: spaceId)
-            notes = try repository.fetchAllLocal(spaceId: spaceId)
-            folders = try repository.fetchFoldersLocal(spaceId: spaceId)
-            lastErrorMessage = nil
-        } catch {
-            loadLocal(spaceId: spaceId)
-            lastErrorMessage = localizedErrorMessage("notes.error.refresh", error: error)
-        }
+    /// Notes require two remote pulls: folders first, then notes.
+    func pullRemoteData(spaceId: UUID) async throws {
+        try await repository.pullFoldersRemoteToLocal(spaceId: spaceId)
+        try await repository.pullRemoteToLocal(spaceId: spaceId)
     }
 
-    /// Creates one note with optional link, incident and location attachment.
+    /// Notes require two pending syncs: folders first, then notes.
+    func syncPendingData(spaceId: UUID) async throws {
+        try await repository.syncPendingFoldersLocal(spaceId: spaceId)
+        try await repository.syncPendingLocal(spaceId: spaceId)
+    }
+
+    func afterSync() {
+        notifyHomeWidgetsDataDidChange()
+    }
+
+    // MARK: - CRUD
+
     func addNote(
         title: String,
         content: String,
@@ -73,7 +63,7 @@ final class NoteStore {
         attachedLinkURL: String?,
         tags: [String],
         isPinned: Bool,
-        linkedEntityType: String?,
+        linkedEntityType: NoteLinkedEntityType?,
         linkedEntityId: UUID?,
         savedPlaceId: UUID?,
         savedPlaceName: String?,
@@ -93,7 +83,7 @@ final class NoteStore {
                 attachedLinkURL: attachedLinkURL,
                 tags: tags,
                 isPinned: isPinned,
-                linkedEntityType: linkedEntityType,
+                linkedEntityType: linkedEntityType?.rawValue,
                 linkedEntityId: linkedEntityId,
                 savedPlaceId: savedPlaceId,
                 savedPlaceName: savedPlaceName,
@@ -103,8 +93,7 @@ final class NoteStore {
                 relatedLocationLabel: relatedLocationLabel,
                 actor: actor
             )
-            notes = try repository.fetchAllLocal(spaceId: spaceId)
-            folders = try repository.fetchFoldersLocal(spaceId: spaceId)
+            loadLocal(spaceId: spaceId)
             notifyHomeWidgetsDataDidChange()
             await syncPending()
             return note
@@ -114,7 +103,6 @@ final class NoteStore {
         }
     }
 
-    /// Updates existing note and syncs it to remote.
     func updateNote(
         _ note: Note,
         title: String,
@@ -123,7 +111,7 @@ final class NoteStore {
         attachedLinkURL: String?,
         tags: [String],
         isPinned: Bool,
-        linkedEntityType: String?,
+        linkedEntityType: NoteLinkedEntityType?,
         linkedEntityId: UUID?,
         savedPlaceId: UUID?,
         savedPlaceName: String?,
@@ -142,7 +130,7 @@ final class NoteStore {
                 attachedLinkURL: attachedLinkURL,
                 tags: tags,
                 isPinned: isPinned,
-                linkedEntityType: linkedEntityType,
+                linkedEntityType: linkedEntityType?.rawValue,
                 linkedEntityId: linkedEntityId,
                 savedPlaceId: savedPlaceId,
                 savedPlaceName: savedPlaceName,
@@ -152,10 +140,7 @@ final class NoteStore {
                 relatedLocationLabel: relatedLocationLabel,
                 actor: actor
             )
-            if let spaceId = currentSpaceId {
-                notes = try repository.fetchAllLocal(spaceId: spaceId)
-                folders = try repository.fetchFoldersLocal(spaceId: spaceId)
-            }
+            if let spaceId = currentSpaceId { loadLocal(spaceId: spaceId) }
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
@@ -163,14 +148,10 @@ final class NoteStore {
         }
     }
 
-    /// Soft-deletes note and syncs deletion.
     func deleteNote(_ note: Note, actor: UUID?) async {
         do {
             try repository.softDeleteLocal(note, actor: actor)
-            if let spaceId = currentSpaceId {
-                notes = try repository.fetchAllLocal(spaceId: spaceId)
-                folders = try repository.fetchFoldersLocal(spaceId: spaceId)
-            }
+            if let spaceId = currentSpaceId { loadLocal(spaceId: spaceId) }
             notifyHomeWidgetsDataDidChange()
             await syncPending()
         } catch {
@@ -178,37 +159,11 @@ final class NoteStore {
         }
     }
 
-    /// Syncs pending local mutations and reloads latest notes.
-    func syncPending() async {
-        guard let spaceId = currentSpaceId else { return }
-        guard cloudSyncEnabled else {
-            loadLocal(spaceId: spaceId)
-            lastErrorMessage = nil
-            return
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-        do {
-            try await repository.syncPendingFoldersLocal(spaceId: spaceId)
-            try await repository.syncPendingLocal(spaceId: spaceId)
-            try await repository.pullFoldersRemoteToLocal(spaceId: spaceId)
-            try await repository.pullRemoteToLocal(spaceId: spaceId)
-            notes = try repository.fetchAllLocal(spaceId: spaceId)
-            folders = try repository.fetchFoldersLocal(spaceId: spaceId)
-            try modelContext.save()
-            notifyHomeWidgetsDataDidChange()
-            lastErrorMessage = nil
-        } catch {
-            lastErrorMessage = localizedErrorMessage("notes.error.sync", error: error)
-        }
-    }
-
-    /// Creates note folder for currently selected space and syncs it.
     func addFolder(name: String, actor: UUID?) async {
         guard let spaceId = currentSpaceId else { return }
         do {
             _ = try repository.createFolderLocal(spaceId: spaceId, name: name, actor: actor)
-            folders = try repository.fetchFoldersLocal(spaceId: spaceId)
+            loadLocal(spaceId: spaceId)
             await syncPending()
         } catch {
             lastErrorMessage = localizedErrorMessage("notes.error.addFolder", error: error)

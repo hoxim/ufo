@@ -255,10 +255,10 @@ struct PhoneHomeScreen: View {
                     guard let dueDate = $0.dueDate else { return false }
                     return Calendar.current.isDateInToday(dueDate)
                 }.count,
-                recurringMissionCount: missions.filter(\.isRecurringValue).count,
+                recurringMissionCount: missions.filter(\.isRecurring).count,
                 pinnedNotesCount: notes.filter(\.isPinnedValue).count,
-                openIncidentsCount: allIncidents.filter { $0.resolvedStatus != IncidentStatus.resolved.rawValue }.count,
-                criticalIncidentsCount: allIncidents.filter { $0.resolvedSeverity == IncidentSeverity.critical.rawValue }.count,
+                openIncidentsCount: allIncidents.filter { $0.status != .resolved }.count,
+                criticalIncidentsCount: allIncidents.filter { $0.severity == .critical }.count,
                 savedPlacesCount: savedPlaces.count,
                 recentCheckInText: checkIns.first.map { "\($0.userDisplayName) · \($0.placeName ?? String(localized: "home.location.current"))" },
                 routinesCount: todayRoutines.count,

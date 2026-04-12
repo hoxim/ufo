@@ -355,7 +355,7 @@ struct BudgetUpcomingRecurringDashboardCard: View {
                     ForEach(items.prefix(4)) { item in
                         HStack(alignment: .top, spacing: 12) {
                             Circle()
-                                .fill(item.rule.kind == BudgetEntryKind.expense.rawValue ? AppTheme.ChartColors.expense : AppTheme.ChartColors.income)
+                                .fill(item.rule.kind == .expense ? AppTheme.ChartColors.expense : AppTheme.ChartColors.income)
                                 .frame(width: 10, height: 10)
                                 .padding(.top, 5)
 
@@ -371,7 +371,7 @@ struct BudgetUpcomingRecurringDashboardCard: View {
 
                             Text(item.rule.amount.formatted(.currency(code: currencyCode)))
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(item.rule.kind == BudgetEntryKind.expense.rawValue ? AppTheme.ChartColors.expense : AppTheme.ChartColors.income)
+                                .foregroundStyle(item.rule.kind == .expense ? AppTheme.ChartColors.expense : AppTheme.ChartColors.income)
                         }
                     }
                 }
@@ -438,7 +438,7 @@ struct BudgetDashboardDetailView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.rule.title)
                                     .font(.headline)
-                                Text("\(item.rule.recurringCadence.displayName) • \(item.nextDate.formatted(date: .abbreviated, time: .omitted))")
+                                Text("\(item.rule.cadence.displayName) • \(item.nextDate.formatted(date: .abbreviated, time: .omitted))")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }

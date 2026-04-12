@@ -194,7 +194,7 @@ struct PadMissionsScreen: View {
             }
 
             HStack(spacing: 8) {
-                Text(mission.resolvedPriority)
+                Text(mission.priority.localizedLabel)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 if let place = mission.savedPlaceName, !place.isEmpty {
@@ -223,7 +223,7 @@ struct PadMissionsScreen: View {
                 || mission.missionDescription.localizedCaseInsensitiveContains(query)
                 || mission.assignees.contains(where: { $0.fullName?.localizedCaseInsensitiveContains(query) ?? false })
                 || (mission.savedPlaceName?.localizedCaseInsensitiveContains(query) ?? false)
-                || mission.resolvedPriority.localizedCaseInsensitiveContains(query)
+                || mission.priority.rawValue.localizedCaseInsensitiveContains(query)
         }
     }
 
@@ -530,7 +530,7 @@ struct PadMissionsSidebarWorkspace<Sidebar: View>: View {
             }
 
             HStack(spacing: 8) {
-                Text(mission.resolvedPriority)
+                Text(mission.priority.localizedLabel)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 if let place = mission.savedPlaceName, !place.isEmpty {
@@ -559,7 +559,7 @@ struct PadMissionsSidebarWorkspace<Sidebar: View>: View {
                 || mission.missionDescription.localizedCaseInsensitiveContains(query)
                 || mission.assignees.contains(where: { $0.fullName?.localizedCaseInsensitiveContains(query) ?? false })
                 || (mission.savedPlaceName?.localizedCaseInsensitiveContains(query) ?? false)
-                || mission.resolvedPriority.localizedCaseInsensitiveContains(query)
+                || mission.priority.rawValue.localizedCaseInsensitiveContains(query)
         }
     }
 

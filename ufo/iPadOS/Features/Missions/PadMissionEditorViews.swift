@@ -68,8 +68,8 @@ struct PadEditMissionView: View {
         _relatedListId = State(initialValue: initialRelatedListId)
         _relatedNoteId = State(initialValue: initialRelatedNoteId)
         _relatedIncidentId = State(initialValue: initialRelatedIncidentId)
-        _priority = State(initialValue: MissionPriority(rawValue: mission.resolvedPriority) ?? .medium)
-        _isRecurring = State(initialValue: mission.isRecurringValue)
+        _priority = State(initialValue: mission.priority)
+        _isRecurring = State(initialValue: mission.isRecurring)
         _iconName = State(initialValue: mission.iconName ?? "target")
         _iconColorHex = State(initialValue: mission.iconColorHex ?? "#F59E0B")
         _imageData = State(initialValue: mission.imageData)
@@ -126,7 +126,7 @@ struct PadEditMissionView: View {
             dueDate: dueDateEnabled ? dueDate : nil,
             savedPlaceId: savedPlaceId,
             savedPlaceName: resolvedAvailablePlaces.first(where: { $0.id == savedPlaceId })?.name,
-            priority: priority.rawValue,
+            priority: priority,
             isRecurring: isRecurring,
             iconName: iconName.isEmpty ? nil : iconName,
             iconColorHex: iconColorHex,
@@ -296,7 +296,7 @@ struct PadAddMissionView: View {
             dueDate: dueDateEnabled ? dueDate : nil,
             savedPlaceId: savedPlaceId,
             savedPlaceName: resolvedAvailablePlaces.first(where: { $0.id == savedPlaceId })?.name,
-            priority: priority.rawValue,
+            priority: priority,
             isRecurring: isRecurring,
             iconName: iconName.isEmpty ? nil : iconName,
             iconColorHex: iconColorHex,

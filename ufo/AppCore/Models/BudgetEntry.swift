@@ -6,7 +6,7 @@ final class BudgetEntry {
     @Attribute(.unique) var id: UUID
     var spaceId: UUID
     var title: String
-    var kind: String
+    var kind: BudgetEntryKind
     var amount: Double
     var category: String
     var subcategory: String?
@@ -31,7 +31,7 @@ final class BudgetEntry {
         id: UUID = UUID(),
         spaceId: UUID,
         title: String,
-        kind: String,
+        kind: BudgetEntryKind,
         amount: Double,
         category: String = "General",
         subcategory: String? = nil,
@@ -87,20 +87,20 @@ final class BudgetEntry {
     }
 
     var signedAmount: Double {
-        kind == BudgetEntryKind.expense.rawValue ? -amount : amount
+        kind == .expense ? -amount : amount
     }
 }
 
-enum BudgetEntryKind: String, CaseIterable, Identifiable {
-    case income = "income"
+enum BudgetEntryKind: String, CaseIterable, Codable, Identifiable {
+    case income  = "income"
     case expense = "expense"
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .income: return String(localized: "budget.shared.kind.income")
-        case .expense: return String(localized: "budget.shared.kind.expense")
+        case .income:  String(localized: "budget.shared.kind.income")
+        case .expense: String(localized: "budget.shared.kind.expense")
         }
     }
 }

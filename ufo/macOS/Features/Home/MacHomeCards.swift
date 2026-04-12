@@ -78,19 +78,19 @@ struct MacHomeBudgetCard: View {
 
     private var balance: Double {
         filteredEntries.reduce(0) { partial, entry in
-            partial + (entry.kind == BudgetEntryKind.expense.rawValue ? -entry.amount : entry.amount)
+            partial + (entry.kind == .expense ? -entry.amount : entry.amount)
         }
     }
 
     private var income: Double {
         filteredEntries
-            .filter { $0.kind == BudgetEntryKind.income.rawValue }
+            .filter { $0.kind == .income }
             .reduce(0) { $0 + $1.amount }
     }
 
     private var expense: Double {
         filteredEntries
-            .filter { $0.kind == BudgetEntryKind.expense.rawValue }
+            .filter { $0.kind == .expense }
             .reduce(0) { $0 + $1.amount }
     }
 
@@ -159,9 +159,9 @@ struct MacHomeBudgetCard: View {
                 Chart(filteredEntries.suffix(10)) { entry in
                     BarMark(
                         x: .value("Date", entry.entryDate, unit: .day),
-                        y: .value("Amount", entry.kind == BudgetEntryKind.expense.rawValue ? -entry.amount : entry.amount)
+                        y: .value("Amount", entry.kind == .expense ? -entry.amount : entry.amount)
                     )
-                    .foregroundStyle(entry.kind == BudgetEntryKind.expense.rawValue ? .red : .green)
+                    .foregroundStyle(entry.kind == .expense ? .red : .green)
                 }
                 .frame(height: 140)
             }
@@ -313,9 +313,9 @@ struct MacHomeMetricCard: View {
 private func macHomePreviewBudgetEntries() -> [BudgetEntry] {
     let spaceID = UUID()
     return [
-        BudgetEntry(spaceId: spaceID, title: "Freelance", kind: BudgetEntryKind.income.rawValue, amount: 1800, category: "Work"),
-        BudgetEntry(spaceId: spaceID, title: "Coffee", kind: BudgetEntryKind.expense.rawValue, amount: 18, category: "Food"),
-        BudgetEntry(spaceId: spaceID, title: "Parking", kind: BudgetEntryKind.expense.rawValue, amount: 25, category: "Travel")
+        BudgetEntry(spaceId: spaceID, title: "Freelance", kind: BudgetEntryKind.income, amount: 1800, category: "Work"),
+        BudgetEntry(spaceId: spaceID, title: "Coffee", kind: BudgetEntryKind.expense, amount: 18, category: "Food"),
+        BudgetEntry(spaceId: spaceID, title: "Parking", kind: BudgetEntryKind.expense, amount: 25, category: "Travel")
     ]
 }
 

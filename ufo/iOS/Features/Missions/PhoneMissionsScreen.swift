@@ -177,7 +177,7 @@ struct PhoneMissionsScreen: View {
                 || mission.missionDescription.localizedCaseInsensitiveContains(query)
                 || mission.assignees.contains(where: { $0.fullName?.localizedCaseInsensitiveContains(query) ?? false })
                 || (mission.savedPlaceName?.localizedCaseInsensitiveContains(query) ?? false)
-                || mission.resolvedPriority.localizedCaseInsensitiveContains(query)
+                || mission.priority.rawValue.localizedCaseInsensitiveContains(query)
         }
     }
 

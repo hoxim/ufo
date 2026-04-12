@@ -112,8 +112,8 @@ final class MissionRepository {
             due_date: mission.dueDate,
             saved_place_id: mission.savedPlaceId,
             saved_place_name: mission.savedPlaceName,
-            priority: mission.resolvedPriority,
-            is_recurring: mission.isRecurringValue,
+            priority: mission.priority.rawValue,
+            is_recurring: mission.isRecurring,
             version: mission.version,
             created_by: mission.createdBy,
             last_updated_at: mission.lastUpdatedAt,
@@ -122,7 +122,7 @@ final class MissionRepository {
             deleted_at: mission.deletedAt,
             icon_name: mission.iconName,
             icon_color_hex: mission.iconColorHex,
-            visibility_mode: mission.resolvedVisibilityMode
+            visibility_mode: mission.visibilityMode.rawValue
         )
 
         try await client
@@ -185,9 +185,9 @@ final class MissionRepository {
         dueDate: Date?,
         savedPlaceId: UUID?,
         savedPlaceName: String?,
-        priority: String,
+        priority: MissionPriority,
         isRecurring: Bool,
-        visibilityMode: String = SpaceContentVisibilityMode.everyone.rawValue,
+        visibilityMode: SpaceContentVisibilityMode = .everyone,
         createdBy: UUID?
     ) throws -> Mission {
         guard let context else { throw RepositoryError.missingLocalContext }
@@ -221,9 +221,9 @@ final class MissionRepository {
         dueDate: Date?? = nil,
         savedPlaceId: UUID?? = nil,
         savedPlaceName: String?? = nil,
-        priority: String? = nil,
+        priority: MissionPriority? = nil,
         isRecurring: Bool? = nil,
-        visibilityMode: String? = nil,
+        visibilityMode: SpaceContentVisibilityMode? = nil,
         isCompleted: Bool? = nil,
         updatedBy: UUID?
     ) throws {
@@ -281,7 +281,7 @@ final class MissionRepository {
                     local.dueDate = record.dueDate
                     local.savedPlaceId = record.savedPlaceId
                     local.savedPlaceName = record.savedPlaceName
-                    local.priority = record.priority
+                    local.priority = MissionPriority(rawValue: record.priority) ?? .medium
                     local.isRecurring = record.isRecurring
                     local.createdBy = record.createdBy
                     local.createdAt = record.createdAt ?? local.createdAt
@@ -292,7 +292,7 @@ final class MissionRepository {
                     local.deletedAt = record.deletedAt
                     local.iconName = record.iconName
                     local.iconColorHex = record.iconColorHex
-                    local.visibilityMode = record.visibilityMode ?? SpaceContentVisibilityMode.everyone.rawValue
+                    local.visibilityMode = SpaceContentVisibilityMode(rawValue: record.visibilityMode ?? "") ?? .everyone
                     local.pendingSync = false
                 }
             } else {
@@ -306,9 +306,9 @@ final class MissionRepository {
                     dueDate: record.dueDate,
                     savedPlaceId: record.savedPlaceId,
                     savedPlaceName: record.savedPlaceName,
-                    priority: record.priority,
+                    priority: MissionPriority(rawValue: record.priority) ?? .medium,
                     isRecurring: record.isRecurring,
-                    visibilityMode: record.visibilityMode ?? SpaceContentVisibilityMode.everyone.rawValue,
+                    visibilityMode: SpaceContentVisibilityMode(rawValue: record.visibilityMode ?? "") ?? .everyone,
                     iconName: record.iconName,
                     iconColorHex: record.iconColorHex,
                     createdBy: record.createdBy

@@ -303,7 +303,7 @@ final class BudgetRepository {
         let entry = BudgetEntry(
             spaceId: spaceId,
             title: title,
-            kind: kind.rawValue,
+            kind: kind,
             amount: amount,
             category: category,
             subcategory: subcategory,
@@ -345,14 +345,14 @@ final class BudgetRepository {
         let rule = BudgetRecurringRule(
             spaceId: spaceId,
             title: title,
-            kind: kind.rawValue,
+            kind: kind,
             amount: amount,
             category: category,
             subcategory: subcategory,
             merchantName: merchantName,
             merchantURLString: merchantURLString,
             notes: notes,
-            cadence: cadence.rawValue,
+            cadence: cadence,
             anchorDate: anchorDate,
             isFixed: isFixed,
             iconName: iconName,
@@ -439,7 +439,7 @@ final class BudgetRepository {
             id: entry.id,
             space_id: entry.spaceId,
             title: entry.title,
-            kind: entry.kind,
+            kind: entry.kind.rawValue,
             amount: entry.amount,
             category: entry.category,
             subcategory: entry.subcategory,
@@ -479,14 +479,14 @@ final class BudgetRepository {
             id: rule.id,
             space_id: rule.spaceId,
             title: rule.title,
-            kind: rule.kind,
+            kind: rule.kind.rawValue,
             amount: rule.amount,
             category: rule.category,
             subcategory: rule.subcategory,
             merchant_name: rule.merchantName,
             merchant_url: rule.merchantURLString,
             notes: rule.notes,
-            cadence: rule.cadence,
+            cadence: rule.cadence.rawValue,
             anchor_date: rule.anchorDate,
             is_fixed: rule.isFixed,
             icon_name: rule.iconName,
@@ -577,7 +577,7 @@ final class BudgetRepository {
                     id: record.id,
                     spaceId: record.spaceId,
                     title: record.title,
-                    kind: record.kind,
+                    kind: BudgetEntryKind(rawValue: record.kind) ?? .expense,
                     amount: record.amount,
                     category: record.category,
                     subcategory: record.subcategory,
@@ -623,14 +623,14 @@ final class BudgetRepository {
                         id: record.id,
                         spaceId: record.spaceId,
                         title: record.title,
-                        kind: record.kind,
+                        kind: BudgetEntryKind(rawValue: record.kind) ?? .expense,
                         amount: record.amount,
                         category: record.category,
                         subcategory: record.subcategory,
                         merchantName: record.merchantName,
                         merchantURLString: record.merchantURLString,
                         notes: record.notes,
-                        cadence: record.cadence,
+                        cadence: BudgetRecurringCadence(rawValue: record.cadence) ?? .monthly,
                         anchorDate: record.anchorDate,
                         isFixed: record.isFixed,
                         iconName: record.iconName,
@@ -811,7 +811,7 @@ final class BudgetRepository {
 
     private func apply(record: BudgetEntryRecord, to local: BudgetEntry) {
         local.title = record.title
-        local.kind = record.kind
+        local.kind = BudgetEntryKind(rawValue: record.kind) ?? .expense
         local.amount = record.amount
         local.category = record.category
         local.subcategory = record.subcategory
@@ -835,14 +835,14 @@ final class BudgetRepository {
 
     private func apply(record: BudgetRecurringRuleRecord, to local: BudgetRecurringRule) {
         local.title = record.title
-        local.kind = record.kind
+        local.kind = BudgetEntryKind(rawValue: record.kind) ?? .expense
         local.amount = record.amount
         local.category = record.category
         local.subcategory = record.subcategory
         local.merchantName = record.merchantName
         local.merchantURLString = record.merchantURLString
         local.notes = record.notes
-        local.cadence = record.cadence
+        local.cadence = BudgetRecurringCadence(rawValue: record.cadence) ?? .monthly
         local.anchorDate = record.anchorDate
         local.isFixed = record.isFixed
         local.iconName = record.iconName
@@ -896,7 +896,7 @@ final class BudgetRepository {
             id: entry.id,
             space_id: entry.spaceId,
             title: entry.title,
-            kind: entry.kind,
+            kind: entry.kind.rawValue,
             amount: entry.amount,
             category: entry.category,
             icon_name: entry.iconName,

@@ -201,7 +201,7 @@ struct PadIncidentsScreen: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
-                Text("\(IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized) · \(IncidentStatus(rawValue: incident.resolvedStatus)?.localizedLabel ?? incident.resolvedStatus.capitalized)")
+                Text("\(incident.severity.localizedLabel) · \(incident.status.localizedLabel)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -218,8 +218,8 @@ struct PadIncidentsScreen: View {
         return store.incidents.filter { incident in
             incident.title.localizedCaseInsensitiveContains(query)
                 || (incident.incidentDescription?.localizedCaseInsensitiveContains(query) ?? false)
-                || incident.resolvedSeverity.localizedCaseInsensitiveContains(query)
-                || incident.resolvedStatus.localizedCaseInsensitiveContains(query)
+                || incident.severity.rawValue.localizedCaseInsensitiveContains(query)
+                || incident.status.rawValue.localizedCaseInsensitiveContains(query)
         }
     }
 
@@ -518,7 +518,7 @@ struct PadIncidentsSidebarWorkspace<Sidebar: View>: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
-                Text("\(IncidentSeverity(rawValue: incident.resolvedSeverity)?.localizedLabel ?? incident.resolvedSeverity.capitalized) · \(IncidentStatus(rawValue: incident.resolvedStatus)?.localizedLabel ?? incident.resolvedStatus.capitalized)")
+                Text("\(incident.severity.localizedLabel) · \(incident.status.localizedLabel)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -535,8 +535,8 @@ struct PadIncidentsSidebarWorkspace<Sidebar: View>: View {
         return store.incidents.filter { incident in
             incident.title.localizedCaseInsensitiveContains(query)
                 || (incident.incidentDescription?.localizedCaseInsensitiveContains(query) ?? false)
-                || incident.resolvedSeverity.localizedCaseInsensitiveContains(query)
-                || incident.resolvedStatus.localizedCaseInsensitiveContains(query)
+                || incident.severity.rawValue.localizedCaseInsensitiveContains(query)
+                || incident.status.rawValue.localizedCaseInsensitiveContains(query)
         }
     }
 

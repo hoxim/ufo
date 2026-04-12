@@ -45,8 +45,8 @@ struct BudgetAnalyticsService {
     }
 
     func summary(entries: [BudgetEntry], openingBalance: Double) -> BudgetSummarySnapshot {
-        let income = entries.filter { $0.kind == BudgetEntryKind.income.rawValue }.reduce(0) { $0 + $1.amount }
-        let expense = entries.filter { $0.kind == BudgetEntryKind.expense.rawValue }.reduce(0) { $0 + $1.amount }
+        let income = entries.filter { $0.kind == .income }.reduce(0) { $0 + $1.amount }
+        let expense = entries.filter { $0.kind == .expense }.reduce(0) { $0 + $1.amount }
         return BudgetSummarySnapshot(
             income: income,
             expense: expense,
@@ -70,8 +70,8 @@ struct BudgetAnalyticsService {
             values.append(
                 BudgetCashFlowPoint(
                     date: cursor,
-                    income: bucketEntries.filter { $0.kind == BudgetEntryKind.income.rawValue }.reduce(0) { $0 + $1.amount },
-                    expense: bucketEntries.filter { $0.kind == BudgetEntryKind.expense.rawValue }.reduce(0) { $0 + $1.amount }
+                    income: bucketEntries.filter { $0.kind == .income }.reduce(0) { $0 + $1.amount },
+                    expense: bucketEntries.filter { $0.kind == .expense }.reduce(0) { $0 + $1.amount }
                 )
             )
             guard let next = calendar.date(byAdding: bucket, value: 1, to: cursor) else { break }
@@ -101,7 +101,7 @@ struct BudgetAnalyticsService {
     }
 
     func categoryBreakdown(entries: [BudgetEntry], limits: [String: Double]) -> [BudgetCategoryBreakdownPoint] {
-        let expenses = entries.filter { $0.kind == BudgetEntryKind.expense.rawValue }
+        let expenses = entries.filter { $0.kind == .expense }
         let grouped = Dictionary(grouping: expenses, by: \.category)
         let categories = Set(grouped.keys).union(limits.keys)
 
